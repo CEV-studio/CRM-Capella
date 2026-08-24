@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import type { ProspectInsert } from "@/lib/domain/database.types";
 import { PROSPECT_STAGES } from "@/lib/domain/stages";
+import { envoyerAcdYoutrustSiNecessaire } from "@/lib/youtrust";
 
 /**
  * Ces actions écrivent avec la session de l'utilisateur, jamais avec la clé
@@ -36,7 +37,6 @@ export async function modifierVuesRapides(
   const choisies = new Set(formData.getAll("etapes").map(String));
   const admin = createAdminClient();
 
-  // On met à jour chaque étape : cochée -> true, sinon false.
   for (const s of PROSPECT_STAGES) {
     const { error } = await admin
       .from("prospect_stages")
@@ -67,8 +67,16 @@ export async function changerEtape(
 
   if (error) return { ok: false, message: messageLisible(error.message) };
 
+  let message = `Étape : ${stage}`;
+  if (stage === "Demande ACD") {
+    const acd = await envoyerAcdYoutrustSiNecessaire(id);
+    if (!acd.ok) message = acd.message;
+    else if (!acd.skipped) message = `${message} — ${acd.message}`;
+  }
+
   revalidatePath("/prospection");
-  return { ok: true, message: `Étape : ${stage}` };
+  revalidatePath(`/prospection/${id}`);
+  return { ok: true, message };
 }
 
 export async function enregistrerProchaineAction(
@@ -134,8 +142,6 @@ function lireFormulaire(formData: FormData): ProspectInsert {
   const source = String(formData.get("source_id") ?? "").trim();
   patch.source_id = source || null;
 
-  // Champs personnalisés : tous les champs du formulaire préfixés « perso_ ».
-  // On ne garde que ceux qui ont une valeur, rangés par clé dans champs_perso.
   const champsPerso: Record<string, string> = {};
   for (const [nom, valeur] of formData.entries()) {
     if (!nom.startsWith("perso_")) continue;
@@ -156,17 +162,25 @@ export async function enregistrerFiche(
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, message: "Prospect introuvable." };
 
+  const patch = lireFormulaire(formData);
   const supabase = await createClient();
   const { error } = await supabase
     .from("prospects")
-    .update(lireFormulaire(formData))
+    .update(patch)
     .eq("id", id);
 
   if (error) return { ok: false, message: messageLisible(error.message) };
 
+  let message = "Fiche enregistrée.";
+  if (patch.stage === "Demande ACD") {
+    const acd = await envoyerAcdYoutrustSiNecessaire(id);
+    if (!acd.ok) message = acd.message;
+    else if (!acd.skipped) message = `${message} ${acd.message}`;
+  }
+
   revalidatePath("/prospection");
   revalidatePath(`/prospection/${id}`);
-  return { ok: true, message: "Fiche enregistrée." };
+  return { ok: true, message };
 }
 
 export async function creerProspect(
@@ -185,8 +199,6 @@ export async function creerProspect(
 
   const supabase = await createClient();
 
-  // Un commercial crée pour lui-même. L'admin peut désigner le propriétaire
-  // (champ vide = le prospect part au réservoir, invisible des commerciaux).
   const proprietaire =
     profil.role === "admin"
       ? String(formData.get("assigned_to") ?? "").trim() || null
@@ -199,6 +211,10 @@ export async function creerProspect(
     .single();
 
   if (error) return { ok: false, message: messageLisible(error.message) };
+
+  if (patch.stage === "Demande ACD") {
+    await envoyerAcdYoutrustSiNecessaire(data.id);
+  }
 
   revalidatePath("/prospection");
   redirect(`/prospection/${data.id}`);
