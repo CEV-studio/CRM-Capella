@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { AffaireInsert, TypeEnergie } from "@/lib/domain/database.types";
 
 function txt(v: unknown) {
   return String(v ?? "").trim();
@@ -82,7 +83,10 @@ export async function POST(req: NextRequest) {
 
     const energie = txt(payload.energie);
     const compteur = txt(payload.numero_compteur);
-    const affaire = {
+    const typeEnergie: TypeEnergie =
+      energie === "Gaz" ? "Gaz" : energie === "Électricité" ? "Électricité" : "Élec+Gaz";
+
+    const affaire: AffaireInsert = {
       commercial_id: commercial.id,
       raison_sociale: txt(payload.nom_entreprise) || "Sans raison sociale",
       adresse_conso: txt(payload.adresse_consommation) || null,
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
       prenom: txt(payload.prenom_dirigeant) || null,
       mail: txt(payload.mail_decisionnaire) || null,
       telephone: txt(payload.telephone_decisionnaire) || null,
-      type_energie: energie === "Gaz" ? "Gaz" : energie === "Électricité" ? "Électricité" : "Élec+Gaz",
+      type_energie: typeEnergie,
       pdl_elec: energie === "Électricité" ? compteur || null : null,
       pce_gaz: energie === "Gaz" ? compteur || null : null,
       date_echeance: isoDateFr(payload.echeance_contrat),
