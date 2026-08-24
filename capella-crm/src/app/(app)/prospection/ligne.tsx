@@ -1,0 +1,177 @@
+"use client";
+
+import Link from "next/link";
+import { useActionState, useRef } from "react";
+import { changerEtape, enregistrerProchaineAction } from "./actions";
+import type { ActionResult } from "@/lib/action-result";
+import { MenuEtape } from "@/components/menu-etape";
+import { PROSPECT_STAGES, stageColor } from "@/lib/domain/stages";
+import { nomComplet } from "@/lib/domain/noms";
+import { fmtDate, fmtDateHeure } from "@/lib/format";
+import type { Prospect } from "@/lib/domain/database.types";
+import { cn } from "@/lib/utils";
+
+export type LigneProspect = Prospect & {
+  commercial?: string | null;
+  source?: string | null;
+};
+
+const CELL = "px-3 py-2 align-middle";
+
+export function Ligne({
+  p,
+  afficherCommercial,
+  selectionnable = false,
+  coche = false,
+  onToggle,
+}: {
+  p: LigneProspect;
+  afficherCommercial: boolean;
+  /** Affiche une case à cocher en tête de ligne (sélection multiple). */
+  selectionnable?: boolean;
+  coche?: boolean;
+  onToggle?: (id: string) => void;
+}) {
+  const [etatEtape, actionEtape] = useActionState<ActionResult | null, FormData>(
+    changerEtape,
+    null,
+  );
+  const [etatAction, actionProchaine] = useActionState<ActionResult | null, FormData>(
+    enregistrerProchaineAction,
+    null,
+  );
+
+  const formAction = useRef<HTMLFormElement>(null);
+
+  const erreur = (!etatEtape?.ok && etatEtape?.message)
+    || (!etatAction?.ok && etatAction?.message);
+
+  return (
+    <>
+      <tr className={cn("border-b border-navy-100 hover:bg-navy-50", coche && "bg-star-50")}>
+        {selectionnable ? (
+          <td className={cn(CELL, "w-10")}>
+            <input
+              type="checkbox"
+              checked={coche}
+              onChange={() => onToggle?.(p.id)}
+              className="h-4 w-4 accent-[var(--color-star-500)]"
+              aria-label={`Sélectionner ${p.raison_sociale ?? "ce prospect"}`}
+            />
+          </td>
+        ) : null}
+        <td className={cn(CELL, "min-w-56 max-w-72")}>
+          <Link
+            href={`/prospection/${p.id}`}
+            className="block truncate font-semibold text-navy-800 hover:text-star-600"
+            title={p.raison_sociale ?? undefined}
+          >
+            {p.raison_sociale || nomComplet(p.nom, p.prenom)}
+          </Link>
+          <div className="tabular text-[11px] text-grey-brand">
+            {p.ref}
+            {p.siren ? ` · ${p.siren}` : ""}
+          </div>
+        </td>
+
+        <td className={cn(CELL, "text-navy-700")}>
+          {nomComplet(p.nom, p.prenom, "—")}
+          {p.mail ? (
+            <div className="truncate text-[11px] text-grey-brand">{p.mail}</div>
+          ) : null}
+        </td>
+
+        <td className={cn(CELL, "tabular whitespace-nowrap text-navy-700")}>
+          {(() => {
+            // Le mobile en priorité ; à défaut le fixe, signalé par « (fixe) ».
+            const numero = p.tel_mobile || p.tel_fixe;
+            if (!numero) return "—";
+            return (
+              <a href={`tel:${numero}`} className="hover:text-star-600">
+                {numero}
+                {!p.tel_mobile ? (
+                  <span className="ml-1 text-[11px] text-grey-brand">(fixe)</span>
+                ) : null}
+              </a>
+            );
+          })()}
+        </td>
+
+        {/* Changement d'étape en un clic, directement depuis la ligne. */}
+        <td className={CELL}>
+          <MenuEtape
+            id={p.id}
+            etapeEnBase={p.stage}
+            etapes={PROSPECT_STAGES}
+            couleur={(e) => stageColor(e, "prospect")}
+            action={actionEtape}
+            resultat={etatEtape}
+            libelle={`Étape de ${p.raison_sociale ?? "ce prospect"}`}
+          />
+        </td>
+
+        <td className={CELL}>
+          <form
+            ref={formAction}
+            action={actionProchaine}
+            className="flex items-center gap-1.5"
+          >
+            <input type="hidden" name="id" value={p.id} />
+            <input
+              name="next_action"
+              defaultValue={p.next_action ?? ""}
+              onBlur={() => formAction.current?.requestSubmit()}
+              placeholder="À faire…"
+              className="h-8 w-40 rounded-md border border-transparent bg-transparent px-2 text-sm hover:border-navy-200 focus:border-star-500 focus:bg-white focus:outline-none"
+              aria-label="Prochaine action"
+            />
+            <input
+              type="date"
+              name="next_action_date"
+              defaultValue={p.next_action_date ?? ""}
+              onChange={() => formAction.current?.requestSubmit()}
+              className="tabular h-8 w-32 rounded-md border border-transparent bg-transparent px-1 text-xs hover:border-navy-200 focus:border-star-500 focus:bg-white focus:outline-none"
+              aria-label="Date de la prochaine action"
+            />
+          </form>
+        </td>
+
+        <td className={cn(CELL, "tabular whitespace-nowrap text-xs text-grey-brand")}>
+          {fmtDateHeure(p.last_action_at)}
+        </td>
+
+        {afficherCommercial ? (
+          <td className={cn(CELL, "whitespace-nowrap text-xs text-navy-700")}>
+            {p.commercial ?? (
+              <span className="text-star-600">Réservoir</span>
+            )}
+          </td>
+        ) : null}
+
+        <td className={cn(CELL, "whitespace-nowrap text-xs text-grey-brand")}>
+          {p.source ?? "—"}
+          {p.date_fin_contrat ? (
+            <div className="tabular">fin : {fmtDate(p.date_fin_contrat)}</div>
+          ) : null}
+        </td>
+      </tr>
+
+      {erreur ? (
+        <tr>
+          <td
+            colSpan={(afficherCommercial ? 8 : 7) + (selectionnable ? 1 : 0)}
+            className="px-3 pb-2"
+          >
+            <p
+              role="alert"
+              className="rounded-lg px-3 py-1.5 text-xs text-navy-800"
+              style={{ backgroundColor: "var(--color-status-perdu)" }}
+            >
+              {erreur}
+            </p>
+          </td>
+        </tr>
+      ) : null}
+    </>
+  );
+}

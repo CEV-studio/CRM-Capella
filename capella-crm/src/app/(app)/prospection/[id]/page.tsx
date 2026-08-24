@@ -1,0 +1,153 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { peutGerer, requireProfile } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { StageBadge } from "@/components/ui";
+import { isTransferable, stageColor } from "@/lib/domain/stages";
+import { fmtDateHeure } from "@/lib/format";
+import { nomComplet } from "@/lib/domain/noms";
+import { BoutonSupprimer } from "../../admin/corbeille/bouton-supprimer";
+import { PiecesJointes } from "@/components/pieces-jointes";
+import { FicheForm } from "../fiche-form";
+import { chargerSources, chargerChampsPersonnalises } from "@/lib/referentiels";
+import type { PieceJointe, Prospect, Profile } from "@/lib/domain/database.types";
+
+export const dynamic = "force-dynamic";
+
+export default async function FicheProspectPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const profil = await requireProfile();
+  const estAdmin = profil.role === "admin";
+
+  const supabase = await createClient();
+
+  // RLS s'applique : un commercial qui devine l'identifiant d'un prospect
+  // qui n'est pas le sien obtient une page « introuvable », pas les données.
+  const { data: prospect } = await supabase
+    .from("prospects")
+    .select("*")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!prospect) notFound();
+
+  const [
+    sources,
+    { data: profils },
+    { data: affaireLiee },
+    { data: piecesData },
+    champsPerso,
+  ] = await Promise.all([
+      chargerSources(),
+      estAdmin
+        ? supabase
+            .from("profiles")
+            .select("id, full_name")
+            .eq("is_active", true)
+            .order("full_name")
+        : Promise.resolve({ data: [] as Pick<Profile, "id" | "full_name">[] }),
+      // Un prospect déjà converti pointe vers son affaire : on évite
+      // les doublons et on garde la traçabilité visible.
+      supabase
+        .from("affaires")
+        .select("id, ref")
+        .eq("prospect_id", id)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      supabase
+        .from("pieces_jointes")
+        .select("*")
+        .eq("prospect_id", id)
+        .order("created_at"),
+      chargerChampsPersonnalises(),
+    ]);
+
+  const p = prospect as Prospect;
+  const pretATransferer = isTransferable(p.stage);
+  const pieces = (piecesData ?? []) as PieceJointe[];
+
+  return (
+    <main className="mx-auto w-full max-w-5xl px-6 py-8">
+      <Link
+        href="/prospection"
+        className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700"
+      >
+        ← Retour à la prospection
+      </Link>
+
+      <header className="mt-3 mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-navy-800">
+            {p.raison_sociale || nomComplet(p.nom, p.prenom)}
+          </h1>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-grey-brand">
+            <StageBadge label={p.stage} color={stageColor(p.stage, "prospect")} />
+            <span className="tabular">{p.ref}</span>
+            <span>· dernière action {fmtDateHeure(p.last_action_at)}</span>
+          </div>
+          {peutGerer(profil) ? (
+            <div className="mt-3">
+              <BoutonSupprimer
+                cible="prospect"
+                id={p.id}
+                libelle={p.raison_sociale || nomComplet(p.nom, p.prenom)}
+                retour="/prospection"
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {affaireLiee ? (
+          <Link
+            href={`/conversion/${affaireLiee.id}`}
+            className="max-w-xs rounded-[var(--radius-card)] px-4 py-3 text-sm text-navy-800 hover:opacity-90"
+            style={{ backgroundColor: "var(--color-status-signe)" }}
+          >
+            <strong>Déjà converti en affaire.</strong>
+            <span className="mt-0.5 block text-xs">
+              Voir l&apos;affaire {affaireLiee.ref} →
+            </span>
+          </Link>
+        ) : pretATransferer ? (
+          <div
+            className="max-w-sm rounded-[var(--radius-card)] px-4 py-3 text-sm text-navy-800"
+            style={{ backgroundColor: "var(--color-status-avance)" }}
+          >
+            <strong>Prêt à basculer en affaire.</strong>
+            <p className="mt-0.5 mb-2 text-xs">
+              La fiche affaire sera pré-remplie ; ce prospect est conservé.
+            </p>
+            <Link
+              href={`/conversion/nouvelle?prospect=${p.id}`}
+              className="inline-flex h-9 items-center rounded-lg bg-star-500 px-3 text-sm font-semibold text-white hover:bg-star-600"
+            >
+              Convertir en affaire
+            </Link>
+          </div>
+        ) : null}
+      </header>
+
+      <FicheForm
+        prospect={p}
+        estAdmin={estAdmin}
+        sources={sources
+          .filter((s) => s.is_active)
+          .map((s) => ({ value: s.id, label: s.name }))}
+        champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))}
+        commerciaux={(profils ?? []).map((c) => ({
+          value: c.id,
+          label: c.full_name,
+        }))}
+      />
+
+      <div className="mt-6">
+        <PiecesJointes scope="prospect" parentId={p.id} pieces={pieces} />
+      </div>
+    </main>
+  );
+}

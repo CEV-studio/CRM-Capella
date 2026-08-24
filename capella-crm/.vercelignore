@@ -1,0 +1,6 @@
+# Fichiers inutiles en production — allègent l'envoi vers Vercel.
+# (Les secrets .env.local sont déjà exclus par .gitignore.)
+scripts/
+supabase/tests/
+GUIDE-JEREMY.md
+GUIDE-DEPLOIEMENT.md

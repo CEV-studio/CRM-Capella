@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* ================================================================
+   CAPELLA ENERGY — CHARTE GRAPHIQUE
+   Ces valeurs sont la référence unique. Aucune couleur en dur ailleurs.
+   ================================================================ */
+
+@theme {
+  /* --- Couleurs de marque --- */
+  --color-navy-50:  #F2F4F8;
+  --color-navy-100: #E2E7EF;
+  --color-navy-200: #C3CCDC;
+  --color-navy-300: #94A3BC;
+  --color-navy-400: #5E7194;
+  --color-navy-500: #35496F;
+  --color-navy-600: #1E3255;
+  --color-navy-700: #142543;
+  --color-navy-800: #0D1B2E;  /* Navy Deep — couleur maîtresse */
+  --color-navy-900: #08111E;
+
+  --color-star-50:  #FEF3EF;
+  --color-star-100: #FDE3D9;
+  --color-star-200: #FAC3B0;
+  --color-star-300: #F49B7C;
+  --color-star-400: #EF7B52;
+  --color-star-500: #E86030;  /* Capella Star Orange — accent */
+  --color-star-600: #CB4A1E;
+  --color-star-700: #A63A16;
+  --color-star-800: #7E2C11;
+  --color-star-900: #5A1F0C;
+
+  --color-grey-brand: #8A94A6;
+  --color-surface:    #F4F6FA;
+
+  /* --- Statuts (repris de l'ancien CRM, mêmes codes couleur) --- */
+  --color-status-signe:   #C6EFCE;  /* vert   — signé          */
+  --color-status-avance:  #E3F5EE;  /* menthe — RDV / RIB      */
+  --color-status-encours: #E3EFFF;  /* bleu   — en cours       */
+  --color-status-relance: #FFF3CD;  /* jaune  — NRP / Rappels  */
+  --color-status-perdu:   #FFD9D9;  /* rouge  — clos / perdu   */
+
+  /* --- Typographie --- */
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans:    var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* --- Rythme visuel --- */
+  --radius-card: 0.75rem;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-navy-800);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+/* Les tableaux du CRM sont denses : chiffres alignés verticalement. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Barre de défilement discrète dans les listes denses. */
+.scroll-slim::-webkit-scrollbar { height: 8px; width: 8px; }
+.scroll-slim::-webkit-scrollbar-thumb {
+  background: var(--color-navy-200);
+  border-radius: 9999px;
+}
+
+::selection {
+  background: var(--color-star-500);
+  color: #fff;
+}
+
+/* Focus visible et cohérent partout — accessibilité clavier. */
+:focus-visible {
+  outline: 2px solid var(--color-star-500);
+  outline-offset: 2px;
+}
