@@ -13,8 +13,17 @@ function isoDateFr(v: unknown) {
   return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
 }
 
-function splitContact(nom: string, prenom: string) {
-  return { nom: nom || null, prenom: prenom || null };
+function isoDateTimeFr(v: unknown) {
+  const s = txt(v);
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (!m) return new Date().toISOString();
+  const year = Number(m[3]);
+  const month = Number(m[2]) - 1;
+  const day = Number(m[1]);
+  const hour = Number(m[4] ?? 0);
+  const minute = Number(m[5] ?? 0);
+  const second = Number(m[6] ?? 0);
+  return new Date(Date.UTC(year, month, day, hour - 2, minute, second)).toISOString();
 }
 
 export async function POST(req: NextRequest) {
@@ -44,10 +53,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, duplicate: true, affaire_id: existing.affaire_id });
   }
 
-  const submittedAt = txt(payload.horodateur) || new Date().toISOString();
   const { data: submission, error: subError } = await admin
     .from("form_submissions")
-    .upsert({ source, external_id: externalId, submitted_at: submittedAt, payload }, { onConflict: "source,external_id" })
+    .upsert(
+      { source, external_id: externalId, submitted_at: isoDateTimeFr(payload.horodateur), payload },
+      { onConflict: "source,external_id" },
+    )
     .select("id")
     .single();
 
@@ -57,21 +68,27 @@ export async function POST(req: NextRequest) {
 
   try {
     const vendeur = txt(payload.vendeur);
+    const vendeurNorm = vendeur.toLowerCase();
+    const aliases: Record<string, string> = {
+      "jeremy": "jeremy",
+      "thibault": "thibault",
+      "januario jimmy": "jimmy januario",
+      "jimmy": "jimmy januario",
+    };
+    const cible = aliases[vendeurNorm] ?? vendeurNorm;
     const { data: profils } = await admin.from("profiles").select("id, full_name").eq("is_active", true);
-    const commercial = (profils ?? []).find((p) => p.full_name.trim().toLowerCase() === vendeur.toLowerCase());
+    const commercial = (profils ?? []).find((p) => p.full_name.trim().toLowerCase() === cible);
     if (!commercial) throw new Error(`Commercial introuvable : ${vendeur}`);
 
     const energie = txt(payload.energie);
     const compteur = txt(payload.numero_compteur);
-    const contact = splitContact(txt(payload.nom_dirigeant), txt(payload.prenom_dirigeant));
-
     const affaire = {
       commercial_id: commercial.id,
       raison_sociale: txt(payload.nom_entreprise) || "Sans raison sociale",
       adresse_conso: txt(payload.adresse_consommation) || null,
       siren: txt(payload.siret) || null,
-      nom: contact.nom,
-      prenom: contact.prenom,
+      nom: txt(payload.nom_dirigeant) || null,
+      prenom: txt(payload.prenom_dirigeant) || null,
       mail: txt(payload.mail_decisionnaire) || null,
       telephone: txt(payload.telephone_decisionnaire) || null,
       type_energie: energie === "Gaz" ? "Gaz" : energie === "Électricité" ? "Électricité" : "Élec+Gaz",
@@ -89,11 +106,10 @@ export async function POST(req: NextRequest) {
     const { data: created, error } = await admin.from("affaires").insert(affaire).select("id, ref").single();
     if (error || !created) throw new Error(error?.message ?? "Création affaire impossible");
 
-    await admin.from("form_submissions").update({
-      affaire_id: created.id,
-      processed_at: new Date().toISOString(),
-      error: null,
-    }).eq("id", submission.id);
+    await admin
+      .from("form_submissions")
+      .update({ affaire_id: created.id, processed_at: new Date().toISOString(), error: null })
+      .eq("id", submission.id);
 
     return NextResponse.json({ ok: true, affaire_id: created.id, ref: created.ref });
   } catch (e) {
