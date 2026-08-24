@@ -44,8 +44,10 @@ export async function envoyerAcdYoutrustSiNecessaire(prospectId: string): Promis
   }
 
   const admin = createAdminClient();
-  const { data: prospect, error } = await admin
-    .from("prospects")
+  // Les colonnes Youtrust viennent de la migration 0008 et seront intégrées
+  // aux types générés Supabase lors de la prochaine régénération automatique.
+  const prospects = admin.from("prospects") as any;
+  const { data: prospect, error } = await prospects
     .select(
       "id, ref, stage, raison_sociale, nom, prenom, mail, tel_mobile, acd_youtrust_request_id, acd_sent_at",
     )
@@ -93,8 +95,7 @@ export async function envoyerAcdYoutrustSiNecessaire(prospectId: string): Promis
       body: JSON.stringify({}),
     });
 
-    await admin
-      .from("prospects")
+    await prospects
       .update({
         acd_youtrust_request_id: sr.id,
         acd_sent_at: new Date().toISOString(),
@@ -106,8 +107,7 @@ export async function envoyerAcdYoutrustSiNecessaire(prospectId: string): Promis
     return { ok: true, message: "ACD envoyée via Youtrust." };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    await admin
-      .from("prospects")
+    await prospects
       .update({ acd_status: "erreur", acd_error: message.slice(0, 1000) })
       .eq("id", prospect.id);
     return { ok: false, message: `Étape enregistrée, mais ACD non envoyée : ${message}` };
