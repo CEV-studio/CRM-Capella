@@ -2,6 +2,7 @@ import "server-only";
 
 import crypto from "node:crypto";
 import { decryptRefreshToken, getActiveGmailAccount, type GmailAttachment } from "@/lib/gmail";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function env(name: string): string {
   const value = process.env[name]?.trim();
@@ -92,6 +93,34 @@ function htmlToText(html: string): string {
     .trim();
 }
 
+async function getCrmSignature(profileId?: string | null): Promise<string> {
+  try {
+    const admin = createAdminClient();
+    if (profileId) {
+      const { data } = await admin
+        .from("email_signatures")
+        .select("html")
+        .eq("profile_id", profileId)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (data?.html?.trim()) return data.html.trim();
+    }
+
+    const { data: fallback } = await admin
+      .from("email_signatures")
+      .select("html")
+      .is("profile_id", null)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    return fallback?.html?.trim() || "";
+  } catch (error) {
+    console.error("Lecture de la signature CRM impossible :", error);
+    return "";
+  }
+}
+
 async function getGmailSignature(sendAsEmail: string): Promise<string> {
   try {
     const settings = await gmailJson<{ signature?: string }>(
@@ -137,11 +166,13 @@ export async function sendGmailMessageAdvanced(input: {
   attachments?: GmailAttachment[];
   threadId?: string | null;
   inReplyTo?: string | null;
+  profileId?: string | null;
 }): Promise<{ id: string; threadId?: string }> {
   const account = await getActiveGmailAccount();
   if (!account) throw new Error("Aucune boîte Gmail active n’est configurée.");
 
-  const signatureHtml = await getGmailSignature(account.email);
+  const crmSignature = await getCrmSignature(input.profileId);
+  const signatureHtml = crmSignature || await getGmailSignature(account.email);
   const mixedBoundary = `capella_mixed_${crypto.randomBytes(12).toString("hex")}`;
   const alternativeBoundary = `capella_alt_${crypto.randomBytes(12).toString("hex")}`;
   const headers = [
