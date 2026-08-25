@@ -22,6 +22,11 @@ function dateEmail(value: string | null): string {
   }
 }
 
+function poidsFichier(octets: number): string {
+  if (octets < 1024 * 1024) return `${Math.max(1, Math.round(octets / 1024))} Ko`;
+  return `${(octets / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
 export function EmailClient({
   prospectId,
   prospectEmail,
@@ -44,7 +49,11 @@ export function EmailClient({
   const [templateId, setTemplateId] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [cc, setCc] = useState("");
+  const [bcc, setBcc] = useState("");
   const [attachmentIds, setAttachmentIds] = useState<string[]>([]);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [inReplyTo, setInReplyTo] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -52,6 +61,7 @@ export function EmailClient({
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
 
   const piecesTri = useMemo(() => [...pieces].sort((a, b) => a.file_name.localeCompare(b.file_name, "fr")), [pieces]);
+  const uploadSize = useMemo(() => uploadFiles.reduce((sum, file) => sum + file.size, 0), [uploadFiles]);
 
   async function synchroniser(silencieux = false) {
     if (!gmailConnected || !prospectEmail || syncing) return;
@@ -107,30 +117,41 @@ export function EmailClient({
     setAttachmentIds((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
   }
 
+  function retirerUpload(index: number) {
+    setUploadFiles((current) => current.filter((_, i) => i !== index));
+  }
+
   async function envoyer() {
     if (!prospectEmail || !gmailConnected || sending) return;
     setSending(true);
     setStatus(null);
     try {
+      const form = new FormData();
+      form.set("subject", subject);
+      form.set("body", body);
+      form.set("cc", cc);
+      form.set("bcc", bcc);
+      form.set("templateId", templateId);
+      form.set("attachmentIds", JSON.stringify(attachmentIds));
+      form.set("threadId", threadId || "");
+      form.set("inReplyTo", inReplyTo || "");
+      uploadFiles.forEach((file) => form.append("files", file, file.name));
+
       const response = await fetch(`/api/gmail/prospects/${prospectId}/send`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          subject,
-          body,
-          templateId: templateId || null,
-          attachmentIds,
-          threadId,
-          inReplyTo,
-        }),
+        body: form,
       });
       const data = await response.json() as { ok?: boolean; error?: string };
       if (!response.ok) throw new Error(data.error || "Envoi impossible.");
       setStatus({ ok: true, text: "Email envoyé." });
       setBody("");
       setSubject("");
+      setCc("");
+      setBcc("");
       setTemplateId("");
       setAttachmentIds([]);
+      setUploadFiles([]);
+      setFileInputKey((value) => value + 1);
       setThreadId(null);
       setInReplyTo(null);
       setTimeout(() => window.location.reload(), 500);
@@ -176,12 +197,22 @@ export function EmailClient({
                 </select>
                 <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Objet du mail" className="h-10 rounded-lg border border-navy-200 px-3 text-sm" />
               </div>
-              <div className="text-xs text-grey-brand">À : <strong className="text-navy-700">{prospectEmail}</strong> · Le template est entièrement modifiable avant envoi.</div>
+
+              <div className="rounded-lg border border-navy-100 bg-navy-50/30 p-3">
+                <div className="mb-2 text-xs text-grey-brand">À : <strong className="text-navy-700">{prospectEmail}</strong></div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="CC — une ou plusieurs adresses" className="h-9 rounded-lg border border-navy-200 bg-white px-3 text-sm" />
+                  <input value={bcc} onChange={(e) => setBcc(e.target.value)} placeholder="CCI — une ou plusieurs adresses" className="h-9 rounded-lg border border-navy-200 bg-white px-3 text-sm" />
+                </div>
+                <div className="mt-2 text-[11px] text-grey-brand">Sépare plusieurs adresses par une virgule ou un point-virgule.</div>
+              </div>
+
+              <div className="text-xs text-grey-brand">Le template est entièrement modifiable avant envoi.</div>
               <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={9} placeholder="Écris ton message…" className="rounded-lg border border-navy-200 px-3 py-2 text-sm leading-6" />
 
               {piecesTri.length ? (
                 <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-brand">Pièces jointes de la fiche</div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-brand">Documents de la fiche à joindre</div>
                   <div className="flex flex-wrap gap-2">
                     {piecesTri.map((piece) => (
                       <label key={piece.id} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-navy-100 px-3 py-2 text-xs text-navy-700 hover:bg-navy-50">
@@ -193,10 +224,39 @@ export function EmailClient({
                 </div>
               ) : null}
 
+              <div>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-brand">Ajouter une pièce jointe</div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-navy-200 bg-white px-3 text-xs font-semibold text-navy-700 hover:bg-navy-50">
+                    Choisir des fichiers
+                    <input
+                      key={fileInputKey}
+                      type="file"
+                      multiple
+                      className="sr-only"
+                      onChange={(e) => setUploadFiles(Array.from(e.currentTarget.files || []))}
+                    />
+                  </label>
+                  <span className="text-xs text-grey-brand">18 Mo maximum au total · {uploadFiles.length ? `${uploadFiles.length} fichier${uploadFiles.length > 1 ? "s" : ""}, ${poidsFichier(uploadSize)}` : "aucun fichier sélectionné"}</span>
+                </div>
+                {uploadFiles.length ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {uploadFiles.map((file, index) => (
+                      <span key={`${file.name}-${index}`} className="inline-flex max-w-full items-center gap-2 rounded-lg bg-navy-50 px-3 py-1.5 text-xs text-navy-700">
+                        <span className="max-w-[280px] truncate">{file.name}</span>
+                        <span className="text-grey-brand">{poidsFichier(file.size)}</span>
+                        <button type="button" onClick={() => retirerUpload(index)} className="font-bold text-grey-brand hover:text-star-600" aria-label={`Retirer ${file.name}`}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
               <div className="flex flex-wrap items-center gap-3">
-                <button type="button" onClick={() => void envoyer()} disabled={sending || !subject.trim() || !body.trim()} className="h-10 rounded-lg bg-star-500 px-5 text-sm font-semibold text-white hover:bg-star-600 disabled:opacity-50">
+                <button type="button" onClick={() => void envoyer()} disabled={sending || !subject.trim() || !body.trim() || uploadSize > 18 * 1024 * 1024} className="h-10 rounded-lg bg-star-500 px-5 text-sm font-semibold text-white hover:bg-star-600 disabled:opacity-50">
                   {sending ? "Envoi…" : threadId ? "Envoyer la réponse" : "Envoyer l’email"}
                 </button>
+                {uploadSize > 18 * 1024 * 1024 ? <span className="text-sm text-red-700">Les fichiers sélectionnés dépassent 18 Mo.</span> : null}
                 {status ? <span className={`text-sm ${status.ok ? "text-green-700" : "text-red-700"}`}>{status.text}</span> : null}
               </div>
             </div>
@@ -223,6 +283,7 @@ export function EmailClient({
                         </div>
                         <div className="mt-1 text-xs text-grey-brand">
                           {message.direction === "incoming" ? `De ${message.from_email || "client"}` : `À ${message.to_emails.join(", ") || prospectEmail}`} · {dateEmail(message.sent_at)}
+                          {message.cc_emails.length ? ` · CC : ${message.cc_emails.join(", ")}` : ""}
                         </div>
                       </div>
                       <button type="button" onClick={() => repondre(message)} className="text-xs font-semibold text-navy-700 underline underline-offset-2">Répondre</button>
