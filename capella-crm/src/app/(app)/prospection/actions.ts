@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
 import type { ProspectInsert } from "@/lib/domain/database.types";
 import { PROSPECT_STAGES } from "@/lib/domain/stages";
-import { envoyerAcdYoutrustSiNecessaire } from "@/lib/youtrust";
 
 /**
  * Ces actions écrivent avec la session de l'utilisateur, jamais avec la clé
@@ -67,16 +66,9 @@ export async function changerEtape(
 
   if (error) return { ok: false, message: messageLisible(error.message) };
 
-  let message = `Étape : ${stage}`;
-  if (stage === "Demande ACD") {
-    const acd = await envoyerAcdYoutrustSiNecessaire(id);
-    if (!acd.ok) message = acd.message;
-    else if (!acd.skipped) message = `${message} — ${acd.message}`;
-  }
-
   revalidatePath("/prospection");
   revalidatePath(`/prospection/${id}`);
-  return { ok: true, message };
+  return { ok: true, message: `Étape : ${stage}` };
 }
 
 export async function enregistrerProchaineAction(
@@ -171,16 +163,9 @@ export async function enregistrerFiche(
 
   if (error) return { ok: false, message: messageLisible(error.message) };
 
-  let message = "Fiche enregistrée.";
-  if (patch.stage === "Demande ACD") {
-    const acd = await envoyerAcdYoutrustSiNecessaire(id);
-    if (!acd.ok) message = acd.message;
-    else if (!acd.skipped) message = `${message} ${acd.message}`;
-  }
-
   revalidatePath("/prospection");
   revalidatePath(`/prospection/${id}`);
-  return { ok: true, message };
+  return { ok: true, message: "Fiche enregistrée." };
 }
 
 export async function creerProspect(
@@ -211,10 +196,6 @@ export async function creerProspect(
     .single();
 
   if (error) return { ok: false, message: messageLisible(error.message) };
-
-  if (patch.stage === "Demande ACD") {
-    await envoyerAcdYoutrustSiNecessaire(data.id);
-  }
 
   revalidatePath("/prospection");
   redirect(`/prospection/${data.id}`);
