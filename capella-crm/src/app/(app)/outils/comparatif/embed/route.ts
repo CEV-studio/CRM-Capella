@@ -31,73 +31,47 @@ export async function GET(request: Request) {
 <section class="form-section"><div class="section-header"><span class="section-num">03</span><div><h2>Offres fournisseurs</h2><p>Saisissez les prix de chaque offre pour obtenir le comparatif</p></div></div><div class="section-body"><div class="offers-toolbar"><button type="button" id="add-offer-btn" class="btn-secondary" onclick="addOffer()">+ Ajouter une offre</button><span id="offers-count" class="offers-count"></span></div><div class="offers-scroll"><div id="offers-container" class="offers-grid"></div></div></div></section>
 <div class="actions-bar"><button type="button" class="btn-ghost" onclick="resetForm()">↺ Réinitialiser</button><button type="button" class="btn-generate" id="generate-btn" onclick="generatePDF()"><span>📄</span> Générer le PDF</button></div><div id="success-msg" class="success-msg hidden">✓ PDF généré et sauvegardé dans la fiche client !</div></main>
 <div id="spinner-overlay" class="spinner-overlay hidden"><div class="spinner-box"><div class="spinner"></div><p>Génération du PDF en cours…</p></div></div><canvas id="chart-canvas" width="760" height="380" style="position:fixed;left:-9999px;top:-9999px;display:block"></canvas>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script><script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}</script><script src="https://cdn.jsdelivr.net/gh/CEV-studio/Tabgen@main/TABGen/generator.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script><script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js')}</script><script src="https://cdn.jsdelivr.net/gh/CEV-studio/Tabgen@main/TABGen/generator.js"></script>
 <script>
 (function(){
   const memory = Object.create(null);
-  function remember(){
-    document.querySelectorAll('input[id],select[id],textarea[id]').forEach(function(el){
-      if(el.type==='file') return;
-      memory[el.id] = el.type==='checkbox' || el.type==='radio' ? { checked: el.checked } : { value: el.value };
-    });
-  }
-  function restore(){
-    document.querySelectorAll('input[id],select[id],textarea[id]').forEach(function(el){
-      const saved = memory[el.id];
-      if(!saved) return;
-      if(Object.prototype.hasOwnProperty.call(saved,'checked')) el.checked = saved.checked;
-      if(Object.prototype.hasOwnProperty.call(saved,'value')) el.value = saved.value;
-    });
-    if(typeof updateAllTotals==='function') updateAllTotals();
-    if(typeof onVolumeChange==='function') onVolumeChange();
-  }
-  function wrap(name){
-    const original = window[name];
-    if(typeof original!=='function') return;
-    window[name] = function(){ remember(); const result = original.apply(this, arguments); restore(); return result; };
-  }
+  function remember(){ document.querySelectorAll('input[id],select[id],textarea[id]').forEach(function(el){ if(el.type==='file') return; memory[el.id]=el.type==='checkbox'||el.type==='radio'?{checked:el.checked}:{value:el.value}; }); }
+  function restore(){ document.querySelectorAll('input[id],select[id],textarea[id]').forEach(function(el){ const saved=memory[el.id]; if(!saved)return; if(Object.prototype.hasOwnProperty.call(saved,'checked'))el.checked=saved.checked; if(Object.prototype.hasOwnProperty.call(saved,'value'))el.value=saved.value; }); if(typeof updateAllTotals==='function')updateAllTotals(); if(typeof onVolumeChange==='function')onVolumeChange(); }
+  function wrap(name){ const original=window[name]; if(typeof original!=='function')return; window[name]=function(){remember();const result=original.apply(this,arguments);restore();return result;}; }
   ['setEnergy','setOption','onBandChange','addOffer','removeOffer'].forEach(wrap);
-  document.addEventListener('input', function(e){ const el=e.target; if(el && el.id) remember(); }, true);
-  document.addEventListener('change', function(e){ const el=e.target; if(el && el.id) remember(); }, true);
-  window.__tabgenRemember = remember;
+  document.addEventListener('input',function(e){const el=e.target;if(el&&el.id)remember();},true); document.addEventListener('change',function(e){const el=e.target;if(el&&el.id)remember();},true); window.__tabgenRemember=remember;
 })();
 
+/* Intercepte chaque nouvelle instance jsPDF sans toucher à jsPDF.API.save.
+   L'ancien hook modifiait une méthode statique inexistante et faisait échouer doc.save(). */
 (function(){
-  if(!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API) return;
-  const originalSave = window.jspdf.jsPDF.API.save;
-  window.jspdf.jsPDF.API.save = function(fileName){
-    try {
-      const blob = this.output('blob');
-      fetch('/api/outils/comparatif/${prospectId}/sauvegarder', {
-        method: 'POST',
-        headers: { 'content-type': 'application/pdf', 'x-file-name': String(fileName || 'Comparatif.pdf') },
-        body: blob,
-        credentials: 'same-origin'
-      }).then(function(r){
-        if(!r.ok) return r.text().then(function(t){ throw new Error(t || 'Sauvegarde impossible'); });
-      }).catch(function(err){
-        console.error('Sauvegarde CRM du comparatif :', err);
-        alert('Le PDF a été téléchargé, mais sa sauvegarde dans la fiche CRM a échoué.');
-      });
-    } catch(err) {
-      console.error('Préparation sauvegarde CRM :', err);
-    }
-    return originalSave.apply(this, arguments);
-  };
+  if(!window.jspdf || !window.jspdf.jsPDF) return;
+  const OriginalJsPDF = window.jspdf.jsPDF;
+  function WrappedJsPDF(){
+    const doc = Reflect.construct(OriginalJsPDF, Array.from(arguments));
+    const originalSave = doc.save.bind(doc);
+    doc.save = function(fileName){
+      try {
+        const blob = doc.output('blob');
+        fetch('/api/outils/comparatif/${prospectId}/sauvegarder', {
+          method:'POST', headers:{'content-type':'application/pdf','x-file-name':String(fileName||'Comparatif.pdf')}, body:blob, credentials:'same-origin'
+        }).then(function(r){ if(!r.ok)return r.text().then(function(t){throw new Error(t||'Sauvegarde impossible');}); })
+          .catch(function(err){ console.error('Sauvegarde CRM du comparatif :',err); alert('Le PDF a été téléchargé, mais sa sauvegarde dans la fiche CRM a échoué.'); });
+      } catch(err){ console.error('Préparation sauvegarde CRM :',err); }
+      return originalSave(fileName);
+    };
+    return doc;
+  }
+  Object.assign(WrappedJsPDF, OriginalJsPDF);
+  WrappedJsPDF.prototype = OriginalJsPDF.prototype;
+  window.jspdf.jsPDF = WrappedJsPDF;
 })();
 
 document.addEventListener('DOMContentLoaded',function(){
-  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v};
-  set('company','${company}');set('firstName','${firstName}');set('lastName','${lastName}');set('pdl','${pdl}');
-  if(typeof setEnergy==='function')setEnergy('${energy}');
-  let opt='';const raw='${esc(optionRaw)}';
-  if(raw.includes('base'))opt='c5base';else if(raw.includes('hp')||raw.includes('hc'))opt='c5hphc';else if(raw.includes('c4'))opt='c4';else if(raw.includes('c3'))opt='c3';else if(raw.includes('c2'))opt='c2';else if(raw.includes('c1'))opt='c1';
-  if(opt&&typeof setOption==='function')setOption(opt);
-  const vol=document.getElementById('vol_total');
-  if(vol&&${Number.isFinite(car) ? car : 0}>0){vol.value=String(${Number.isFinite(car) ? car : 0}/1000);if(typeof onVolumeChange==='function')onVolumeChange()}
-  if(typeof window.__tabgenRemember==='function')window.__tabgenRemember();
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v}; set('company','${company}');set('firstName','${firstName}');set('lastName','${lastName}');set('pdl','${pdl}'); if(typeof setEnergy==='function')setEnergy('${energy}');
+  let opt='';const raw='${esc(optionRaw)}'; if(raw.includes('base'))opt='c5base';else if(raw.includes('hp')||raw.includes('hc'))opt='c5hphc';else if(raw.includes('c4'))opt='c4';else if(raw.includes('c3'))opt='c3';else if(raw.includes('c2'))opt='c2';else if(raw.includes('c1'))opt='c1'; if(opt&&typeof setOption==='function')setOption(opt);
+  const vol=document.getElementById('vol_total'); if(vol&&${Number.isFinite(car) ? car : 0}>0){vol.value=String(${Number.isFinite(car) ? car : 0}/1000);if(typeof onVolumeChange==='function')onVolumeChange()} if(typeof window.__tabgenRemember==='function')window.__tabgenRemember();
 });
 </script></body></html>`;
-
-  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+  return new Response(html,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
 }
