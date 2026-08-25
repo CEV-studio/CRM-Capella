@@ -290,7 +290,23 @@ export function EmailClient({
                     </div>
                     <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-navy-800">{message.body_text || message.snippet || "(contenu non disponible)"}</div>
                     {Array.isArray(message.attachments) && message.attachments.length ? (
-                      <div className="mt-3 text-xs text-grey-brand">Pièces jointes : {message.attachments.map((a) => a.filename).filter(Boolean).join(", ")}</div>
+                      <div className="mt-3">
+                        <div className="mb-1.5 text-xs font-semibold text-grey-brand">Pièces jointes</div>
+                        <div className="flex flex-wrap gap-2">
+                          {message.attachments.map((attachment, index) => attachment.filename ? (
+                            <a
+                              key={`${attachment.filename}-${index}`}
+                              href={`/api/gmail/messages/${message.id}/attachments/${index}`}
+                              className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-navy-100 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 hover:border-star-300 hover:text-star-700"
+                              title={`Télécharger ${attachment.filename}`}
+                            >
+                              <span aria-hidden>📎</span>
+                              <span className="max-w-[300px] truncate">{attachment.filename}</span>
+                              {attachment.size ? <span className="font-normal text-grey-brand">{poidsFichier(attachment.size)}</span> : null}
+                            </a>
+                          ) : null)}
+                        </div>
+                      </div>
                     ) : null}
                   </article>
                 ))}
