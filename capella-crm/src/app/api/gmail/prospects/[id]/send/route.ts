@@ -118,6 +118,7 @@ export async function POST(
       attachments,
       threadId,
       inReplyTo,
+      profileId: profile.id,
     });
 
     await syncProspectEmails(id, prospect.mail.trim());
