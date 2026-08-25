@@ -56,16 +56,10 @@ export default async function ProspectionPage({
   const tri = TRIS[cleTri];
   const page = Math.max(1, Number(filtres.page ?? 1) || 1);
 
-  // --- Construction de la requête -------------------------------------
-  // RLS fait déjà le cloisonnement : un commercial ne verra que ses lignes,
-  // quels que soient les filtres demandés ici.
   let requete = supabase
     .from("prospects")
-    // La liste ne reçoit que les champs réellement affichés. Les données
-    // détaillées (notes, PJ, CAR, etc.) restent chargées à l'ouverture de la
-    // fiche, ce qui allège chaque retour à la prospection.
     .select(
-      "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, last_action_at, assigned_to, source_id, date_fin_contrat",
+      "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, notes, last_action_at, assigned_to, source_id, date_fin_contrat",
       { count: "exact" },
     )
     .is("deleted_at", null);
@@ -108,9 +102,6 @@ export default async function ProspectionPage({
 
   const debut = (page - 1) * PAR_PAGE;
 
-  // --- Tout en parallèle : la liste des prospects, la liste des commerciaux
-  //     (réservée à l'admin) et les référentiels (sources, étapes). Aucune de
-  //     ces lectures ne dépend d'une autre, donc on n'attend qu'une seule fois.
   const [{ data, count, error }, { data: profils }, sources, etapes] =
     await Promise.all([
       requete
@@ -123,13 +114,8 @@ export default async function ProspectionPage({
       chargerEtapesProspect(),
     ]);
 
-  const vuesRapides = etapes
-    .filter((s) => s.quick_filter)
-    .map((s) => s.label);
-
-  const nomParCommercial = new Map(
-    (profils ?? []).map((p) => [p.id, p.full_name]),
-  );
+  const vuesRapides = etapes.filter((s) => s.quick_filter).map((s) => s.label);
+  const nomParCommercial = new Map((profils ?? []).map((p) => [p.id, p.full_name]));
   const nomParSource = new Map(sources.map((s) => [s.id, s.name]));
 
   const lignes: LigneProspect[] = ((data ?? []) as Prospect[]).map((p) => ({
@@ -140,39 +126,25 @@ export default async function ProspectionPage({
 
   const total = count ?? 0;
   const nbPages = Math.max(1, Math.ceil(total / PAR_PAGE));
-
-  // Vue mémorisée : si l'URL ne précise pas la vue (ex. retour par le menu),
-  // on reprend la dernière vue choisie, gardée dans un cookie (voir MemoVue).
   const vuePreferee = (await cookies()).get("prospection_vue")?.value;
-  const kanban =
-    filtres.vue !== undefined
-      ? filtres.vue === "kanban"
-      : vuePreferee === "kanban";
+  const kanban = filtres.vue !== undefined ? filtres.vue === "kanban" : vuePreferee === "kanban";
 
   function lienVue(vue: "liste" | "kanban") {
-    const p = new URLSearchParams(
-      Object.entries(filtres).filter(([, v]) => v) as [string, string][],
-    );
-    // On pose toujours la vue explicitement : le menu (sans paramètre) laisse
-    // alors le cookie décider, mais un clic Liste/Kanban gagne toujours.
+    const p = new URLSearchParams(Object.entries(filtres).filter(([, v]) => v) as [string, string][]);
     p.set("vue", vue);
     p.delete("page");
     return `/prospection?${p.toString()}`;
   }
 
   function lienTri(cle: CleTri) {
-    const p = new URLSearchParams(
-      Object.entries(filtres).filter(([, v]) => v) as [string, string][],
-    );
+    const p = new URLSearchParams(Object.entries(filtres).filter(([, v]) => v) as [string, string][]);
     p.set("tri", cle);
     p.delete("page");
     return `/prospection?${p.toString()}`;
   }
 
   function lienPage(n: number) {
-    const p = new URLSearchParams(
-      Object.entries(filtres).filter(([, v]) => v) as [string, string][],
-    );
+    const p = new URLSearchParams(Object.entries(filtres).filter(([, v]) => v) as [string, string][]);
     p.set("page", String(n));
     return `/prospection?${p.toString()}`;
   }
@@ -182,56 +154,24 @@ export default async function ProspectionPage({
       <MemoVue vue={kanban ? "kanban" : "liste"} />
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-navy-800">
-            Prospection
-          </h1>
+          <h1 className="font-display text-2xl font-bold text-navy-800">Prospection</h1>
           <p className="mt-1 text-sm text-grey-brand">
-            {estAdmin
-              ? "Tous les prospects de Capella Energy."
-              : "Tes prospects. Change une étape directement depuis la ligne."}
+            {estAdmin ? "Tous les prospects de Capella Energy." : "Tes prospects. Change une étape directement depuis la ligne."}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-lg border border-navy-200 p-0.5">
-            <Link
-              href={lienVue("liste")}
-              className={
-                !kanban
-                  ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white"
-                  : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700 hover:bg-navy-50"
-              }
-            >
-              Liste
-            </Link>
-            <Link
-              href={lienVue("kanban")}
-              className={
-                kanban
-                  ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white"
-                  : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700 hover:bg-navy-50"
-              }
-            >
-              Kanban
-            </Link>
+            <Link href={lienVue("liste")} className={!kanban ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white" : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700 hover:bg-navy-50"}>Liste</Link>
+            <Link href={lienVue("kanban")} className={kanban ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white" : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700 hover:bg-navy-50"}>Kanban</Link>
           </div>
-          <Link
-            href="/prospection/nouveau"
-            className="inline-flex h-10 items-center rounded-lg bg-star-500 px-4 text-sm font-semibold text-white hover:bg-star-600"
-          >
-            Nouveau prospect
-          </Link>
+          <Link href="/prospection/nouveau" className="inline-flex h-10 items-center rounded-lg bg-star-500 px-4 text-sm font-semibold text-white hover:bg-star-600">Nouveau prospect</Link>
         </div>
       </header>
 
       <div className="mb-4">
         <Filtres
-          commerciaux={(profils ?? []).map((p) => ({
-            value: p.id,
-            label: p.full_name,
-          }))}
-          sources={sources
-            .filter((s) => s.is_active)
-            .map((s) => ({ value: s.id, label: s.name }))}
+          commerciaux={(profils ?? []).map((p) => ({ value: p.id, label: p.full_name }))}
+          sources={sources.filter((s) => s.is_active).map((s) => ({ value: s.id, label: s.name }))}
           total={total}
           vuesRapides={vuesRapides}
           peutPersonnaliser={peutGerer(profil)}
@@ -241,46 +181,25 @@ export default async function ProspectionPage({
       {kanban ? (
         <KanbanProspection lignes={lignes} afficherCommercial={estAdmin} />
       ) : (
-      <Card className="overflow-hidden">
-        <ListeProspects
-          lignes={lignes}
-          afficherCommercial={estAdmin}
-          peutSupprimer={peutSupprimer(profil)}
-          triLiens={{
-            societe: lienTri("societe"),
-            etape: lienTri("etape"),
-            relance: lienTri("relance"),
-            action: lienTri("action"),
-          }}
-          messageErreur={error?.message}
-        />
+        <Card className="overflow-hidden">
+          <ListeProspects
+            lignes={lignes}
+            afficherCommercial={estAdmin}
+            peutSupprimer={peutSupprimer(profil)}
+            triLiens={{ societe: lienTri("societe"), etape: lienTri("etape"), relance: lienTri("relance"), action: lienTri("action") }}
+            messageErreur={error?.message}
+          />
 
-        {nbPages > 1 ? (
-          <div className="flex items-center justify-between border-t border-navy-100 px-4 py-3 text-sm">
-            <span className="tabular text-grey-brand">
-              Page {page} sur {nbPages}
-            </span>
-            <div className="flex gap-2">
-              {page > 1 ? (
-                <Link
-                  href={lienPage(page - 1)}
-                  className="rounded-lg border border-navy-200 px-3 py-1.5 hover:bg-navy-50"
-                >
-                  Précédent
-                </Link>
-              ) : null}
-              {page < nbPages ? (
-                <Link
-                  href={lienPage(page + 1)}
-                  className="rounded-lg border border-navy-200 px-3 py-1.5 hover:bg-navy-50"
-                >
-                  Suivant
-                </Link>
-              ) : null}
+          {nbPages > 1 ? (
+            <div className="flex items-center justify-between border-t border-navy-100 px-4 py-3 text-sm">
+              <span className="tabular text-grey-brand">Page {page} sur {nbPages}</span>
+              <div className="flex gap-2">
+                {page > 1 ? <Link href={lienPage(page - 1)} className="rounded-lg border border-navy-200 px-3 py-1.5 hover:bg-navy-50">Précédent</Link> : null}
+                {page < nbPages ? <Link href={lienPage(page + 1)} className="rounded-lg border border-navy-200 px-3 py-1.5 hover:bg-navy-50">Suivant</Link> : null}
+              </div>
             </div>
-          </div>
-        ) : null}
-      </Card>
+          ) : null}
+        </Card>
       )}
 
       <p className="mt-4 text-xs text-grey-brand">
