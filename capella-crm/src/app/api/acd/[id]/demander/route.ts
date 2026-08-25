@@ -23,15 +23,26 @@ export async function POST(
     return new NextResponse("Le prospect doit être à l'étape Demande ACD", { status: 400 });
   }
 
+  const internalSecret = process.env.FORM_WEBHOOK_SECRET;
+  if (!internalSecret) {
+    return new NextResponse("Secret interne ACD non configuré", { status: 500 });
+  }
+
   const cookie = request.headers.get("cookie") ?? "";
   const pdfResponse = await fetch(new URL(`/api/acd/${id}`, request.url), {
-    headers: { cookie },
+    headers: {
+      cookie,
+      "x-capella-internal-secret": internalSecret,
+    },
     cache: "no-store",
   });
 
   if (!pdfResponse.ok) {
     const detail = await pdfResponse.text().catch(() => "");
-    return new NextResponse(`Génération ACD impossible${detail ? ` : ${detail}` : ""}`, { status: 502 });
+    return new NextResponse(
+      `Génération ACD impossible${detail ? ` : ${detail}` : ""}`,
+      { status: 502 },
+    );
   }
 
   const pdf = await pdfResponse.arrayBuffer();
