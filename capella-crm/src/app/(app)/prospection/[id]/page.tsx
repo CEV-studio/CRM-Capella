@@ -8,9 +8,11 @@ import { fmtDateHeure } from "@/lib/format";
 import { nomComplet } from "@/lib/domain/noms";
 import { BoutonSupprimer } from "../../admin/corbeille/bouton-supprimer";
 import { PiecesJointes } from "@/components/pieces-jointes";
+import { EmailClient } from "@/components/email-client";
 import { FicheForm } from "../fiche-form";
 import { chargerSources, chargerChampsPersonnalises } from "@/lib/referentiels";
-import type { PieceJointe, Prospect, Profile } from "@/lib/domain/database.types";
+import { getActiveGmailAccount } from "@/lib/gmail";
+import type { EmailMessage, EmailTemplate, PieceJointe, Prospect, Profile } from "@/lib/domain/database.types";
 
 export const dynamic = "force-dynamic";
 
@@ -27,17 +29,37 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const { data: prospect } = await supabase.from("prospects").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
   if (!prospect) notFound();
 
-  const [sources, { data: profils }, { data: affaireLiee }, { data: piecesData }, champsPerso] = await Promise.all([
+  const [sources, { data: profils }, { data: affaireLiee }, { data: piecesData }, champsPerso, { data: templateData }, { data: messageData }, gmailAccount] = await Promise.all([
     chargerSources(),
     estAdmin ? supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name") : Promise.resolve({ data: [] as Pick<Profile, "id" | "full_name">[] }),
     supabase.from("affaires").select("id, ref").eq("prospect_id", id).is("deleted_at", null).maybeSingle(),
     supabase.from("pieces_jointes").select("*").eq("prospect_id", id).order("created_at"),
     chargerChampsPersonnalises(),
+    supabase.from("email_templates").select("*").eq("is_active", true).order("sort_order").order("name"),
+    supabase.from("email_messages").select("*").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(100),
+    getActiveGmailAccount().catch(() => null),
   ]);
 
   const p = prospect as Prospect;
   const pretATransferer = isTransferable(p.stage);
   const pieces = (piecesData ?? []) as PieceJointe[];
+  const piecesVisibles = estAdmin ? pieces : pieces.filter((x) => x.type !== "ACD");
+  const templates = (templateData ?? []) as EmailTemplate[];
+  const messages = (messageData ?? []) as EmailMessage[];
+  const fournisseur = p.fournisseur_electricite || p.fournisseur_gaz || "";
+  const variables: Record<string, string> = {
+    prenom: p.prenom || "",
+    nom: p.nom || "",
+    societe: p.raison_sociale || "",
+    email: p.mail || "",
+    commercial: profil.full_name,
+    ref: p.ref || "",
+    siren: p.siren || "",
+    pdl: p.pdl || "",
+    pce: p.pce || "",
+    fournisseur,
+    date_echeance: p.date_fin_contrat || "",
+  };
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
@@ -77,7 +99,19 @@ export default async function FicheProspectPage({ params, searchParams }: {
       </header>
 
       <FicheForm prospect={p} estAdmin={estAdmin} sources={sources.filter((s) => s.is_active).map((s) => ({ value: s.id, label: s.name }))} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} commerciaux={(profils ?? []).map((c) => ({ value: c.id, label: c.full_name }))} />
-      <div className="mt-6"><PiecesJointes scope="prospect" parentId={p.id} pieces={estAdmin ? pieces : pieces.filter((x) => x.type !== "ACD")} /></div>
+      <div className="mt-6">
+        <EmailClient
+          prospectId={p.id}
+          prospectEmail={p.mail}
+          variables={variables}
+          templates={templates.map((t) => ({ id: t.id, name: t.name, subject: t.subject, body: t.body }))}
+          messages={messages}
+          pieces={piecesVisibles.map((piece) => ({ id: piece.id, file_name: piece.file_name, type: piece.type }))}
+          gmailConnected={Boolean(gmailAccount)}
+          estAdmin={estAdmin}
+        />
+      </div>
+      <div className="mt-6"><PiecesJointes scope="prospect" parentId={p.id} pieces={piecesVisibles} /></div>
     </main>
   );
 }
