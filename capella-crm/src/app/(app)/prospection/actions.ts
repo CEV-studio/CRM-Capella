@@ -96,6 +96,29 @@ export async function enregistrerProchaineAction(
   return { ok: true, message: "Enregistré." };
 }
 
+export async function enregistrerNotes(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireProfile();
+
+  const id = String(formData.get("id") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  if (!id) return { ok: false, message: "Prospect introuvable." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("prospects")
+    .update({ notes: notes || null })
+    .eq("id", id);
+
+  if (error) return { ok: false, message: messageLisible(error.message) };
+
+  revalidatePath("/prospection");
+  revalidatePath(`/prospection/${id}`);
+  return { ok: true, message: "Note enregistrée." };
+}
+
 /** Champs de la fiche que l'utilisateur peut modifier. */
 const CHAMPS_FICHE = [
   "nom", "prenom", "mail", "tel_mobile", "tel_fixe",
