@@ -3,7 +3,8 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BUCKET_PIECES } from "@/lib/supabase/storage";
-import { syncProspectEmails, type GmailAttachment } from "@/lib/gmail";
+import { type GmailAttachment } from "@/lib/gmail";
+import { syncProspectEmailsFast } from "@/lib/gmail-sync-fast";
 import { sendGmailMessageAdvanced } from "@/lib/gmail-message-tools";
 
 const MAX_TOTAL = 18 * 1024 * 1024;
@@ -121,7 +122,7 @@ export async function POST(
       profileId: profile.id,
     });
 
-    await syncProspectEmails(id, prospect.mail.trim());
+    await syncProspectEmailsFast(id, prospect.mail.trim());
     const admin = createAdminClient();
     await admin.from("email_messages").update({
       triggered_by: profile.id,
