@@ -16,6 +16,12 @@ type LigneAcd = {
   tel_fixe: string | null;
   last_action_at: string | null;
   acd_downloaded_at: string | null;
+  assigned_to: string | null;
+};
+
+type Commercial = {
+  id: string;
+  full_name: string;
 };
 
 function libelleProspect(ligne: LigneAcd): string {
@@ -28,14 +34,39 @@ export default async function AcdATraiterPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("prospects")
-    .select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, last_action_at, acd_downloaded_at")
-    .eq("stage", "Demande ACD")
-    .is("deleted_at", null)
-    .order("last_action_at", { ascending: false });
+  const [{ data, error }, { data: profils }] = await Promise.all([
+    supabase
+      .from("prospects")
+      .select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, last_action_at, acd_downloaded_at, assigned_to")
+      .eq("stage", "Demande ACD")
+      .is("deleted_at", null)
+      .order("last_action_at", { ascending: false }),
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("is_active", true)
+      .order("full_name"),
+  ]);
 
   const lignes: LigneAcd[] = data ?? [];
+  const commerciaux: Commercial[] = profils ?? [];
+  const nomsCommerciaux = new Map(commerciaux.map((c) => [c.id, c.full_name]));
+
+  const stats = new Map<string, { nom: string; total: number; telechargees: number }>();
+  for (const ligne of lignes) {
+    const cle = ligne.assigned_to || "sans-attribution";
+    const nom = ligne.assigned_to
+      ? nomsCommerciaux.get(ligne.assigned_to) || "Commercial inconnu"
+      : "Sans attribution";
+    const actuel = stats.get(cle) || { nom, total: 0, telechargees: 0 };
+    actuel.total += 1;
+    if (ligne.acd_downloaded_at) actuel.telechargees += 1;
+    stats.set(cle, actuel);
+  }
+
+  const statsParCommercial = Array.from(stats.values()).sort((a, b) =>
+    a.nom.localeCompare(b.nom, "fr"),
+  );
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
@@ -50,6 +81,28 @@ export default async function AcdATraiterPage() {
         </div>
       ) : null}
 
+      {statsParCommercial.length > 0 ? (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {statsParCommercial.map((stat) => (
+            <div key={stat.nom} className="rounded-xl border border-navy-100 bg-white p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-grey-brand">
+                {stat.nom}
+              </div>
+              <div className="mt-2 flex items-end gap-4">
+                <div>
+                  <div className="text-2xl font-bold text-navy-800">{stat.total}</div>
+                  <div className="text-xs text-grey-brand">demandes ACD</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-green-700">{stat.telechargees}</div>
+                  <div className="text-xs text-grey-brand">téléchargées</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="mt-6 overflow-hidden rounded-xl border border-navy-100 bg-white">
         {lignes.length === 0 ? (
           <p className="p-5 text-sm text-grey-brand">Aucune ACD à traiter.</p>
@@ -57,6 +110,9 @@ export default async function AcdATraiterPage() {
           <div className="divide-y divide-navy-100">
             {lignes.map((ligne) => {
               const telephone = ligne.tel_mobile || ligne.tel_fixe;
+              const detenteur = ligne.assigned_to
+                ? nomsCommerciaux.get(ligne.assigned_to) || "Commercial inconnu"
+                : "Sans attribution";
 
               return (
                 <div key={ligne.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -78,6 +134,7 @@ export default async function AcdATraiterPage() {
                       {ligne.last_action_at ? ` · demande ${fmtDateHeure(ligne.last_action_at)}` : ""}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-grey-brand">
+                      <span className="font-semibold text-navy-700">Détenteur : {detenteur}</span>
                       {ligne.mail ? <span>{ligne.mail}</span> : null}
                       {telephone ? <span>{telephone}</span> : null}
                       {ligne.acd_downloaded_at ? (
