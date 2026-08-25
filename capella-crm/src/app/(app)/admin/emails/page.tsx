@@ -1,7 +1,8 @@
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { creerTemplate, modifierTemplate, supprimerTemplate } from "./actions";
-import type { EmailAccount, EmailTemplate } from "@/lib/domain/database.types";
+import { creerTemplate, modifierTemplate, supprimerTemplate, enregistrerSignature, supprimerSignature } from "./actions";
+import { SignatureEditor } from "@/components/signature-editor";
+import type { EmailAccount, EmailSignature, EmailTemplate, Profile } from "@/lib/domain/database.types";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +18,25 @@ export default async function AdminEmailsPage({ searchParams }: {
   const query = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: accountData, error: accountError }, { data: templateData, error: templateError }] = await Promise.all([
+  const [
+    { data: accountData, error: accountError },
+    { data: templateData, error: templateError },
+    { data: signatureData },
+    { data: profileData },
+  ] = await Promise.all([
     supabase.from("email_accounts").select("*").eq("is_active", true).order("connected_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("email_templates").select("*").order("sort_order").order("name"),
+    supabase.from("email_signatures").select("*").order("created_at"),
+    supabase.from("profiles").select("id, full_name, email, role, is_active").eq("is_active", true).order("full_name"),
   ]);
 
   const account = accountData as EmailAccount | null;
   const templates = (templateData ?? []) as EmailTemplate[];
+  const signatures = (signatureData ?? []) as EmailSignature[];
+  const profiles = (profileData ?? []) as Pick<Profile, "id" | "full_name" | "email" | "role" | "is_active">[];
+  const signatureDefault = signatures.find((s) => !s.profile_id) ?? null;
+  const signatureParProfil = new Map(signatures.filter((s) => s.profile_id).map((s) => [s.profile_id as string, s]));
+
   const oauthConfigured = Boolean(
     process.env.GOOGLE_GMAIL_CLIENT_ID &&
     process.env.GOOGLE_GMAIL_CLIENT_SECRET &&
@@ -34,7 +47,7 @@ export default async function AdminEmailsPage({ searchParams }: {
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-8">
       <h1 className="font-display text-2xl font-bold text-navy-800">Emails & templates</h1>
-      <p className="mt-1 text-sm text-grey-brand">Configure la boîte Gmail utilisée par l’équipe et les modèles disponibles depuis les fiches clients.</p>
+      <p className="mt-1 text-sm text-grey-brand">Configure la boîte Gmail utilisée par l’équipe, les signatures CRM et les modèles disponibles depuis les fiches clients.</p>
 
       {query.gmail === "connecte" ? <div className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Boîte Gmail connectée.</div> : null}
       {query.gmail === "deconnecte" ? <div className="mt-4 rounded-lg bg-navy-50 px-4 py-3 text-sm text-navy-700">Boîte Gmail déconnectée.</div> : null}
@@ -66,6 +79,60 @@ export default async function AdminEmailsPage({ searchParams }: {
         {!oauthConfigured ? (
           <p className="mt-3 text-xs text-grey-brand">Variables Vercel nécessaires : GOOGLE_GMAIL_CLIENT_ID, GOOGLE_GMAIL_CLIENT_SECRET et GMAIL_TOKEN_ENCRYPTION_KEY.</p>
         ) : null}
+      </section>
+
+      <section className="mt-6 rounded-xl border border-navy-100 bg-white p-5">
+        <h2 className="font-semibold text-navy-800">Signatures CRM</h2>
+        <p className="mt-1 text-sm text-grey-brand">
+          Pour une boîte partagée comme hello@capellaenergy.fr, le CRM utilise d’abord la signature du commercial qui envoie. S’il n’en a pas, il prend la signature par défaut. La signature Gmail ne sert qu’en dernier recours.
+        </p>
+
+        <div className="mt-5 rounded-xl border border-star-200 bg-star-50/30 p-4">
+          <div className="mb-3">
+            <h3 className="text-sm font-semibold text-navy-800">Signature par défaut de l’équipe</h3>
+            <p className="text-xs text-grey-brand">Utilisée lorsqu’un utilisateur n’a pas de signature personnelle.</p>
+          </div>
+          <form action={enregistrerSignature} className="grid gap-3">
+            <input type="hidden" name="profile_id" value="default" />
+            <input name="name" defaultValue={signatureDefault?.name || "Signature Capella Energy"} className="h-9 rounded-lg border border-navy-200 bg-white px-3 text-sm" />
+            <SignatureEditor name="html" initialHtml={signatureDefault?.html || ""} />
+            <div className="flex gap-3">
+              <button className="h-9 rounded-lg bg-navy-800 px-4 text-sm font-semibold text-white hover:bg-navy-700">Enregistrer la signature</button>
+            </div>
+          </form>
+          {signatureDefault ? (
+            <form action={supprimerSignature} className="mt-2">
+              <input type="hidden" name="id" value={signatureDefault.id} />
+              <button className="text-xs text-red-700 underline underline-offset-2">Supprimer la signature par défaut</button>
+            </form>
+          ) : null}
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          {profiles.map((profile) => {
+            const signature = signatureParProfil.get(profile.id) ?? null;
+            return (
+              <div key={profile.id} className="rounded-xl border border-navy-100 p-4">
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold text-navy-800">{profile.full_name}</h3>
+                  <p className="text-xs text-grey-brand">{profile.email} · {profile.role === "admin" ? "Administrateur" : "Commercial"}</p>
+                </div>
+                <form action={enregistrerSignature} className="grid gap-3">
+                  <input type="hidden" name="profile_id" value={profile.id} />
+                  <input name="name" defaultValue={signature?.name || `Signature ${profile.full_name}`} className="h-9 rounded-lg border border-navy-200 px-3 text-sm" />
+                  <SignatureEditor name="html" initialHtml={signature?.html || ""} />
+                  <button className="h-9 justify-self-start rounded-lg bg-navy-800 px-4 text-sm font-semibold text-white hover:bg-navy-700">Enregistrer</button>
+                </form>
+                {signature ? (
+                  <form action={supprimerSignature} className="mt-2">
+                    <input type="hidden" name="id" value={signature.id} />
+                    <button className="text-xs text-red-700 underline underline-offset-2">Supprimer cette signature</button>
+                  </form>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <section className="mt-6 rounded-xl border border-navy-100 bg-white p-5">
