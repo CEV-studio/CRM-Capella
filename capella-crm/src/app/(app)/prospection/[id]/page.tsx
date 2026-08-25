@@ -10,6 +10,7 @@ import { BoutonSupprimer } from "../../admin/corbeille/bouton-supprimer";
 import { PiecesJointes } from "@/components/pieces-jointes";
 import { EmailClient } from "@/components/email-client";
 import { ProspectInfoSidebar } from "@/components/prospect-info-sidebar";
+import { ProspectNoteEditor } from "@/components/prospect-note-editor";
 import { chargerSources, chargerChampsPersonnalises } from "@/lib/referentiels";
 import { getActiveGmailAccount } from "@/lib/gmail";
 import type { EmailMessage, EmailTemplate, PieceJointe, Prospect, Profile } from "@/lib/domain/database.types";
@@ -33,7 +34,20 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const { data: prospect } = await supabase.from("prospects").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
   if (!prospect) notFound();
 
-  const [sources, { data: profils }, { data: affaireLiee }, { data: piecesData }, champsPerso, { data: templateData }, { data: messageData }, gmailAccount] = await Promise.all([
+  const p = prospect as Prospect;
+
+  const [
+    sources,
+    { data: profils },
+    { data: affaireLiee },
+    { data: piecesData },
+    champsPerso,
+    { data: templateData },
+    { data: messageData },
+    gmailAccount,
+    { data: fichePrecedente },
+    { data: ficheSuivante },
+  ] = await Promise.all([
     chargerSources(),
     estAdmin ? supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name") : Promise.resolve({ data: [] as Pick<Profile, "id" | "full_name">[] }),
     supabase.from("affaires").select("id, ref").eq("prospect_id", id).is("deleted_at", null).maybeSingle(),
@@ -42,9 +56,10 @@ export default async function FicheProspectPage({ params, searchParams }: {
     supabase.from("email_templates").select("*").eq("is_active", true).order("sort_order").order("name"),
     supabase.from("email_messages").select("*").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(100),
     getActiveGmailAccount().catch(() => null),
+    supabase.from("prospects").select("id, raison_sociale, nom, prenom").is("deleted_at", null).gt("created_at", p.created_at).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+    supabase.from("prospects").select("id, raison_sociale, nom, prenom").is("deleted_at", null).lt("created_at", p.created_at).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
-  const p = prospect as Prospect;
   const pretATransferer = isTransferable(p.stage);
   const pieces = (piecesData ?? []) as PieceJointe[];
   const piecesVisibles = estAdmin ? pieces : pieces.filter((x) => x.type !== "ACD");
@@ -74,7 +89,36 @@ export default async function FicheProspectPage({ params, searchParams }: {
     <main className="mx-auto w-full max-w-[1720px] px-4 py-5 2xl:px-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href="/prospection" className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700">← Retour à la prospection</Link>
-        <div className="text-xs text-grey-brand">Dernière action {fmtDateHeure(p.last_action_at)}</div>
+        <div className="flex items-center gap-3">
+          <div className="inline-flex overflow-hidden rounded-lg border border-navy-200 bg-white">
+            {fichePrecedente ? (
+              <Link
+                href={`/prospection/${fichePrecedente.id}`}
+                className="inline-flex h-9 w-10 items-center justify-center text-xl font-semibold text-navy-700 hover:bg-navy-50"
+                title={`Fiche précédente : ${fichePrecedente.raison_sociale || nomComplet(fichePrecedente.nom, fichePrecedente.prenom)}`}
+                aria-label="Fiche précédente"
+              >
+                ‹
+              </Link>
+            ) : (
+              <span className="inline-flex h-9 w-10 cursor-not-allowed items-center justify-center text-xl text-navy-200" aria-hidden>‹</span>
+            )}
+            <span className="w-px bg-navy-100" />
+            {ficheSuivante ? (
+              <Link
+                href={`/prospection/${ficheSuivante.id}`}
+                className="inline-flex h-9 w-10 items-center justify-center text-xl font-semibold text-navy-700 hover:bg-navy-50"
+                title={`Fiche suivante : ${ficheSuivante.raison_sociale || nomComplet(ficheSuivante.nom, ficheSuivante.prenom)}`}
+                aria-label="Fiche suivante"
+              >
+                ›
+              </Link>
+            ) : (
+              <span className="inline-flex h-9 w-10 cursor-not-allowed items-center justify-center text-xl text-navy-200" aria-hidden>›</span>
+            )}
+          </div>
+          <div className="text-xs text-grey-brand">Dernière action {fmtDateHeure(p.last_action_at)}</div>
+        </div>
       </div>
 
       {query.acd === "transmise" ? (
@@ -119,6 +163,8 @@ export default async function FicheProspectPage({ params, searchParams }: {
               </div>
             ) : null}
           </section>
+
+          <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
 
           {(p.next_action || p.next_action_date) ? (
             <section className="rounded-xl border border-star-200 bg-star-50/40 p-4">
