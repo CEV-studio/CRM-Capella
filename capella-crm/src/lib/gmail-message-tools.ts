@@ -63,6 +63,71 @@ function safeHeaderFileName(value: string): string {
   return value.replace(/[\r\n\"]/g, "_");
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+async function getGmailSignature(sendAsEmail: string): Promise<string> {
+  try {
+    const settings = await gmailJson<{ signature?: string }>(
+      `/settings/sendAs/${encodeURIComponent(sendAsEmail)}`,
+    );
+    return settings.signature?.trim() || "";
+  } catch (error) {
+    // Une signature ne doit jamais empêcher l'envoi d'un message.
+    console.error("Lecture de la signature Gmail impossible :", error);
+    return "";
+  }
+}
+
+function buildAlternativeParts(body: string, signatureHtml: string, boundary: string): string[] {
+  const bodyHtml = escapeHtml(body).replace(/\r?\n/g, "<br>");
+  const html = signatureHtml
+    ? `<div>${bodyHtml}</div><br><div class="gmail_signature">${signatureHtml}</div>`
+    : `<div>${bodyHtml}</div>`;
+  const signatureText = signatureHtml ? htmlToText(signatureHtml) : "";
+  const plain = signatureText ? `${body}\n\n${signatureText}` : body;
+
+  return [
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    wrapBase64(plain),
+    `--${boundary}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    wrapBase64(html),
+    `--${boundary}--`,
+  ];
+}
+
 export async function sendGmailMessageAdvanced(input: {
   to: string;
   cc?: string[];
@@ -76,7 +141,9 @@ export async function sendGmailMessageAdvanced(input: {
   const account = await getActiveGmailAccount();
   if (!account) throw new Error("Aucune boîte Gmail active n’est configurée.");
 
-  const boundary = `capella_${crypto.randomBytes(12).toString("hex")}`;
+  const signatureHtml = await getGmailSignature(account.email);
+  const mixedBoundary = `capella_mixed_${crypto.randomBytes(12).toString("hex")}`;
+  const alternativeBoundary = `capella_alt_${crypto.randomBytes(12).toString("hex")}`;
   const headers = [
     `From: ${account.display_name ? `${encodeHeader(account.display_name)} <${account.email}>` : account.email}`,
     `To: ${input.to}`,
@@ -96,25 +163,24 @@ export async function sendGmailMessageAdvanced(input: {
   if (!attachments.length) {
     mime = [
       ...headers,
-      "Content-Type: text/plain; charset=UTF-8",
-      "Content-Transfer-Encoding: base64",
+      `Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`,
       "",
-      wrapBase64(input.body),
+      ...buildAlternativeParts(input.body, signatureHtml, alternativeBoundary),
+      "",
     ].join("\r\n");
   } else {
     mime = [
       ...headers,
-      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
       "",
-      `--${boundary}`,
-      "Content-Type: text/plain; charset=UTF-8",
-      "Content-Transfer-Encoding: base64",
+      `--${mixedBoundary}`,
+      `Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`,
       "",
-      wrapBase64(input.body),
+      ...buildAlternativeParts(input.body, signatureHtml, alternativeBoundary),
       ...attachments.flatMap((attachment) => {
         const name = safeHeaderFileName(attachment.fileName);
         return [
-          `--${boundary}`,
+          `--${mixedBoundary}`,
           `Content-Type: ${attachment.mime || "application/octet-stream"}; name="${name}"`,
           "Content-Transfer-Encoding: base64",
           `Content-Disposition: attachment; filename="${name}"`,
@@ -122,7 +188,7 @@ export async function sendGmailMessageAdvanced(input: {
           wrapBase64(attachment.data),
         ];
       }),
-      `--${boundary}--`,
+      `--${mixedBoundary}--`,
       "",
     ].join("\r\n");
   }
