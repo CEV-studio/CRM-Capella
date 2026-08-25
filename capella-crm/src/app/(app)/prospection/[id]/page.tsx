@@ -55,6 +55,8 @@ export default async function FicheProspectPage({ params, searchParams }: {
             <span className="tabular">{p.ref}</span><span>· dernière action {fmtDateHeure(p.last_action_at)}</span>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Link href={`/outils/comparatif?prospect=${p.id}`} className="inline-flex h-9 items-center rounded-lg border border-navy-200 bg-white px-3 text-sm font-semibold text-navy-700 hover:bg-navy-50">Générer un comparatif</Link>
+            <Link href={`/outils/resiliation?prospect=${p.id}`} className="inline-flex h-9 items-center rounded-lg border border-navy-200 bg-white px-3 text-sm font-semibold text-navy-700 hover:bg-navy-50">Lettre de résiliation</Link>
             {p.stage === "Demande ACD" ? (
               estAdmin ? (
                 <a href={`/api/acd/${p.id}`} className="inline-flex h-9 items-center rounded-lg bg-star-500 px-3 text-sm font-semibold text-white hover:bg-star-600">Télécharger une ACD</a>
