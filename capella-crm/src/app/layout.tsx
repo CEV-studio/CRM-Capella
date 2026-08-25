@@ -17,6 +17,11 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Capella CRM",
   description: "CRM de Capella Energy — prospection et conversion.",
+  icons: {
+    icon: "/capella-avatar.svg",
+    shortcut: "/capella-avatar.svg",
+    apple: "/capella-avatar.svg",
+  },
   robots: { index: false, follow: false },
 };
 
