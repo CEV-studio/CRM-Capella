@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import { changerEtape, enregistrerProchaineAction } from "./actions";
 import type { ActionResult } from "@/lib/action-result";
 import { MenuEtape } from "@/components/menu-etape";
+import { ProspectNoteEditor } from "@/components/prospect-note-editor";
 import { PROSPECT_STAGES, stageColor } from "@/lib/domain/stages";
 import { nomComplet } from "@/lib/domain/noms";
 import { fmtDate, fmtDateHeure } from "@/lib/format";
@@ -27,28 +28,21 @@ export function Ligne({
 }: {
   p: LigneProspect;
   afficherCommercial: boolean;
-  /** Affiche une case à cocher en tête de ligne (sélection multiple). */
   selectionnable?: boolean;
   coche?: boolean;
   onToggle?: (id: string) => void;
 }) {
-  const [etatEtape, actionEtape] = useActionState<ActionResult | null, FormData>(
-    changerEtape,
-    null,
-  );
-  const [etatAction, actionProchaine] = useActionState<ActionResult | null, FormData>(
-    enregistrerProchaineAction,
-    null,
-  );
-
+  const [etatEtape, actionEtape] = useActionState<ActionResult | null, FormData>(changerEtape, null);
+  const [etatAction, actionProchaine] = useActionState<ActionResult | null, FormData>(enregistrerProchaineAction, null);
+  const [notesOuvertes, setNotesOuvertes] = useState(false);
   const formAction = useRef<HTMLFormElement>(null);
 
-  const erreur = (!etatEtape?.ok && etatEtape?.message)
-    || (!etatAction?.ok && etatAction?.message);
+  const erreur = (!etatEtape?.ok && etatEtape?.message) || (!etatAction?.ok && etatAction?.message);
+  const colSpan = (afficherCommercial ? 9 : 8) + (selectionnable ? 1 : 0);
 
   return (
     <>
-      <tr className={cn("border-b border-navy-100 hover:bg-navy-50", coche && "bg-star-50")}>
+      <tr className={cn("border-b border-navy-100 hover:bg-navy-50", coche && "bg-star-50", notesOuvertes && "bg-navy-50")}>
         {selectionnable ? (
           <td className={cn(CELL, "w-10")}>
             <input
@@ -60,44 +54,34 @@ export function Ligne({
             />
           </td>
         ) : null}
+
         <td className={cn(CELL, "min-w-56 max-w-72")}>
-          <Link
-            href={`/prospection/${p.id}`}
-            className="block truncate font-semibold text-navy-800 hover:text-star-600"
-            title={p.raison_sociale ?? undefined}
-          >
+          <Link href={`/prospection/${p.id}`} className="block truncate font-semibold text-navy-800 hover:text-star-600" title={p.raison_sociale ?? undefined}>
             {p.raison_sociale || nomComplet(p.nom, p.prenom)}
           </Link>
           <div className="tabular text-[11px] text-grey-brand">
-            {p.ref}
-            {p.siren ? ` · ${p.siren}` : ""}
+            {p.ref}{p.siren ? ` · ${p.siren}` : ""}
           </div>
         </td>
 
         <td className={cn(CELL, "text-navy-700")}>
           {nomComplet(p.nom, p.prenom, "—")}
-          {p.mail ? (
-            <div className="truncate text-[11px] text-grey-brand">{p.mail}</div>
-          ) : null}
+          {p.mail ? <div className="truncate text-[11px] text-grey-brand">{p.mail}</div> : null}
         </td>
 
         <td className={cn(CELL, "tabular whitespace-nowrap text-navy-700")}>
           {(() => {
-            // Le mobile en priorité ; à défaut le fixe, signalé par « (fixe) ».
             const numero = p.tel_mobile || p.tel_fixe;
             if (!numero) return "—";
             return (
               <a href={`tel:${numero}`} className="hover:text-star-600">
                 {numero}
-                {!p.tel_mobile ? (
-                  <span className="ml-1 text-[11px] text-grey-brand">(fixe)</span>
-                ) : null}
+                {!p.tel_mobile ? <span className="ml-1 text-[11px] text-grey-brand">(fixe)</span> : null}
               </a>
             );
           })()}
         </td>
 
-        {/* Changement d'étape en un clic, directement depuis la ligne. */}
         <td className={CELL}>
           <MenuEtape
             id={p.id}
@@ -111,11 +95,7 @@ export function Ligne({
         </td>
 
         <td className={CELL}>
-          <form
-            ref={formAction}
-            action={actionProchaine}
-            className="flex items-center gap-1.5"
-          >
+          <form ref={formAction} action={actionProchaine} className="flex items-center gap-1.5">
             <input type="hidden" name="id" value={p.id} />
             <input
               name="next_action"
@@ -136,37 +116,53 @@ export function Ligne({
           </form>
         </td>
 
-        <td className={cn(CELL, "tabular whitespace-nowrap text-xs text-grey-brand")}>
-          {fmtDateHeure(p.last_action_at)}
+        <td className={cn(CELL, "min-w-44 max-w-60")}>
+          <button
+            type="button"
+            onClick={() => setNotesOuvertes((value) => !value)}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white"
+            aria-expanded={notesOuvertes}
+          >
+            <span className="shrink-0 text-base" aria-hidden>📝</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold text-navy-700">{p.notes ? "Note" : "Ajouter une note"}</span>
+              {p.notes ? <span className="block truncate text-[11px] text-grey-brand" title={p.notes}>{p.notes}</span> : null}
+            </span>
+          </button>
         </td>
+
+        <td className={cn(CELL, "tabular whitespace-nowrap text-xs text-grey-brand")}>{fmtDateHeure(p.last_action_at)}</td>
 
         {afficherCommercial ? (
           <td className={cn(CELL, "whitespace-nowrap text-xs text-navy-700")}>
-            {p.commercial ?? (
-              <span className="text-star-600">Réservoir</span>
-            )}
+            {p.commercial ?? <span className="text-star-600">Réservoir</span>}
           </td>
         ) : null}
 
         <td className={cn(CELL, "whitespace-nowrap text-xs text-grey-brand")}>
           {p.source ?? "—"}
-          {p.date_fin_contrat ? (
-            <div className="tabular">fin : {fmtDate(p.date_fin_contrat)}</div>
-          ) : null}
+          {p.date_fin_contrat ? <div className="tabular">fin : {fmtDate(p.date_fin_contrat)}</div> : null}
         </td>
       </tr>
 
+      {notesOuvertes ? (
+        <tr className="border-b border-navy-100 bg-navy-50/70">
+          <td colSpan={colSpan} className="px-4 py-3">
+            <div className="ml-auto max-w-3xl rounded-xl border border-navy-100 bg-white p-3 shadow-sm">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="text-xs font-semibold text-navy-800">Note — {p.raison_sociale || nomComplet(p.nom, p.prenom)}</div>
+                <button type="button" onClick={() => setNotesOuvertes(false)} className="text-xs text-grey-brand underline underline-offset-2">Fermer</button>
+              </div>
+              <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} compact />
+            </div>
+          </td>
+        </tr>
+      ) : null}
+
       {erreur ? (
         <tr>
-          <td
-            colSpan={(afficherCommercial ? 8 : 7) + (selectionnable ? 1 : 0)}
-            className="px-3 pb-2"
-          >
-            <p
-              role="alert"
-              className="rounded-lg px-3 py-1.5 text-xs text-navy-800"
-              style={{ backgroundColor: "var(--color-status-perdu)" }}
-            >
+          <td colSpan={colSpan} className="px-3 pb-2">
+            <p role="alert" className="rounded-lg px-3 py-1.5 text-xs text-navy-800" style={{ backgroundColor: "var(--color-status-perdu)" }}>
               {erreur}
             </p>
           </td>
