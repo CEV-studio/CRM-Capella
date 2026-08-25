@@ -22,9 +22,7 @@ function Panel({ title, children, open = true }: { title: string; children: Reac
         <span>{title}</span>
         <span className="text-xs text-grey-brand transition-transform group-open:rotate-180">⌄</span>
       </summary>
-      <div className="border-t border-navy-100 px-4 py-1">
-        {children}
-      </div>
+      <div className="border-t border-navy-100 px-4 py-1">{children}</div>
     </details>
   );
 }
@@ -52,9 +50,7 @@ export function ProspectInfoSidebar({
           <h2 className="text-sm font-semibold text-navy-800">Informations</h2>
           <p className="text-[11px] text-grey-brand">Données de la fiche client</p>
         </div>
-        <Link href={`/prospection/${p.id}/modifier`} className="rounded-lg border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50">
-          Modifier
-        </Link>
+        <Link href={`/prospection/${p.id}/modifier`} className="rounded-lg border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50">Modifier</Link>
       </div>
 
       <Panel title="Suivi commercial">
@@ -72,15 +68,9 @@ export function ProspectInfoSidebar({
         <dl>
           <InfoRow label="Prénom">{valeur(p.prenom)}</InfoRow>
           <InfoRow label="Nom">{valeur(p.nom)}</InfoRow>
-          <InfoRow label="Email">
-            {p.mail ? <a className="text-navy-700 underline underline-offset-2" href={`mailto:${p.mail}`}>{p.mail}</a> : "—"}
-          </InfoRow>
-          <InfoRow label="Mobile">
-            {p.tel_mobile ? <a className="text-navy-700 underline underline-offset-2" href={`tel:${p.tel_mobile}`}>{p.tel_mobile}</a> : "—"}
-          </InfoRow>
-          <InfoRow label="Fixe">
-            {p.tel_fixe ? <a className="text-navy-700 underline underline-offset-2" href={`tel:${p.tel_fixe}`}>{p.tel_fixe}</a> : "—"}
-          </InfoRow>
+          <InfoRow label="Email">{p.mail ? <a className="text-navy-700 underline underline-offset-2" href={`mailto:${p.mail}`}>{p.mail}</a> : "—"}</InfoRow>
+          <InfoRow label="Mobile">{p.tel_mobile ? <a className="text-navy-700 underline underline-offset-2" href={`tel:${p.tel_mobile}`}>{p.tel_mobile}</a> : "—"}</InfoRow>
+          <InfoRow label="Fixe">{p.tel_fixe ? <a className="text-navy-700 underline underline-offset-2" href={`tel:${p.tel_fixe}`}>{p.tel_fixe}</a> : "—"}</InfoRow>
         </dl>
       </Panel>
 
@@ -110,15 +100,9 @@ export function ProspectInfoSidebar({
 
       {champs.length ? (
         <Panel title="Informations personnalisées" open={false}>
-          <dl>
-            {champs.map((c) => <InfoRow key={c.cle} label={c.libelle}>{valeur(c.value)}</InfoRow>)}
-          </dl>
+          <dl>{champs.map((c) => <InfoRow key={c.cle} label={c.libelle}>{valeur(c.value)}</InfoRow>)}</dl>
         </Panel>
       ) : null}
-
-      <Panel title="Notes" open={false}>
-        <div className="whitespace-pre-wrap py-3 text-xs leading-5 text-navy-800">{p.notes || "Aucune note."}</div>
-      </Panel>
     </div>
   );
 }
