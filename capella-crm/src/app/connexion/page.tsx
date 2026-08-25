@@ -9,7 +9,7 @@ export default function ConnexionPage() {
     <main className="flex min-h-screen items-center justify-center bg-navy-800 px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex justify-center text-white">
-          <Logotype />
+          <Logotype className="w-72 max-w-full" />
         </div>
 
         <div className="rounded-[var(--radius-card)] bg-white p-6 shadow-xl">
