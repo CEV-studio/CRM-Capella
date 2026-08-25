@@ -10,6 +10,7 @@ export async function GET(request: Request) {
   await requireProfile();
   const url = new URL(request.url);
   const q = url.searchParams;
+  const prospectId = esc(q.get("prospect"));
   const company = esc(q.get("company"));
   const firstName = esc(q.get("firstName"));
   const lastName = esc(q.get("lastName"));
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 <section class="form-section"><div class="section-header"><span class="section-num">01</span><div><h2>Informations client</h2><p>Données générales de la consultation</p></div></div><div class="section-body"><div class="grid-2"><div class="form-group"><label for="firstName">Prénom du contact</label><input type="text" id="firstName"></div><div class="form-group"><label for="lastName">Nom du contact</label><input type="text" id="lastName"></div><div class="form-group"><label for="company">Nom de la société</label><input type="text" id="company"></div><div class="form-group"><label for="pdl">Point de livraison</label><input type="text" id="pdl"></div><div class="form-group"><label for="yearsCount">Durée d'analyse des économies</label><select id="yearsCount"><option value="1">1 an</option><option value="2">2 ans</option><option value="3" selected>3 ans</option><option value="4">4 ans</option><option value="5">5 ans</option></select></div><div class="form-group"><label for="studyDate">Date de l'étude</label><input type="text" id="studyDate"></div><div class="form-group"><label for="validUntil">Validité de la proposition</label><input type="text" id="validUntil"></div></div><div class="form-group mt-20"><label>Type d'énergie</label><div class="energy-selector"><button type="button" class="energy-btn active" data-energy="electricity" onclick="setEnergy('electricity')"><span class="energy-icon">⚡</span><span class="energy-label">Électricité</span></button><button type="button" class="energy-btn" data-energy="gas" onclick="setEnergy('gas')"><span class="energy-icon">🔥</span><span class="energy-label">Gaz</span></button></div></div><div class="form-group mt-20" id="tariff-section"><label>Option tarifaire</label><div class="tariff-options" id="tariff-options"></div></div><div class="form-group mt-20" id="bands-section" style="display:none"><label>Postes tarifaires actifs</label><div id="bands-container"></div></div></div></section>
 <section class="form-section"><div class="section-header"><span class="section-num">02</span><div><h2>Volumes de consommation</h2><p>Consommations annuelles en MWh</p></div></div><div class="section-body"><div id="volumes-container"></div></div></section>
 <section class="form-section"><div class="section-header"><span class="section-num">03</span><div><h2>Offres fournisseurs</h2><p>Saisissez les prix de chaque offre pour obtenir le comparatif</p></div></div><div class="section-body"><div class="offers-toolbar"><button type="button" id="add-offer-btn" class="btn-secondary" onclick="addOffer()">+ Ajouter une offre</button><span id="offers-count" class="offers-count"></span></div><div class="offers-scroll"><div id="offers-container" class="offers-grid"></div></div></div></section>
-<div class="actions-bar"><button type="button" class="btn-ghost" onclick="resetForm()">↺ Réinitialiser</button><button type="button" class="btn-generate" id="generate-btn" onclick="generatePDF()"><span>📄</span> Générer le PDF</button></div><div id="success-msg" class="success-msg hidden">✓ PDF généré avec succès !</div></main>
+<div class="actions-bar"><button type="button" class="btn-ghost" onclick="resetForm()">↺ Réinitialiser</button><button type="button" class="btn-generate" id="generate-btn" onclick="generatePDF()"><span>📄</span> Générer le PDF</button></div><div id="success-msg" class="success-msg hidden">✓ PDF généré et sauvegardé dans la fiche client !</div></main>
 <div id="spinner-overlay" class="spinner-overlay hidden"><div class="spinner-box"><div class="spinner"></div><p>Génération du PDF en cours…</p></div></div><canvas id="chart-canvas" width="760" height="380" style="position:fixed;left:-9999px;top:-9999px;display:block"></canvas>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script><script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}</script><script src="https://cdn.jsdelivr.net/gh/CEV-studio/Tabgen@main/TABGen/generator.js"></script>
 <script>
@@ -53,18 +54,36 @@ export async function GET(request: Request) {
   function wrap(name){
     const original = window[name];
     if(typeof original!=='function') return;
-    window[name] = function(){
-      remember();
-      const result = original.apply(this, arguments);
-      restore();
-      return result;
-    };
+    window[name] = function(){ remember(); const result = original.apply(this, arguments); restore(); return result; };
   }
   ['setEnergy','setOption','onBandChange','addOffer','removeOffer'].forEach(wrap);
   document.addEventListener('input', function(e){ const el=e.target; if(el && el.id) remember(); }, true);
   document.addEventListener('change', function(e){ const el=e.target; if(el && el.id) remember(); }, true);
   window.__tabgenRemember = remember;
-  window.__tabgenRestore = restore;
+})();
+
+(function(){
+  if(!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API) return;
+  const originalSave = window.jspdf.jsPDF.API.save;
+  window.jspdf.jsPDF.API.save = function(fileName){
+    try {
+      const blob = this.output('blob');
+      fetch('/api/outils/comparatif/${prospectId}/sauvegarder', {
+        method: 'POST',
+        headers: { 'content-type': 'application/pdf', 'x-file-name': String(fileName || 'Comparatif.pdf') },
+        body: blob,
+        credentials: 'same-origin'
+      }).then(function(r){
+        if(!r.ok) return r.text().then(function(t){ throw new Error(t || 'Sauvegarde impossible'); });
+      }).catch(function(err){
+        console.error('Sauvegarde CRM du comparatif :', err);
+        alert('Le PDF a été téléchargé, mais sa sauvegarde dans la fiche CRM a échoué.');
+      });
+    } catch(err) {
+      console.error('Préparation sauvegarde CRM :', err);
+    }
+    return originalSave.apply(this, arguments);
+  };
 })();
 
 document.addEventListener('DOMContentLoaded',function(){
