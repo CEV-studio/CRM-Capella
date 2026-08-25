@@ -36,12 +36,30 @@ export type LeadAssignment = { id:number; prospect_id:string; from_user:string|n
 export type FormSubmission = { id:string; source:string; external_id:string; submitted_at:string|null; payload:Record<string,unknown>; affaire_id:string|null; processed_at:string|null; error:string|null; created_at:string };
 export type ImportRun = { id:string; kind:string; source_name:string; mode:"dry-run"|"apply"; status:"started"|"completed"|"failed"; stats:Record<string,unknown>; error:string|null; created_by:string|null; created_at:string; completed_at:string|null };
 
+export type EmailAccount = {
+  id:string; email:string; display_name:string|null; refresh_token_enc:string; scope:string; is_active:boolean;
+  connected_at:string; last_sync_at:string|null; created_by:string|null; created_at:string; updated_at:string;
+};
+export type EmailTemplate = {
+  id:string; name:string; subject:string; body:string; is_active:boolean; sort_order:number;
+  created_by:string|null; created_at:string; updated_at:string;
+};
+export type EmailMessage = {
+  id:string; prospect_id:string; email_account_id:string|null; gmail_message_id:string; gmail_thread_id:string|null;
+  header_message_id:string|null; direction:"incoming"|"outgoing"; from_email:string|null; to_emails:string[]; cc_emails:string[];
+  subject:string|null; body_text:string|null; body_html:string|null; snippet:string|null; sent_at:string|null;
+  template_id:string|null; triggered_by:string|null; attachments:Array<{filename?:string;mimeType?:string;size?:number}>; created_at:string;
+};
+
 type Writable<T, Generated extends keyof T = never> = Omit<T, Generated>;
 export type ProspectInsert = Partial<Writable<Prospect,"id"|"ref"|"siren_norm"|"pdl_norm"|"pce_norm"|"mobile_norm"|"created_at"|"updated_at">>;
 export type ProspectUpdate = ProspectInsert;
 export type AffaireInsert = Partial<Writable<Affaire,"id"|"ref"|"created_at"|"updated_at">> & { raison_sociale:string; commercial_id:string };
 export type AffaireUpdate = Partial<AffaireInsert>;
 export type PieceJointeInsert = Partial<Writable<PieceJointe,"id"|"created_at">> & { type:"ACD"|"Facture"; bucket_path:string; file_name:string };
+export type EmailAccountInsert = Partial<Writable<EmailAccount,"id"|"created_at"|"updated_at">> & { email:string; refresh_token_enc:string; scope:string };
+export type EmailTemplateInsert = Partial<Writable<EmailTemplate,"id"|"created_at"|"updated_at">> & { name:string };
+export type EmailMessageInsert = Partial<Writable<EmailMessage,"id"|"created_at">> & { prospect_id:string; gmail_message_id:string; direction:"incoming"|"outgoing" };
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Row>> = { Row:Row; Insert:Insert; Update:Update; Relationships:[] };
 
@@ -61,10 +79,14 @@ export interface Database {
       pieces_jointes:Table<PieceJointe,PieceJointeInsert>;
       form_submissions:Table<FormSubmission>;
       import_runs:Table<ImportRun>;
+      email_accounts:Table<EmailAccount,EmailAccountInsert>;
+      email_templates:Table<EmailTemplate,EmailTemplateInsert>;
+      email_messages:Table<EmailMessage,EmailMessageInsert>;
     };
     Views:Record<never,never>;
     Functions:{
       is_admin:{ Args:Record<never,never>; Returns:boolean };
+      is_active_user:{ Args:Record<never,never>; Returns:boolean };
       can_view_all:{ Args:Record<never,never>; Returns:boolean };
       can_manage:{ Args:Record<never,never>; Returns:boolean };
       current_role_name:{ Args:Record<never,never>; Returns:string };
