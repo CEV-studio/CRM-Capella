@@ -35,6 +35,9 @@ export default async function FicheProspectPage({ params, searchParams }: {
   if (!prospect) notFound();
 
   const p = prospect as Prospect;
+  const navigationSelection = "id, raison_sociale, nom, prenom";
+  const plusRecent = `created_at.gt.${p.created_at},and(created_at.eq.${p.created_at},id.gt.${p.id})`;
+  const plusAncien = `created_at.lt.${p.created_at},and(created_at.eq.${p.created_at},id.lt.${p.id})`;
 
   const [
     sources,
@@ -56,8 +59,24 @@ export default async function FicheProspectPage({ params, searchParams }: {
     supabase.from("email_templates").select("*").eq("is_active", true).order("sort_order").order("name"),
     supabase.from("email_messages").select("*").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(100),
     getActiveGmailAccount().catch(() => null),
-    supabase.from("prospects").select("id, raison_sociale, nom, prenom").is("deleted_at", null).gt("created_at", p.created_at).order("created_at", { ascending: true }).limit(1).maybeSingle(),
-    supabase.from("prospects").select("id, raison_sociale, nom, prenom").is("deleted_at", null).lt("created_at", p.created_at).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase
+      .from("prospects")
+      .select(navigationSelection)
+      .is("deleted_at", null)
+      .or(plusRecent)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("prospects")
+      .select(navigationSelection)
+      .is("deleted_at", null)
+      .or(plusAncien)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const pretATransferer = isTransferable(p.stage);
