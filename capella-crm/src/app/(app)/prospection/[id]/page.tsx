@@ -9,12 +9,16 @@ import { nomComplet } from "@/lib/domain/noms";
 import { BoutonSupprimer } from "../../admin/corbeille/bouton-supprimer";
 import { PiecesJointes } from "@/components/pieces-jointes";
 import { EmailClient } from "@/components/email-client";
-import { FicheForm } from "../fiche-form";
+import { ProspectInfoSidebar } from "@/components/prospect-info-sidebar";
 import { chargerSources, chargerChampsPersonnalises } from "@/lib/referentiels";
 import { getActiveGmailAccount } from "@/lib/gmail";
 import type { EmailMessage, EmailTemplate, PieceJointe, Prospect, Profile } from "@/lib/domain/database.types";
 
 export const dynamic = "force-dynamic";
+
+function contactNom(p: Prospect): string {
+  return nomComplet(p.nom, p.prenom) || "Contact non renseigné";
+}
 
 export default async function FicheProspectPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
@@ -47,6 +51,11 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const templates = (templateData ?? []) as EmailTemplate[];
   const messages = (messageData ?? []) as EmailMessage[];
   const fournisseur = p.fournisseur_electricite || p.fournisseur_gaz || "";
+  const ownerName = p.assigned_to === profil.id
+    ? profil.full_name
+    : (profils ?? []).find((x) => x.id === p.assigned_to)?.full_name ?? null;
+  const sourceName = sources.find((s) => s.id === p.source_id)?.name ?? null;
+  const phone = p.tel_mobile || p.tel_fixe;
   const variables: Record<string, string> = {
     prenom: p.prenom || "",
     nom: p.nom || "",
@@ -62,56 +71,111 @@ export default async function FicheProspectPage({ params, searchParams }: {
   };
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-6 py-8">
-      <Link href="/prospection" className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700">← Retour à la prospection</Link>
+    <main className="mx-auto w-full max-w-[1720px] px-4 py-5 2xl:px-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <Link href="/prospection" className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700">← Retour à la prospection</Link>
+        <div className="text-xs text-grey-brand">Dernière action {fmtDateHeure(p.last_action_at)}</div>
+      </div>
 
       {query.acd === "transmise" ? (
-        <div className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div>
+        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div>
       ) : null}
 
-      <header className="mt-3 mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-navy-800">{p.raison_sociale || nomComplet(p.nom, p.prenom)}</h1>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-grey-brand">
-            <StageBadge label={p.stage} color={stageColor(p.stage, "prospect")} />
-            <span className="tabular">{p.ref}</span><span>· dernière action {fmtDateHeure(p.last_action_at)}</span>
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Link href={`/outils/comparatif?prospect=${p.id}`} className="inline-flex h-9 items-center rounded-lg border border-navy-200 bg-white px-3 text-sm font-semibold text-navy-700 hover:bg-navy-50">Générer un comparatif</Link>
-            <Link href={`/outils/resiliation?prospect=${p.id}`} className="inline-flex h-9 items-center rounded-lg border border-navy-200 bg-white px-3 text-sm font-semibold text-navy-700 hover:bg-navy-50">Lettre de résiliation</Link>
-            {p.stage === "Demande ACD" ? (
-              estAdmin ? (
-                <a href={`/api/acd/${p.id}`} className="inline-flex h-9 items-center rounded-lg bg-star-500 px-3 text-sm font-semibold text-white hover:bg-star-600">Télécharger une ACD</a>
-              ) : (
-                <form action={`/api/acd/${p.id}/demander`} method="post">
-                  <button type="submit" className="inline-flex h-9 items-center rounded-lg bg-star-500 px-3 text-sm font-semibold text-white hover:bg-star-600">Demander l&apos;ACD</button>
-                </form>
-              )
-            ) : null}
-            {peutGerer(profil) ? <BoutonSupprimer cible="prospect" id={p.id} libelle={p.raison_sociale || nomComplet(p.nom, p.prenom)} retour="/prospection" /> : null}
-          </div>
-        </div>
-        {affaireLiee ? (
-          <Link href={`/conversion/${affaireLiee.id}`} className="max-w-xs rounded-[var(--radius-card)] px-4 py-3 text-sm text-navy-800 hover:opacity-90" style={{ backgroundColor: "var(--color-status-signe)" }}><strong>Déjà converti en affaire.</strong><span className="mt-0.5 block text-xs">Voir l&apos;affaire {affaireLiee.ref} →</span></Link>
-        ) : pretATransferer ? (
-          <div className="max-w-sm rounded-[var(--radius-card)] px-4 py-3 text-sm text-navy-800" style={{ backgroundColor: "var(--color-status-avance)" }}><strong>Prêt à basculer en affaire.</strong><p className="mt-0.5 mb-2 text-xs">La fiche affaire sera pré-remplie ; ce prospect est conservé.</p><Link href={`/conversion/nouvelle?prospect=${p.id}`} className="inline-flex h-9 items-center rounded-lg bg-star-500 px-3 text-sm font-semibold text-white hover:bg-star-600">Convertir en affaire</Link></div>
-        ) : null}
-      </header>
+      <div className="grid items-start gap-5 xl:grid-cols-[270px_minmax(0,1fr)_360px]">
+        <aside className="space-y-4 xl:sticky xl:top-5">
+          <section className="rounded-xl border border-navy-100 bg-white p-5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-navy-50 font-display text-lg font-bold text-navy-700">
+              {(p.raison_sociale || p.nom || "C").slice(0, 1).toUpperCase()}
+            </div>
+            <h1 className="mt-3 font-display text-xl font-bold leading-tight text-navy-800">{p.raison_sociale || contactNom(p)}</h1>
+            <p className="mt-1 text-sm font-medium text-grey-brand">{contactNom(p)}</p>
 
-      <FicheForm prospect={p} estAdmin={estAdmin} sources={sources.filter((s) => s.is_active).map((s) => ({ value: s.id, label: s.name }))} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} commerciaux={(profils ?? []).map((c) => ({ value: c.id, label: c.full_name }))} />
-      <div className="mt-6">
-        <EmailClient
-          prospectId={p.id}
-          prospectEmail={p.mail}
-          variables={variables}
-          templates={templates.map((t) => ({ id: t.id, name: t.name, subject: t.subject, body: t.body }))}
-          messages={messages}
-          pieces={piecesVisibles.map((piece) => ({ id: piece.id, file_name: piece.file_name, type: piece.type }))}
-          gmailConnected={Boolean(gmailAccount)}
-          estAdmin={estAdmin}
-        />
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <StageBadge label={p.stage} color={stageColor(p.stage, "prospect")} />
+              {p.ref ? <span className="text-xs tabular text-grey-brand">{p.ref}</span> : null}
+            </div>
+
+            <div className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-sm">
+              {p.mail ? <a href={`mailto:${p.mail}`} className="block truncate text-navy-700 underline underline-offset-2" title={p.mail}>{p.mail}</a> : <span className="block text-grey-brand">Email non renseigné</span>}
+              {phone ? <a href={`tel:${phone}`} className="block font-semibold text-navy-800">{phone}</a> : <span className="block text-grey-brand">Téléphone non renseigné</span>}
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              {phone ? <a href={`tel:${phone}`} className="inline-flex h-9 items-center justify-center rounded-lg border border-navy-200 bg-white px-2 text-xs font-semibold text-navy-700 hover:bg-navy-50">Appeler</a> : null}
+              <a href="#email-composer" className="inline-flex h-9 items-center justify-center rounded-lg border border-navy-200 bg-white px-2 text-xs font-semibold text-navy-700 hover:bg-navy-50">E-mail</a>
+              <Link href={`/outils/comparatif?prospect=${p.id}`} className="inline-flex h-9 items-center justify-center rounded-lg border border-navy-200 bg-white px-2 text-xs font-semibold text-navy-700 hover:bg-navy-50">Comparatif</Link>
+              <Link href={`/outils/resiliation?prospect=${p.id}`} className="inline-flex h-9 items-center justify-center rounded-lg border border-navy-200 bg-white px-2 text-xs font-semibold text-navy-700 hover:bg-navy-50">Résiliation</Link>
+            </div>
+
+            {p.stage === "Demande ACD" ? (
+              <div className="mt-2">
+                {estAdmin ? (
+                  <a href={`/api/acd/${p.id}`} className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Télécharger l’ACD</a>
+                ) : (
+                  <form action={`/api/acd/${p.id}/demander`} method="post">
+                    <button type="submit" className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Demander l&apos;ACD</button>
+                  </form>
+                )}
+              </div>
+            ) : null}
+          </section>
+
+          {(p.next_action || p.next_action_date) ? (
+            <section className="rounded-xl border border-star-200 bg-star-50/40 p-4">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-grey-brand">À faire</div>
+              <div className="mt-1 text-sm font-semibold text-navy-800">{p.next_action || "Prochaine action"}</div>
+              {p.next_action_date ? <div className="mt-1 text-xs text-grey-brand">Prévue le {p.next_action_date}</div> : null}
+            </section>
+          ) : null}
+
+          {affaireLiee ? (
+            <Link href={`/conversion/${affaireLiee.id}`} className="block rounded-xl p-4 text-sm text-navy-800 hover:opacity-90" style={{ backgroundColor: "var(--color-status-signe)" }}>
+              <strong>Déjà converti en affaire</strong>
+              <span className="mt-1 block text-xs">Voir {affaireLiee.ref} →</span>
+            </Link>
+          ) : pretATransferer ? (
+            <section className="rounded-xl p-4 text-sm text-navy-800" style={{ backgroundColor: "var(--color-status-avance)" }}>
+              <strong>Prêt à convertir</strong>
+              <p className="mt-1 text-xs">La fiche affaire sera pré-remplie.</p>
+              <Link href={`/conversion/nouvelle?prospect=${p.id}`} className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Convertir en affaire</Link>
+            </section>
+          ) : null}
+
+          {peutGerer(profil) ? (
+            <div className="px-1"><BoutonSupprimer cible="prospect" id={p.id} libelle={p.raison_sociale || contactNom(p)} retour="/prospection" /></div>
+          ) : null}
+        </aside>
+
+        <section className="min-w-0">
+          <div className="mb-3 flex items-end justify-between gap-3 px-1">
+            <div>
+              <h2 className="font-display text-xl font-bold text-navy-800">Activité & échanges</h2>
+              <p className="text-xs text-grey-brand">Le fil de travail principal de cette relation client.</p>
+            </div>
+            <span className="rounded-full bg-navy-50 px-3 py-1 text-xs font-semibold text-navy-700">E-mails</span>
+          </div>
+          <EmailClient
+            prospectId={p.id}
+            prospectEmail={p.mail}
+            variables={variables}
+            templates={templates.map((t) => ({ id: t.id, name: t.name, subject: t.subject, body: t.body }))}
+            messages={messages}
+            pieces={piecesVisibles.map((piece) => ({ id: piece.id, file_name: piece.file_name, type: piece.type }))}
+            gmailConnected={Boolean(gmailAccount)}
+            estAdmin={estAdmin}
+          />
+        </section>
+
+        <aside className="space-y-5 xl:sticky xl:top-5 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
+          <ProspectInfoSidebar
+            prospect={p}
+            ownerName={ownerName}
+            sourceName={sourceName}
+            champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))}
+          />
+          <PiecesJointes scope="prospect" parentId={p.id} pieces={piecesVisibles} compact />
+        </aside>
       </div>
-      <div className="mt-6"><PiecesJointes scope="prospect" parentId={p.id} pieces={piecesVisibles} /></div>
     </main>
   );
 }
