@@ -15,6 +15,7 @@ const NAV: { titre: string; items: NavItem[] }[] = [
   ]},
   { titre: "Administration", items: [
     { href: "/admin/acd", label: "ACD à traiter", needs: (p) => p.role === "admin" },
+    { href: "/admin/emails", label: "Emails & templates", needs: (p) => p.role === "admin" },
     { href: "/admin/commerciaux", label: "Commerciaux", adminOnly: true },
     { href: "/admin/reservoir", label: "Réservoir & attribution", adminOnly: true },
     { href: "/admin/corbeille", label: "Corbeille", adminOnly: true },
