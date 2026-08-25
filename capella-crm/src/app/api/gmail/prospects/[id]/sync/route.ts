@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { syncProspectEmails } from "@/lib/gmail";
+import { syncProspectEmailsFast } from "@/lib/gmail-sync-fast";
 
 export async function POST(
   _request: Request,
@@ -21,7 +21,7 @@ export async function POST(
   if (!prospect.mail?.trim()) return NextResponse.json({ error: "Aucune adresse email sur la fiche." }, { status: 400 });
 
   try {
-    const result = await syncProspectEmails(id, prospect.mail.trim());
+    const result = await syncProspectEmailsFast(id, prospect.mail.trim());
     return NextResponse.json({ ok: true, ...result });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Synchronisation Gmail impossible." }, { status: 500 });
