@@ -44,6 +44,10 @@ export type EmailTemplate = {
   id:string; name:string; subject:string; body:string; is_active:boolean; sort_order:number;
   created_by:string|null; created_at:string; updated_at:string;
 };
+export type EmailSignature = {
+  id:string; profile_id:string|null; name:string; html:string; is_active:boolean;
+  created_by:string|null; created_at:string; updated_at:string;
+};
 export type EmailMessage = {
   id:string; prospect_id:string; email_account_id:string|null; gmail_message_id:string; gmail_thread_id:string|null;
   header_message_id:string|null; direction:"incoming"|"outgoing"; from_email:string|null; to_emails:string[]; cc_emails:string[];
@@ -59,6 +63,7 @@ export type AffaireUpdate = Partial<AffaireInsert>;
 export type PieceJointeInsert = Partial<Writable<PieceJointe,"id"|"created_at">> & { type:"ACD"|"Facture"; bucket_path:string; file_name:string };
 export type EmailAccountInsert = Partial<Writable<EmailAccount,"id"|"created_at"|"updated_at">> & { email:string; refresh_token_enc:string; scope:string };
 export type EmailTemplateInsert = Partial<Writable<EmailTemplate,"id"|"created_at"|"updated_at">> & { name:string };
+export type EmailSignatureInsert = Partial<Writable<EmailSignature,"id"|"created_at"|"updated_at">>;
 export type EmailMessageInsert = Partial<Writable<EmailMessage,"id"|"created_at">> & { prospect_id:string; gmail_message_id:string; direction:"incoming"|"outgoing" };
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Row>> = { Row:Row; Insert:Insert; Update:Update; Relationships:[] };
@@ -81,6 +86,7 @@ export interface Database {
       import_runs:Table<ImportRun>;
       email_accounts:Table<EmailAccount,EmailAccountInsert>;
       email_templates:Table<EmailTemplate,EmailTemplateInsert>;
+      email_signatures:Table<EmailSignature,EmailSignatureInsert>;
       email_messages:Table<EmailMessage,EmailMessageInsert>;
     };
     Views:Record<never,never>;
