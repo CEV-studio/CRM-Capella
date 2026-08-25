@@ -25,8 +25,6 @@ export default async function FicheProspectPage({
 
   const supabase = await createClient();
 
-  // RLS s'applique : un commercial qui devine l'identifiant d'un prospect
-  // qui n'est pas le sien obtient une page « introuvable », pas les données.
   const { data: prospect } = await supabase
     .from("prospects")
     .select("*")
@@ -51,8 +49,6 @@ export default async function FicheProspectPage({
             .eq("is_active", true)
             .order("full_name")
         : Promise.resolve({ data: [] as Pick<Profile, "id" | "full_name">[] }),
-      // Un prospect déjà converti pointe vers son affaire : on évite
-      // les doublons et on garde la traçabilité visible.
       supabase
         .from("affaires")
         .select("id, ref")
@@ -90,16 +86,26 @@ export default async function FicheProspectPage({
             <span className="tabular">{p.ref}</span>
             <span>· dernière action {fmtDateHeure(p.last_action_at)}</span>
           </div>
-          {peutGerer(profil) ? (
-            <div className="mt-3">
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {p.stage === "Demande ACD" ? (
+              <a
+                href={`/api/acd/${p.id}`}
+                className="inline-flex h-9 items-center rounded-lg bg-star-500 px-3 text-sm font-semibold text-white hover:bg-star-600"
+              >
+                Générer l&apos;ACD
+              </a>
+            ) : null}
+
+            {peutGerer(profil) ? (
               <BoutonSupprimer
                 cible="prospect"
                 id={p.id}
                 libelle={p.raison_sociale || nomComplet(p.nom, p.prenom)}
                 retour="/prospection"
               />
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
         {affaireLiee ? (
