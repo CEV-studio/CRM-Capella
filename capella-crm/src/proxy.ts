@@ -5,14 +5,12 @@ import { NextResponse, type NextRequest } from "next/server";
  * Rafraîchit la session à chaque navigation et bloque l'accès à l'application
  * tant que l'utilisateur n'est pas connecté.
  *
- * Ce middleware est une commodité, PAS la sécurité : l'isolation des données
- * entre commerciaux est assurée par les politiques RLS dans Postgres.
+ * La sécurité métier reste assurée par RLS, avec ici un garde-fou supplémentaire
+ * pour empêcher le téléchargement direct d'une ACD par un commercial.
  */
 export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  // Tant que les clés Supabase ne sont pas renseignées, on laisse passer :
-  // l'application affiche alors sa page de diagnostic au lieu de planter.
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -29,9 +27,7 @@ export default async function proxy(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
@@ -41,10 +37,6 @@ export default async function proxy(request: NextRequest) {
     },
   );
 
-  // `getUser()` interroge l'API Auth à chaque navigation. Avec les clés de
-  // signature asymétriques de Supabase, `getClaims()` vérifie le jeton signé
-  // localement après mise en cache de la clé publique : même contrôle, sans
-  // imposer un aller-retour réseau à chaque clic dans le CRM.
   const { data: token } = await supabase.auth.getClaims();
   const userId = typeof token?.claims?.sub === "string" ? token.claims.sub : null;
 
@@ -65,12 +57,33 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Générateur ACD : accessible directement uniquement à l'admin.
+  // La route serveur /demander peut l'appeler avec le secret interne,
+  // qui n'est jamais envoyé au navigateur du commercial.
+  const isAcdGenerator = /^\/api\/acd\/[^/]+$/.test(path);
+  if (userId && isAcdGenerator && request.method === "GET") {
+    const givenSecret = request.headers.get("x-capella-internal-secret") ?? "";
+    const internalSecret = process.env.FORM_WEBHOOK_SECRET ?? "";
+    const internalCall = Boolean(internalSecret) && givenSecret === internalSecret;
+
+    if (!internalCall) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (profile?.role !== "admin") {
+        return new NextResponse("Accès réservé à l'administrateur", { status: 403 });
+      }
+    }
+  }
+
   return response;
 }
 
 export const config = {
   matcher: [
-    // Tout sauf les fichiers statiques et les images.
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
