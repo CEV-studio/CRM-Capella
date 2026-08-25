@@ -56,7 +56,7 @@ export function Ligne({
         ) : null}
 
         <td className={cn(CELL, "min-w-56 max-w-72")}>
-          <Link href={`/prospection/${p.id}`} className="block truncate font-semibold text-navy-800 hover:text-star-600" title={p.raison_sociale ?? undefined}>
+          <Link href={`/prospection/${p.id}`} prefetch={false} className="block truncate font-semibold text-navy-800 hover:text-star-600" title={p.raison_sociale ?? undefined}>
             {p.raison_sociale || nomComplet(p.nom, p.prenom)}
           </Link>
           <div className="tabular text-[11px] text-grey-brand">
