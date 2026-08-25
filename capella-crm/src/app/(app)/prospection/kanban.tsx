@@ -27,6 +27,7 @@ function CarteProspect({
     <li className="rounded-lg border border-navy-100 bg-white p-3 shadow-sm">
       <Link
         href={`/prospection/${p.id}`}
+        prefetch={false}
         className="block truncate text-sm font-semibold text-navy-800 hover:text-star-600"
         title={p.raison_sociale ?? undefined}
       >
