@@ -16,8 +16,6 @@ export async function GET(
   const { id } = await params;
   const supabase = await createClient();
 
-  // RLS protège l'accès : un utilisateur ne peut générer que l'ACD d'un
-  // prospect auquel il a réellement accès dans le CRM.
   const { data: prospect, error } = await supabase
     .from("prospects")
     .select("id, stage, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, pdl, pce")
@@ -37,11 +35,15 @@ export async function GET(
 
   const nomPrenom = nomComplet(prospect.nom, prospect.prenom);
   const telephone = prospect.tel_mobile || prospect.tel_fixe || "";
+  const raisonSociale = prospect.raison_sociale || "";
+  const identifiantSociete = prospect.siren || "";
+  const email = prospect.mail || "";
+
   const manquants: string[] = [];
   if (!nomPrenom) manquants.push("nom/prénom");
-  if (!prospect.raison_sociale) manquants.push("raison sociale");
-  if (!prospect.siren) manquants.push("SIRET/SIREN");
-  if (!prospect.mail) manquants.push("email");
+  if (!raisonSociale) manquants.push("raison sociale");
+  if (!identifiantSociete) manquants.push("SIRET/SIREN");
+  if (!email) manquants.push("email");
   if (!telephone) manquants.push("téléphone");
 
   if (manquants.length) {
@@ -67,9 +69,9 @@ export async function GET(
     },
     body: JSON.stringify({
       nom_prenom: nomPrenom,
-      nom_societe: prospect.raison_sociale,
-      siret: prospect.siren,
-      mail: prospect.mail,
+      nom_societe: raisonSociale,
+      siret: identifiantSociete,
+      mail: email,
       telephone,
       pdl: prospect.pdl || "",
       pce: prospect.pce || "",
@@ -88,7 +90,7 @@ export async function GET(
   }
 
   const pdf = await response.arrayBuffer();
-  const filename = `ACD_${safeFilename(prospect.raison_sociale)}_${safeFilename(nomPrenom)}.pdf`;
+  const filename = `ACD_${safeFilename(raisonSociale)}_${safeFilename(nomPrenom)}.pdf`;
 
   return new Response(pdf, {
     status: 200,
