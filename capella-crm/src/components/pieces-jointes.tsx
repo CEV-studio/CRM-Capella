@@ -14,7 +14,6 @@ function poids(o: number | null): string {
   return `${(o / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
-/** Une pièce : nom cliquable (téléchargement signé) + suppression éventuelle. */
 function LignePiece({
   piece,
   lectureSeule,
@@ -62,7 +61,6 @@ function LignePiece({
   );
 }
 
-/** Une section (ACD ou Facture) : liste + zone d'ajout. */
 function Section({
   titre,
   type,
@@ -82,12 +80,18 @@ function Section({
     ajouterPiece,
     null,
   );
-  const [nomFichier, setNomFichier] = useState<string | null>(null);
+  const [fichiers, setFichiers] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const propres = pieces.filter((p) => p.type === type);
   const dHeritees = heritees.filter((p) => p.type === type);
   const vide = propres.length === 0 && dHeritees.length === 0;
+
+  const libelleSelection = fichiers.length
+    ? fichiers.length === 1
+      ? fichiers[0]
+      : `${fichiers.length} fichiers sélectionnés`
+    : "PDF, JPG ou PNG · 10 Mo max par fichier";
 
   return (
     <div>
@@ -116,31 +120,38 @@ function Section({
         <input type="hidden" name="parent_id" value={parentId} />
         <input type="hidden" name="type" value={type} />
         <label className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-navy-200 px-3 text-xs font-semibold text-navy-700 hover:bg-navy-50">
-          Choisir un fichier
+          Choisir des fichiers
           <input
             ref={inputRef}
             type="file"
-            name="fichier"
+            name="fichiers"
             accept="application/pdf,image/jpeg,image/png"
+            multiple
             required
             className="sr-only"
-            onChange={(e) => setNomFichier(e.currentTarget.files?.[0]?.name ?? null)}
+            onChange={(e) =>
+              setFichiers(Array.from(e.currentTarget.files ?? []).map((f) => f.name))
+            }
           />
         </label>
-        <span className="min-w-0 flex-1 truncate text-xs text-grey-brand">
-          {nomFichier ?? "PDF, JPG ou PNG · 10 Mo max"}
+        <span className="min-w-0 flex-1 truncate text-xs text-grey-brand" title={fichiers.join(", ")}>
+          {libelleSelection}
         </span>
         <button
           type="submit"
-          disabled={enCours || !nomFichier}
+          disabled={enCours || fichiers.length === 0}
           className="inline-flex h-9 items-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600 disabled:opacity-50"
         >
-          {enCours ? "Envoi…" : "Ajouter"}
+          {enCours ? "Envoi…" : fichiers.length > 1 ? `Ajouter les ${fichiers.length}` : "Ajouter"}
         </button>
-        {etat && !etat.ok ? (
+        {etat ? (
           <span
             className="w-full rounded px-2 py-1 text-xs text-navy-800"
-            style={{ backgroundColor: "var(--color-status-perdu)" }}
+            style={{
+              backgroundColor: etat.ok
+                ? "var(--color-status-signe)"
+                : "var(--color-status-perdu)",
+            }}
           >
             {etat.message}
           </span>
@@ -150,11 +161,6 @@ function Section({
   );
 }
 
-/**
- * Bloc « Documents » d'une fiche : deux sections ACD et Facture.
- * `heritees` = pièces du prospect d'origine, montrées en lecture seule sur
- * une affaire.
- */
 export function PiecesJointes({
   scope,
   parentId,
@@ -170,7 +176,7 @@ export function PiecesJointes({
     <Card>
       <CardHeader
         title="Documents"
-        hint="ACD et factures. Plusieurs fichiers possibles par catégorie."
+        hint="ACD et factures. Sélection multiple possible par catégorie."
       />
       <div className="grid gap-px bg-navy-100 sm:grid-cols-2">
         <div className="bg-white">
