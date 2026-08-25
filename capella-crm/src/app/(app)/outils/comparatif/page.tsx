@@ -21,6 +21,7 @@ export default async function ComparatifPage({ searchParams }: { searchParams: P
   if (!prospect) notFound();
 
   const params = new URLSearchParams({
+    prospect: prospect.id,
     company: prospect.raison_sociale ?? "",
     firstName: prospect.prenom ?? "",
     lastName: prospect.nom ?? "",
@@ -36,7 +37,7 @@ export default async function ComparatifPage({ searchParams }: { searchParams: P
         <div>
           <Link href={`/prospection/${prospect.id}`} className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700">← Retour à la fiche</Link>
           <h1 className="mt-1 font-display text-2xl font-bold text-navy-800">Générateur de comparatif</h1>
-          <p className="text-sm text-grey-brand">TABGen prérempli avec les données disponibles dans le CRM.</p>
+          <p className="text-sm text-grey-brand">TABGen prérempli avec les données disponibles dans le CRM. Le PDF généré est automatiquement sauvegardé dans la fiche client.</p>
         </div>
       </div>
       <iframe
