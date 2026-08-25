@@ -3,7 +3,8 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BUCKET_PIECES } from "@/lib/supabase/storage";
-import { sendGmailMessage, syncProspectEmails, type GmailAttachment } from "@/lib/gmail";
+import { syncProspectEmails, type GmailAttachment } from "@/lib/gmail";
+import { sendGmailMessageAdvanced } from "@/lib/gmail-message-tools";
 
 const MAX_TOTAL = 18 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
@@ -66,7 +67,7 @@ export async function POST(
     .slice(0, MAX_ATTACHMENTS);
 
   if (attachmentIds.length + uploadedFiles.length > MAX_ATTACHMENTS) {
-    return NextResponse.json({ error: `10 pièces jointes maximum par email.` }, { status: 400 });
+    return NextResponse.json({ error: "10 pièces jointes maximum par email." }, { status: 400 });
   }
 
   const attachments: GmailAttachment[] = [];
@@ -108,7 +109,7 @@ export async function POST(
   }
 
   try {
-    const sent = await sendGmailMessage({
+    const sent = await sendGmailMessageAdvanced({
       to: prospect.mail.trim(),
       cc,
       bcc,
