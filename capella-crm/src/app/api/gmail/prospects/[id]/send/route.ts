@@ -122,12 +122,12 @@ export async function POST(
       profileId: profile.id,
     });
 
-    await syncProspectEmailsFast(id, prospect.mail.trim());
+    await syncProspectEmailsFast(id, prospect.mail.trim(), profile.id);
     const admin = createAdminClient();
     await admin.from("email_messages").update({
       triggered_by: profile.id,
       template_id: templateId,
-    }).eq("gmail_message_id", sent.id);
+    }).eq("email_account_id", sent.accountId).eq("gmail_message_id", sent.id);
 
     return NextResponse.json({ ok: true, messageId: sent.id, threadId: sent.threadId || null });
   } catch (error) {
