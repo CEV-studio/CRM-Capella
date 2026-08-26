@@ -55,6 +55,17 @@ export type EmailMessage = {
   template_id:string|null; triggered_by:string|null; attachments:Array<{filename?:string;mimeType?:string;size?:number}>; created_at:string;
 };
 
+export type CalendarAccount = {
+  id:string; profile_id:string; email:string; refresh_token_enc:string; scope:string; is_active:boolean;
+  connected_at:string; updated_at:string;
+};
+export type CalendarEvent = {
+  id:string; prospect_id:string; profile_id:string; google_event_id:string; google_calendar_id:string;
+  kind:"rdv"|"rappel"; title:string; description:string|null; location:string|null;
+  start_at:string; end_at:string; reminder_minutes:number|null; invite_client:boolean;
+  html_link:string|null; status:string; created_at:string; updated_at:string;
+};
+
 type Writable<T, Generated extends keyof T = never> = Omit<T, Generated>;
 export type ProspectInsert = Partial<Writable<Prospect,"id"|"ref"|"siren_norm"|"pdl_norm"|"pce_norm"|"mobile_norm"|"created_at"|"updated_at">>;
 export type ProspectUpdate = ProspectInsert;
@@ -65,6 +76,8 @@ export type EmailAccountInsert = Partial<Writable<EmailAccount,"id"|"created_at"
 export type EmailTemplateInsert = Partial<Writable<EmailTemplate,"id"|"created_at"|"updated_at">> & { name:string };
 export type EmailSignatureInsert = Partial<Writable<EmailSignature,"id"|"created_at"|"updated_at">>;
 export type EmailMessageInsert = Partial<Writable<EmailMessage,"id"|"created_at">> & { prospect_id:string; gmail_message_id:string; direction:"incoming"|"outgoing" };
+export type CalendarAccountInsert = Partial<Writable<CalendarAccount,"id"|"updated_at">> & { profile_id:string; email:string; refresh_token_enc:string; scope:string };
+export type CalendarEventInsert = Partial<Writable<CalendarEvent,"id"|"created_at"|"updated_at">> & { prospect_id:string; profile_id:string; google_event_id:string; title:string; start_at:string; end_at:string };
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Row>> = { Row:Row; Insert:Insert; Update:Update; Relationships:[] };
 
@@ -88,6 +101,8 @@ export interface Database {
       email_templates:Table<EmailTemplate,EmailTemplateInsert>;
       email_signatures:Table<EmailSignature,EmailSignatureInsert>;
       email_messages:Table<EmailMessage,EmailMessageInsert>;
+      calendar_accounts:Table<CalendarAccount,CalendarAccountInsert>;
+      calendar_events:Table<CalendarEvent,CalendarEventInsert>;
     };
     Views:Record<never,never>;
     Functions:{
