@@ -1,7 +1,8 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { decryptRefreshToken, getActiveGmailAccount } from "@/lib/gmail";
+import { decryptRefreshToken } from "@/lib/gmail";
+import { getGmailAccountForProfile } from "@/lib/gmail-account";
 
 const CONCURRENCY = 8;
 
@@ -167,18 +168,13 @@ async function mapBatches<T, R>(items: T[], worker: (item: T) => Promise<R>): Pr
   return result;
 }
 
-/**
- * Synchronisation incrémentale :
- * - un seul renouvellement OAuth par synchronisation ;
- * - on liste les 100 messages récents liés au contact ;
- * - on ne télécharge en détail QUE les messages absents de Supabase ;
- * - les nouveaux messages sont lus par lots parallèles de 8.
- */
+/** Synchronisation incrémentale strictement limitée à la boîte autorisée du profil. */
 export async function syncProspectEmailsFast(
   prospectId: string,
   prospectEmail: string,
+  profileId: string,
 ): Promise<{ newCount: number; total: number }> {
-  const account = await getActiveGmailAccount();
+  const account = await getGmailAccountForProfile(profileId, "read");
   if (!account) return { newCount: 0, total: 0 };
 
   const accessToken = await getAccessToken(decryptRefreshToken(account.refresh_token_enc));
@@ -198,6 +194,7 @@ export async function syncProspectEmailsFast(
   const { data: existing, error: existingError } = await admin
     .from("email_messages")
     .select("gmail_message_id")
+    .eq("email_account_id", account.id)
     .in("gmail_message_id", ids);
   if (existingError) throw new Error(`Lecture de l’historique email impossible : ${existingError.message}`);
 
