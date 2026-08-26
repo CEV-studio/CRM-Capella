@@ -215,7 +215,7 @@ export async function syncProspectEmailsFast(
       prospect_id: prospectId,
       email_account_id: account.id,
     }));
-    const { error } = await admin.from("email_messages").upsert(rows, { onConflict: "gmail_message_id" });
+    const { error } = await admin.from("email_messages").upsert(rows, { onConflict: "email_account_id,gmail_message_id" });
     if (error) throw new Error(`Enregistrement des emails impossible : ${error.message}`);
   }
 
