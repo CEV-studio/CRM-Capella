@@ -11,10 +11,24 @@ function safeReturnTo(value: FormDataEntryValue | null): string {
 export async function POST(request: Request) {
   const profile = await requireProfile();
   const form = await request.formData();
-  const accountId = String(form.get("account_id") || "").trim();
+  let accountId = String(form.get("account_id") || "").trim();
   const returnTo = safeReturnTo(form.get("return_to"));
   const origin = new URL(request.url).origin;
   const url = new URL(returnTo, origin);
+  const admin = createAdminClient();
+
+  // Compatibilité avec l'ancien bouton admin qui ne transmettait pas encore l'id.
+  if (!accountId) {
+    const { data: ownAccount } = await admin
+      .from("email_accounts")
+      .select("id")
+      .eq("owner_profile_id", profile.id)
+      .eq("is_active", true)
+      .order("connected_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    accountId = ownAccount?.id || "";
+  }
 
   if (!accountId) {
     url.searchParams.set("gmail", "erreur");
@@ -22,7 +36,6 @@ export async function POST(request: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  const admin = createAdminClient();
   const { data: account, error: readError } = await admin
     .from("email_accounts")
     .select("id, owner_profile_id, is_shared")
@@ -42,7 +55,6 @@ export async function POST(request: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  // On désactive sans supprimer : l'historique reste relié à la bonne boîte.
   const { error } = await admin.from("email_accounts").update({ is_active: false }).eq("id", accountId);
   url.searchParams.set("gmail", error ? "erreur" : "deconnecte");
   if (error) url.searchParams.set("message", error.message);
