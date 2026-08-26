@@ -9,6 +9,7 @@ const NAV: { titre: string; items: NavItem[] }[] = [
   { titre: "Pilotage", items: [
     { href: "/", label: "Tableau de bord" },
     { href: "/prospection", label: "Prospection" },
+    { href: "/agenda", label: "Mon agenda" },
     { href: "/conversion", label: "Conversion" },
     { href: "/commissions", label: "Commissions" },
     { href: "/admin/export", label: "Export", needs: (p) => peutGerer(p) || p.can_export },
