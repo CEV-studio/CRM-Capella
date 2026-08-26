@@ -17,12 +17,15 @@ export async function GET(
   const supabase = await createClient();
   const { data: message, error } = await supabase
     .from("email_messages")
-    .select("id, gmail_message_id, attachments")
+    .select("id, email_account_id, gmail_message_id, attachments")
     .eq("id", id)
     .maybeSingle();
 
   if (error || !message) {
     return NextResponse.json({ error: "Email introuvable ou inaccessible." }, { status: 404 });
+  }
+  if (!message.email_account_id) {
+    return NextResponse.json({ error: "Boîte Gmail liée à cet email introuvable." }, { status: 404 });
   }
 
   const attachments = Array.isArray(message.attachments) ? message.attachments : [];
@@ -31,7 +34,7 @@ export async function GET(
   }
 
   try {
-    const file = await downloadGmailAttachment(message.gmail_message_id, index);
+    const file = await downloadGmailAttachment(message.email_account_id, message.gmail_message_id, index);
     return new Response(new Uint8Array(file.data), {
       headers: {
         "content-type": file.mime,
