@@ -1,8 +1,10 @@
 import "server-only";
 
 import crypto from "node:crypto";
-import { decryptRefreshToken, getActiveGmailAccount, type GmailAttachment } from "@/lib/gmail";
+import { decryptRefreshToken, type GmailAttachment } from "@/lib/gmail";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getGmailAccountById, getGmailAccountForProfile } from "@/lib/gmail-account";
+import type { EmailAccount } from "@/lib/domain/database.types";
 
 function env(name: string): string {
   const value = process.env[name]?.trim();
@@ -29,9 +31,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   return json.access_token;
 }
 
-async function gmailJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const account = await getActiveGmailAccount();
-  if (!account) throw new Error("Aucune boîte Gmail active n’est configurée.");
+async function gmailJson<T>(account: EmailAccount, path: string, init: RequestInit = {}): Promise<T> {
   const accessToken = await refreshAccessToken(decryptRefreshToken(account.refresh_token_enc));
   const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me${path}`, {
     ...init,
@@ -93,19 +93,17 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-async function getCrmSignature(profileId?: string | null): Promise<string> {
+async function getCrmSignature(profileId: string): Promise<string> {
   try {
     const admin = createAdminClient();
-    if (profileId) {
-      const { data } = await admin
-        .from("email_signatures")
-        .select("html")
-        .eq("profile_id", profileId)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-      if (data?.html?.trim()) return data.html.trim();
-    }
+    const { data } = await admin
+      .from("email_signatures")
+      .select("html")
+      .eq("profile_id", profileId)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (data?.html?.trim()) return data.html.trim();
 
     const { data: fallback } = await admin
       .from("email_signatures")
@@ -121,14 +119,14 @@ async function getCrmSignature(profileId?: string | null): Promise<string> {
   }
 }
 
-async function getGmailSignature(sendAsEmail: string): Promise<string> {
+async function getGmailSignature(account: EmailAccount): Promise<string> {
   try {
     const settings = await gmailJson<{ signature?: string }>(
-      `/settings/sendAs/${encodeURIComponent(sendAsEmail)}`,
+      account,
+      `/settings/sendAs/${encodeURIComponent(account.email)}`,
     );
     return settings.signature?.trim() || "";
   } catch (error) {
-    // Une signature ne doit jamais empêcher l'envoi d'un message.
     console.error("Lecture de la signature Gmail impossible :", error);
     return "";
   }
@@ -166,13 +164,15 @@ export async function sendGmailMessageAdvanced(input: {
   attachments?: GmailAttachment[];
   threadId?: string | null;
   inReplyTo?: string | null;
-  profileId?: string | null;
-}): Promise<{ id: string; threadId?: string }> {
-  const account = await getActiveGmailAccount();
-  if (!account) throw new Error("Aucune boîte Gmail active n’est configurée.");
+  profileId: string;
+}): Promise<{ id: string; threadId?: string; accountId: string }> {
+  const account = await getGmailAccountForProfile(input.profileId, "send");
+  if (!account) {
+    throw new Error("Aucune boîte Gmail n’est connectée ou autorisée pour ton compte CRM. Ouvre « Mon email » pour la configurer.");
+  }
 
   const crmSignature = await getCrmSignature(input.profileId);
-  const signatureHtml = crmSignature || await getGmailSignature(account.email);
+  const signatureHtml = crmSignature || await getGmailSignature(account);
   const mixedBoundary = `capella_mixed_${crypto.randomBytes(12).toString("hex")}`;
   const alternativeBoundary = `capella_alt_${crypto.randomBytes(12).toString("hex")}`;
   const headers = [
@@ -225,10 +225,11 @@ export async function sendGmailMessageAdvanced(input: {
   }
 
   const raw = Buffer.from(mime, "utf8").toString("base64url");
-  return await gmailJson<{ id: string; threadId?: string }>("/messages/send", {
+  const sent = await gmailJson<{ id: string; threadId?: string }>(account, "/messages/send", {
     method: "POST",
     body: JSON.stringify({ raw, ...(input.threadId ? { threadId: input.threadId } : {}) }),
   });
+  return { ...sent, accountId: account.id };
 }
 
 type GmailPart = {
@@ -246,12 +247,15 @@ function collectAttachments(part: GmailPart | undefined, out: GmailPart[]) {
   part.parts?.forEach((child) => collectAttachments(child, out));
 }
 
-export async function downloadGmailAttachment(messageId: string, attachmentIndex: number): Promise<{
-  data: Buffer;
-  fileName: string;
-  mime: string;
-}> {
-  const message = await gmailJson<GmailMessage>(`/messages/${encodeURIComponent(messageId)}?format=full`);
+export async function downloadGmailAttachment(
+  emailAccountId: string,
+  messageId: string,
+  attachmentIndex: number,
+): Promise<{ data: Buffer; fileName: string; mime: string }> {
+  const account = await getGmailAccountById(emailAccountId);
+  if (!account) throw new Error("Boîte Gmail liée à ce message introuvable.");
+
+  const message = await gmailJson<GmailMessage>(account, `/messages/${encodeURIComponent(messageId)}?format=full`);
   const parts: GmailPart[] = [];
   collectAttachments(message.payload, parts);
   const part = parts[attachmentIndex];
@@ -260,6 +264,7 @@ export async function downloadGmailAttachment(messageId: string, attachmentIndex
   let data: Buffer;
   if (part.body?.attachmentId) {
     const attachment = await gmailJson<{ data?: string }>(
+      account,
       `/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(part.body.attachmentId)}`,
     );
     if (!attachment.data) throw new Error("Contenu de la pièce jointe Gmail indisponible.");
