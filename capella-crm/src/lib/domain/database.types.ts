@@ -38,7 +38,11 @@ export type ImportRun = { id:string; kind:string; source_name:string; mode:"dry-
 
 export type EmailAccount = {
   id:string; email:string; display_name:string|null; refresh_token_enc:string; scope:string; is_active:boolean;
+  owner_profile_id:string|null; is_shared:boolean;
   connected_at:string; last_sync_at:string|null; created_by:string|null; created_at:string; updated_at:string;
+};
+export type EmailAccountMember = {
+  email_account_id:string; profile_id:string; can_read:boolean; can_send:boolean; is_default:boolean; created_at:string;
 };
 export type EmailTemplate = {
   id:string; name:string; subject:string; body:string; is_active:boolean; sort_order:number;
@@ -73,6 +77,7 @@ export type AffaireInsert = Partial<Writable<Affaire,"id"|"ref"|"created_at"|"up
 export type AffaireUpdate = Partial<AffaireInsert>;
 export type PieceJointeInsert = Partial<Writable<PieceJointe,"id"|"created_at">> & { type:"ACD"|"Facture"; bucket_path:string; file_name:string };
 export type EmailAccountInsert = Partial<Writable<EmailAccount,"id"|"created_at"|"updated_at">> & { email:string; refresh_token_enc:string; scope:string };
+export type EmailAccountMemberInsert = Partial<EmailAccountMember> & { email_account_id:string; profile_id:string };
 export type EmailTemplateInsert = Partial<Writable<EmailTemplate,"id"|"created_at"|"updated_at">> & { name:string };
 export type EmailSignatureInsert = Partial<Writable<EmailSignature,"id"|"created_at"|"updated_at">>;
 export type EmailMessageInsert = Partial<Writable<EmailMessage,"id"|"created_at">> & { prospect_id:string; gmail_message_id:string; direction:"incoming"|"outgoing" };
@@ -98,6 +103,7 @@ export interface Database {
       form_submissions:Table<FormSubmission>;
       import_runs:Table<ImportRun>;
       email_accounts:Table<EmailAccount,EmailAccountInsert>;
+      email_account_members:Table<EmailAccountMember,EmailAccountMemberInsert>;
       email_templates:Table<EmailTemplate,EmailTemplateInsert>;
       email_signatures:Table<EmailSignature,EmailSignatureInsert>;
       email_messages:Table<EmailMessage,EmailMessageInsert>;
@@ -111,6 +117,7 @@ export interface Database {
       can_view_all:{ Args:Record<never,never>; Returns:boolean };
       can_manage:{ Args:Record<never,never>; Returns:boolean };
       current_role_name:{ Args:Record<never,never>; Returns:string };
+      can_access_email_account:{ Args:{ p_account:string; p_send?:boolean }; Returns:boolean };
     };
     Enums:Record<never,never>;
     CompositeTypes:Record<never,never>;
