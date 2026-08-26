@@ -2,6 +2,8 @@ import "server-only";
 
 import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getGmailAccountForProfile } from "@/lib/gmail-account";
 
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
 
@@ -22,7 +24,6 @@ type GmailPart = {
   body?: { data?: string; attachmentId?: string; size?: number };
   parts?: GmailPart[];
 };
-
 type GmailMessage = {
   id: string;
   threadId?: string;
@@ -128,17 +129,13 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   return json.access_token;
 }
 
+/** Boîte Gmail effective du compte CRM courant : personnelle, sinon partagée autorisée. */
 export async function getActiveGmailAccount(): Promise<GmailAccount | null> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("email_accounts")
-    .select("id, email, display_name, refresh_token_enc, scope, is_active")
-    .eq("is_active", true)
-    .order("connected_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(`Lecture de la boîte Gmail impossible : ${error.message}`);
-  return data as GmailAccount | null;
+  const supabase = await createClient();
+  const { data: token } = await supabase.auth.getClaims();
+  const profileId = typeof token?.claims?.sub === "string" ? token.claims.sub : null;
+  if (!profileId) return null;
+  return await getGmailAccountForProfile(profileId, "read") as GmailAccount | null;
 }
 
 async function gmailRequest<T>(
@@ -293,6 +290,7 @@ export async function syncProspectEmails(prospectId: string, prospectEmail: stri
   const { data: existing } = await admin
     .from("email_messages")
     .select("gmail_message_id")
+    .eq("email_account_id", account.id)
     .in("gmail_message_id", ids);
   const existingSet = new Set((existing || []).map((m) => m.gmail_message_id));
 
@@ -308,7 +306,7 @@ export async function syncProspectEmails(prospectId: string, prospectEmail: stri
       prospect_id: prospectId,
       email_account_id: account.id,
     }));
-    const { error } = await admin.from("email_messages").upsert(rows, { onConflict: "gmail_message_id" });
+    const { error } = await admin.from("email_messages").upsert(rows, { onConflict: "email_account_id,gmail_message_id" });
     if (error) throw new Error(`Enregistrement des emails impossible : ${error.message}`);
   }
 
@@ -342,7 +340,7 @@ export async function sendGmailMessage(input: {
   inReplyTo?: string | null;
 }): Promise<{ id: string; threadId?: string }> {
   const account = await getActiveGmailAccount();
-  if (!account) throw new Error("Aucune boîte Gmail active n’est configurée.");
+  if (!account) throw new Error("Aucune boîte Gmail active n’est configurée pour ce compte CRM.");
 
   const boundary = `capella_${crypto.randomBytes(12).toString("hex")}`;
   const headers = [
