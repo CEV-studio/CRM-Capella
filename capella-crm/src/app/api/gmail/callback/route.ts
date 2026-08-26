@@ -5,19 +5,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptRefreshToken, exchangeGmailCode, getGmailProfile } from "@/lib/gmail";
 import { exchangeCalendarCode, getGoogleAccountEmail, GOOGLE_CALENDAR_SCOPE } from "@/lib/calendar";
 
-function redirectAdmin(origin: string, params: Record<string, string>) {
-  const url = new URL("/admin/emails", origin);
-  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-  return NextResponse.redirect(url);
-}
-
-function safeReturnTo(value: string | undefined): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/agenda";
+function safeReturnTo(value: string | undefined, fallback = "/email"): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return fallback;
   return value;
 }
 
-function redirectCalendar(origin: string, returnTo: string, params: Record<string, string>) {
-  const url = new URL(safeReturnTo(returnTo), origin);
+function redirectWithParams(origin: string, returnTo: string, params: Record<string, string>) {
+  const url = new URL(returnTo, origin);
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
   return NextResponse.redirect(url);
 }
@@ -31,16 +25,15 @@ export async function GET(request: Request) {
   const oauthError = url.searchParams.get("error");
   const store = await cookies();
 
-  // Google Calendar réutilise volontairement ce callback, déjà déclaré dans
-  // Google Cloud pour Gmail. Cela évite une nouvelle URI OAuth à configurer.
+  // Google Calendar réutilise ce callback OAuth, mais reste isolé par profil.
   const calendarState = store.get("calendar_oauth_state")?.value;
   if (state && calendarState && state === calendarState) {
-    const returnTo = safeReturnTo(store.get("calendar_oauth_return")?.value);
+    const returnTo = safeReturnTo(store.get("calendar_oauth_return")?.value, "/agenda");
     store.delete("calendar_oauth_state");
     store.delete("calendar_oauth_return");
 
-    if (oauthError) return redirectCalendar(origin, returnTo, { calendar: "erreur", message: oauthError });
-    if (!code) return redirectCalendar(origin, returnTo, { calendar: "erreur", message: "Code OAuth Google manquant." });
+    if (oauthError) return redirectWithParams(origin, returnTo, { calendar: "erreur", message: oauthError });
+    if (!code) return redirectWithParams(origin, returnTo, { calendar: "erreur", message: "Code OAuth Google manquant." });
 
     try {
       const token = await exchangeCalendarCode(origin, code);
@@ -55,48 +48,75 @@ export async function GET(request: Request) {
         connected_at: new Date().toISOString(),
       }, { onConflict: "profile_id" });
       if (error) throw new Error(error.message);
-      return redirectCalendar(origin, returnTo, { calendar: "connecte" });
+      return redirectWithParams(origin, returnTo, { calendar: "connecte" });
     } catch (error) {
-      return redirectCalendar(origin, returnTo, {
+      return redirectWithParams(origin, returnTo, {
         calendar: "erreur",
         message: error instanceof Error ? error.message : "Connexion Google Calendar impossible.",
       });
     }
   }
 
-  // Flux Gmail historique : toujours strictement réservé à l'administrateur.
-  if (profile.role !== "admin") {
+  const expectedState = store.get("gmail_oauth_state")?.value;
+  const mode = store.get("gmail_oauth_mode")?.value === "shared" ? "shared" : "personal";
+  const returnTo = safeReturnTo(
+    store.get("gmail_oauth_return")?.value,
+    mode === "shared" ? "/admin/boites-email" : "/email",
+  );
+  store.delete("gmail_oauth_state");
+  store.delete("gmail_oauth_mode");
+  store.delete("gmail_oauth_return");
+
+  if (mode === "shared" && profile.role !== "admin") {
     return NextResponse.redirect(new URL("/?motif=acces-refuse", origin));
   }
-
-  const expectedState = store.get("gmail_oauth_state")?.value;
-  if (state && expectedState && state === expectedState) store.delete("gmail_oauth_state");
-
-  if (oauthError) return redirectAdmin(origin, { gmail: "erreur", message: oauthError });
+  if (oauthError) return redirectWithParams(origin, returnTo, { gmail: "erreur", message: oauthError });
   if (!code || !state || !expectedState || state !== expectedState) {
-    return redirectAdmin(origin, { gmail: "erreur", message: "État OAuth invalide ou expiré." });
+    return redirectWithParams(origin, returnTo, { gmail: "erreur", message: "État OAuth invalide ou expiré." });
   }
 
   try {
     const token = await exchangeGmailCode(origin, code);
     const gmailProfile = await getGmailProfile(token.access_token!);
+    const email = gmailProfile.emailAddress.toLowerCase();
     const admin = createAdminClient();
+    const { data: existing, error: existingError } = await admin
+      .from("email_accounts")
+      .select("id, owner_profile_id, is_shared")
+      .eq("email", email)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
 
-    await admin.from("email_accounts").update({ is_active: false }).eq("is_active", true);
-    const { error } = await admin.from("email_accounts").upsert({
-      email: gmailProfile.emailAddress.toLowerCase(),
-      display_name: "Capella Energy",
+    if (existing && existing.owner_profile_id && existing.owner_profile_id !== profile.id) {
+      throw new Error("Cette boîte Gmail est déjà rattachée à un autre compte CRM.");
+    }
+    if (mode === "personal" && existing?.is_shared) {
+      throw new Error("Cette adresse est configurée comme boîte partagée dans le CRM.");
+    }
+
+    const payload = {
+      email,
+      display_name: mode === "shared" ? "Capella Energy" : profile.full_name,
       refresh_token_enc: encryptRefreshToken(token.refresh_token!),
       scope: token.scope || "https://www.googleapis.com/auth/gmail.modify",
       is_active: true,
+      owner_profile_id: profile.id,
+      is_shared: mode === "shared",
       connected_at: new Date().toISOString(),
       created_by: profile.id,
-    }, { onConflict: "email" });
+    };
 
-    if (error) throw new Error(error.message);
-    return redirectAdmin(origin, { gmail: "connecte" });
+    if (existing?.id) {
+      const { error } = await admin.from("email_accounts").update(payload).eq("id", existing.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await admin.from("email_accounts").insert(payload);
+      if (error) throw new Error(error.message);
+    }
+
+    return redirectWithParams(origin, returnTo, { gmail: "connecte" });
   } catch (error) {
-    return redirectAdmin(origin, {
+    return redirectWithParams(origin, returnTo, {
       gmail: "erreur",
       message: error instanceof Error ? error.message : "Connexion Gmail impossible.",
     });
