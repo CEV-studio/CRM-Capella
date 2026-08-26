@@ -11,9 +11,11 @@ import { PiecesJointes } from "@/components/pieces-jointes";
 import { EmailClient } from "@/components/email-client";
 import { ProspectInfoSidebar } from "@/components/prospect-info-sidebar";
 import { ProspectNoteEditor } from "@/components/prospect-note-editor";
+import { CalendarPanel } from "@/components/calendar-panel";
 import { chargerSources, chargerChampsPersonnalises } from "@/lib/referentiels";
 import { getActiveGmailAccount } from "@/lib/gmail";
-import type { EmailMessage, EmailTemplate, PieceJointe, Prospect, Profile } from "@/lib/domain/database.types";
+import { getCalendarAccount } from "@/lib/calendar";
+import type { CalendarEvent, EmailMessage, EmailTemplate, PieceJointe, Prospect, Profile } from "@/lib/domain/database.types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,7 @@ function contactNom(p: Prospect): string {
 
 export default async function FicheProspectPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ acd?: string }>;
+  searchParams: Promise<{ acd?: string; calendar?: string; message?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -38,6 +40,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const navigationSelection = "id, raison_sociale, nom, prenom";
   const plusRecent = `created_at.gt.${p.created_at},and(created_at.eq.${p.created_at},id.gt.${p.id})`;
   const plusAncien = `created_at.lt.${p.created_at},and(created_at.eq.${p.created_at},id.lt.${p.id})`;
+  const calendarSince = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
   const [
     sources,
@@ -48,6 +51,8 @@ export default async function FicheProspectPage({ params, searchParams }: {
     { data: templateData },
     { data: messageData },
     gmailAccount,
+    calendarAccount,
+    { data: calendarEventData },
     { data: fichePrecedente },
     { data: ficheSuivante },
   ] = await Promise.all([
@@ -59,6 +64,8 @@ export default async function FicheProspectPage({ params, searchParams }: {
     supabase.from("email_templates").select("*").eq("is_active", true).order("sort_order").order("name"),
     supabase.from("email_messages").select("*").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(100),
     getActiveGmailAccount().catch(() => null),
+    getCalendarAccount(profil.id).catch(() => null),
+    supabase.from("calendar_events").select("*").eq("prospect_id", id).eq("profile_id", profil.id).gte("end_at", calendarSince).order("start_at", { ascending: true }).limit(20),
     supabase
       .from("prospects")
       .select(navigationSelection)
@@ -84,12 +91,14 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const piecesVisibles = estAdmin ? pieces : pieces.filter((x) => x.type !== "ACD");
   const templates = (templateData ?? []) as EmailTemplate[];
   const messages = (messageData ?? []) as EmailMessage[];
+  const calendarEvents = (calendarEventData ?? []) as CalendarEvent[];
   const fournisseur = p.fournisseur_electricite || p.fournisseur_gaz || "";
   const ownerName = p.assigned_to === profil.id
     ? profil.full_name
     : (profils ?? []).find((x) => x.id === p.assigned_to)?.full_name ?? null;
   const sourceName = sources.find((s) => s.id === p.source_id)?.name ?? null;
   const phone = p.tel_mobile || p.tel_fixe;
+  const prospectLabel = p.raison_sociale || contactNom(p);
   const variables: Record<string, string> = {
     prenom: p.prenom || "",
     nom: p.nom || "",
@@ -143,6 +152,12 @@ export default async function FicheProspectPage({ params, searchParams }: {
       {query.acd === "transmise" ? (
         <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div>
       ) : null}
+      {query.calendar === "connecte" ? (
+        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Google Calendar connecté à ton compte CRM.</div>
+      ) : null}
+      {query.calendar === "erreur" ? (
+        <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-800">Connexion Google Calendar impossible : {query.message || "erreur inconnue"}</div>
+      ) : null}
 
       <div className="grid items-start gap-5 xl:grid-cols-[270px_minmax(0,1fr)_360px]">
         <aside className="space-y-4 xl:sticky xl:top-5">
@@ -184,6 +199,15 @@ export default async function FicheProspectPage({ params, searchParams }: {
           </section>
 
           <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
+
+          <CalendarPanel
+            prospectId={p.id}
+            prospectEmail={p.mail}
+            prospectLabel={prospectLabel}
+            connected={Boolean(calendarAccount)}
+            accountEmail={calendarAccount?.email || null}
+            events={calendarEvents}
+          />
 
           {(p.next_action || p.next_action_date) ? (
             <section className="rounded-xl border border-star-200 bg-star-50/40 p-4">
