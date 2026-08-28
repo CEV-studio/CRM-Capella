@@ -1,50 +1,134 @@
 "use client";
 
-import { useActionState } from "react";
-import { enregistrerNotes } from "@/app/(app)/prospection/actions";
-import type { ActionResult } from "@/lib/action-result";
+import { useEffect, useRef, useState } from "react";
 
-export function ProspectNoteEditor({
-  prospectId,
-  initialNotes,
-  compact = false,
-}: {
-  prospectId: string;
-  initialNotes: string | null;
-  compact?: boolean;
-}) {
-  const [etat, action, enCours] = useActionState<ActionResult | null, FormData>(enregistrerNotes, null);
+type ProspectNote = {
+  id: string;
+  body: string;
+  author_name: string;
+  created_at: string;
+};
+
+function fmtNoteDate(value: string): string {
+  try {
+    return new Intl.DateTimeFormat("fr-FR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+export function ProspectNoteEditor({ prospectId }: { prospectId: string; initialNotes?: string | null; compact?: boolean }) {
+  const [notes, setNotes] = useState<ProspectNote[]>([]);
+  const [body, setBody] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/prospects/${prospectId}/notes`, { cache: "no-store" });
+        const data = await response.json() as { notes?: ProspectNote[]; error?: string };
+        if (!response.ok) throw new Error(data.error || "Chargement des notes impossible.");
+        if (!cancelled) setNotes(data.notes ?? []);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Chargement des notes impossible.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [prospectId]);
+
+  function resize() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "40px";
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 40), 150)}px`;
+  }
+
+  async function ajouter() {
+    const text = body.trim();
+    if (!text || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/prospects/${prospectId}/notes`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ body: text }),
+      });
+      const data = await response.json() as { note?: ProspectNote; error?: string };
+      if (!response.ok || !data.note) throw new Error(data.error || "Ajout de la note impossible.");
+      setNotes((current) => [data.note!, ...current]);
+      setBody("");
+      requestAnimationFrame(() => {
+        if (textareaRef.current) textareaRef.current.style.height = "40px";
+        textareaRef.current?.focus();
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ajout de la note impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <form action={action} className={compact ? "grid gap-2" : "rounded-xl border border-navy-100 bg-white p-4"}>
-      <input type="hidden" name="id" value={prospectId} />
-      {!compact ? (
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-grey-brand">Note</div>
-            <div className="text-xs text-grey-brand">Mémo commercial toujours accessible</div>
-          </div>
-          {etat?.ok ? <span className="text-[11px] font-medium text-green-700">Enregistrée</span> : null}
+    <section className="rounded-xl border border-navy-100 bg-white">
+      <div className="border-b border-navy-100 p-3">
+        <div className="flex items-end gap-2">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={body}
+            onChange={(e) => { setBody(e.target.value); resize(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void ajouter();
+              }
+            }}
+            placeholder="Ajouter une note…"
+            className="min-h-10 flex-1 resize-none overflow-y-auto rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm leading-5 text-navy-800 outline-none transition focus:border-star-500 focus:ring-2 focus:ring-star-500/15"
+          />
+          <button
+            type="button"
+            onClick={() => void ajouter()}
+            disabled={saving || !body.trim()}
+            className="inline-flex h-10 shrink-0 items-center rounded-lg bg-navy-800 px-4 text-xs font-semibold text-white hover:bg-navy-700 disabled:opacity-40"
+          >
+            {saving ? "Ajout…" : "Ajouter"}
+          </button>
         </div>
-      ) : null}
-      <textarea
-        name="notes"
-        rows={compact ? 4 : 6}
-        defaultValue={initialNotes ?? ""}
-        placeholder="Ajouter une note…"
-        className="w-full resize-y rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm leading-5 text-navy-800 focus:border-star-500 focus:outline-none focus:ring-2 focus:ring-star-500/20"
-      />
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={enCours}
-          className="inline-flex h-8 items-center rounded-lg bg-navy-800 px-3 text-xs font-semibold text-white hover:bg-navy-700 disabled:opacity-50"
-        >
-          {enCours ? "Enregistrement…" : "Enregistrer la note"}
-        </button>
-        {etat && !etat.ok ? <span className="text-xs text-red-700">{etat.message}</span> : null}
-        {compact && etat?.ok ? <span className="text-xs text-green-700">{etat.message}</span> : null}
+        <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[10px] text-grey-brand">
+          <span>Entrée pour ajouter · Maj+Entrée pour aller à la ligne</span>
+          {notes.length ? <span>{notes.length} note{notes.length > 1 ? "s" : ""}</span> : null}
+        </div>
+        {error ? <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p> : null}
       </div>
-    </form>
+
+      {loading ? (
+        <div className="px-4 py-5 text-xs text-grey-brand">Chargement des notes…</div>
+      ) : notes.length ? (
+        <div className="divide-y divide-navy-100">
+          {notes.map((note) => (
+            <article key={note.id} className="px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-navy-700">{note.author_name}</span>
+                <time className="text-[10px] text-grey-brand" dateTime={note.created_at}>{fmtNoteDate(note.created_at)}</time>
+              </div>
+              <p className="mt-1.5 whitespace-pre-wrap text-sm leading-5 text-navy-800">{note.body}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="px-4 py-4 text-xs text-grey-brand">Aucune note pour le moment.</div>
+      )}
+    </section>
   );
 }
