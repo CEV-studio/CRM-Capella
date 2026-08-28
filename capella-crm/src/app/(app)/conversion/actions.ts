@@ -14,31 +14,31 @@ export async function changerEtapeAffaire(
   const profil = await requireProfile();
   const id = String(formData.get("id") ?? "");
   const stage = String(formData.get("stage") ?? "");
+  const koReason = String(formData.get("ko_reason") ?? "").trim();
   if (!id || !stage) return { ok: false, message: "Affaire introuvable." };
+  if (stage === "KO" && !koReason) return { ok: false, message: "Explique pourquoi le dossier est KO." };
 
   const supabase = await createClient();
   const { data: actuelle } = await supabase.from("affaires").select("stage").eq("id", id).maybeSingle();
 
   if (profil.role !== "admin") {
-    if (stage === "Signé") {
-      return { ok: false, message: "La validation finale est réservée à l’ADV." };
-    }
-    if (actuelle?.stage === "Signé") {
-      return { ok: false, message: "Ce dossier a déjà été validé par l’ADV." };
-    }
+    if (stage === "Signé") return { ok: false, message: "La validation finale est réservée à l’ADV." };
+    if (actuelle?.stage === "Signé") return { ok: false, message: "Ce dossier a déjà été validé par l’ADV." };
   }
 
-  const { error } = await supabase.from("affaires").update({ stage }).eq("id", id);
+  const patch: { stage: string; ko_reason?: string } = { stage };
+  if (stage === "KO") patch.ko_reason = koReason;
+  const { error } = await supabase.from("affaires").update(patch).eq("id", id);
   if (error) return { ok: false, message: error.message };
 
   revalidatePath("/conversion");
   revalidatePath("/adv");
-  return { ok: true, message: `Étape : ${stage}` };
+  return { ok: true, message: stage === "KO" ? "Dossier passé en KO avec motif." : `Étape : ${stage}` };
 }
 
 const CHAMPS_TEXTE = [
   "raison_sociale", "adresse_conso", "siren", "nom", "prenom", "mail",
-  "telephone", "fournisseur", "contrat", "pdl_elec", "pce_gaz", "notes",
+  "telephone", "fournisseur", "contrat", "pdl_elec", "pce_gaz", "notes", "ko_reason",
 ] as const;
 const CHAMPS_DATE = ["date_debut", "date_echeance", "date_entree", "date_signature", "date_relance"] as const;
 
@@ -90,6 +90,7 @@ export async function enregistrerAffaire(_prev: ActionResult | null, formData: F
   const souci = verifierMontants(patch);
   if (souci) return { ok: false, message: souci };
   if (!patch.raison_sociale) return { ok: false, message: "La raison sociale est obligatoire." };
+  if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
 
   const supabase = await createClient();
   if (profil.role !== "admin") {
@@ -117,6 +118,7 @@ export async function creerAffaire(_prev: ActionResult | null, formData: FormDat
   const souci = verifierMontants(patch);
   if (souci) return { ok: false, message: souci };
   if (!patch.raison_sociale) return { ok: false, message: "La raison sociale est obligatoire." };
+  if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
 
   const commercial = profil.role === "admin" ? String(formData.get("commercial_id") ?? "").trim() || profil.id : profil.id;
   const prospectId = String(formData.get("prospect_id") ?? "").trim() || null;
