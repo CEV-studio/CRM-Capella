@@ -9,6 +9,7 @@ const NAV: { titre: string; items: NavItem[] }[] = [
   { titre: "Pilotage", items: [
     { href: "/", label: "Tableau de bord" },
     { href: "/prospection", label: "Prospection" },
+    { href: "/clients", label: "Clients" },
     { href: "/agenda", label: "Mon agenda" },
     { href: "/email", label: "Mon email" },
     { href: "/conversion", label: "Conversion" },
