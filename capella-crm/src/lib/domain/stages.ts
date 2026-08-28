@@ -1,22 +1,31 @@
-/**
- * Étapes du CRM — libellés strictement identiques à l'ancien Google Sheets.
- * Ne jamais renommer : les commerciaux les connaissent par cœur.
- *
- * La `category` sert aux filtres et aux KPI ; elle n'est pas affichée telle quelle.
- */
+/** Étapes métier du CRM. */
 
-export const PROSPECT_STAGES = [
+export const PROSPECTION_STAGES = [
   { label: "NRP", category: "actif", color: "#FFF3CD" },
   { label: "Rappels", category: "actif", color: "#FFF3CD" },
   { label: "Demande de facture", category: "actif", color: "#E3EFFF" },
-  { label: "Demande ACD", category: "actif", color: "#E3EFFF" },
-  { label: "RDV comparatif", category: "a_transferer", color: "#E3F5EE" },
-  { label: "Présentation", category: "a_transferer", color: "#E3EFFF" },
-  { label: "RIB", category: "a_transferer", color: "#E3F5EE" },
+  // Étape de transition : dès qu'elle est choisie, la fiche passe dans Clients.
+  { label: "Demande ACD", category: "client", color: "#E3EFFF" },
   { label: "DFF trop éloigné", category: "clos", color: "#FFD9D9" },
   { label: "KO", category: "clos", color: "#FFD9D9" },
   { label: "Numéro KO", category: "clos", color: "#FFD9D9" },
   { label: "Pas intéressé", category: "clos", color: "#FFD9D9" },
+] as const;
+
+export const CLIENT_STAGES = [
+  { label: "Demande ACD", category: "client", color: "#E3EFFF" },
+  { label: "RDV comparatif", category: "client", color: "#E3F5EE" },
+  { label: "Présentation", category: "client", color: "#E3EFFF" },
+  { label: "RIB", category: "client", color: "#E3F5EE" },
+  // Étape de transition : crée/bascule le dossier dans Cotations.
+  { label: "Demande de cotation", category: "cotation", color: "#E3F5EE" },
+  { label: "KO", category: "clos", color: "#FFD9D9" },
+] as const;
+
+/** Toutes les étapes possibles d'une fiche relationnelle, pour compatibilité historique. */
+export const PROSPECT_STAGES = [
+  ...PROSPECTION_STAGES,
+  ...CLIENT_STAGES.filter((s) => !PROSPECTION_STAGES.some((p) => p.label === s.label)),
 ] as const;
 
 export const AFFAIRE_STAGES = [
@@ -30,13 +39,12 @@ export const AFFAIRE_STAGES = [
 
 export type ProspectStage = (typeof PROSPECT_STAGES)[number]["label"];
 export type AffaireStage = (typeof AFFAIRE_STAGES)[number]["label"];
-
 export type ProspectCategory = (typeof PROSPECT_STAGES)[number]["category"];
 
-/** Libellés lisibles des catégories de prospection, pour les filtres. */
-export const PROSPECT_CATEGORY_LABELS: Record<ProspectCategory, string> = {
+export const PROSPECT_CATEGORY_LABELS: Record<string, string> = {
   actif: "En travail",
-  a_transferer: "À transférer",
+  client: "Client",
+  cotation: "Cotation",
   clos: "Clos",
 };
 
@@ -69,14 +77,12 @@ export function affaireStage(label: string) {
   return AFFAIRE_STAGE_INDEX.get(label as AffaireStage);
 }
 
-/** Couleur de fond d'une ligne selon son étape. Blanc si l'étape est inconnue. */
 export function stageColor(label: string, kind: "prospect" | "affaire") {
-  const stage =
-    kind === "prospect" ? prospectStage(label) : affaireStage(label);
+  const stage = kind === "prospect" ? prospectStage(label) : affaireStage(label);
   return stage?.color ?? "#FFFFFF";
 }
 
-/** Un prospect à cette étape est prêt à devenir une affaire. */
+/** Une fiche client à cette étape doit entrer dans le pipeline de cotation. */
 export function isTransferable(label: string) {
-  return prospectStage(label)?.category === "a_transferer";
+  return label === "Demande de cotation";
 }
