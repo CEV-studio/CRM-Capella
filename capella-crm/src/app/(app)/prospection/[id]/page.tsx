@@ -185,6 +185,17 @@ export default async function FicheProspectPage({ params, searchParams }: {
               <Link href={`/outils/resiliation?prospect=${p.id}`} className="inline-flex h-9 items-center justify-center rounded-lg border border-navy-200 bg-white px-2 text-xs font-semibold text-navy-700 hover:bg-navy-50">Résiliation</Link>
             </div>
 
+            <div className="mt-2">
+              <CalendarPanel
+                prospectId={p.id}
+                prospectEmail={p.mail}
+                prospectLabel={prospectLabel}
+                connected={Boolean(calendarAccount)}
+                accountEmail={calendarAccount?.email || null}
+                events={calendarEvents}
+              />
+            </div>
+
             {p.stage === "Demande ACD" ? (
               <div className="mt-2">
                 {estAdmin ? (
@@ -199,15 +210,6 @@ export default async function FicheProspectPage({ params, searchParams }: {
           </section>
 
           <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
-
-          <CalendarPanel
-            prospectId={p.id}
-            prospectEmail={p.mail}
-            prospectLabel={prospectLabel}
-            connected={Boolean(calendarAccount)}
-            accountEmail={calendarAccount?.email || null}
-            events={calendarEvents}
-          />
 
           {(p.next_action || p.next_action_date) ? (
             <section className="rounded-xl border border-star-200 bg-star-50/40 p-4">
