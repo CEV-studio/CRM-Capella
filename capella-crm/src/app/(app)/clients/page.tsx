@@ -28,6 +28,8 @@ type ClientRow = {
   ko_reason: string | null;
 };
 
+type ClientAvecCommercial = ClientRow & { commercial: string };
+
 function nomClient(c: ClientRow) {
   return c.raison_sociale || [c.prenom, c.nom].filter(Boolean).join(" ") || "Client sans nom";
 }
@@ -37,11 +39,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const estAdmin = profil.role === "admin";
   const filtres = await searchParams;
   const supabase = await createClient();
-  const db = supabase as any;
+  const db: any = supabase;
 
   const etapesClients = CLIENT_STAGES.map((s) => s.label).filter((s) => s !== "Demande de cotation");
+  const vuesEtapes = CLIENT_STAGES.filter((s) => s.label !== "Demande de cotation");
 
-  let requete = db
+  let requete: any = db
     .from("prospects")
     .select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, assigned_to, became_client_at, ko_reason")
     .is("deleted_at", null)
@@ -52,7 +55,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
 
   const q = (filtres.q ?? "").trim();
   if (q) {
-    const safe = q.replaceAll(",", " ");
+    const safe = q.split(",").join(" ");
     requete = requete.or(`raison_sociale.ilike.%${safe}%,nom.ilike.%${safe}%,prenom.ilike.%${safe}%,mail.ilike.%${safe}%`);
   }
   if (filtres.etape && etapesClients.includes(filtres.etape)) requete = requete.eq("stage", filtres.etape);
@@ -60,16 +63,16 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     requete = filtres.commercial === "reservoir" ? requete.is("assigned_to", null) : requete.eq("assigned_to", filtres.commercial);
   }
 
-  const [{ data, error }, profilsResult] = await Promise.all([
-    requete,
-    estAdmin
-      ? supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name")
-      : Promise.resolve({ data: [] as Pick<Profile, "id" | "full_name">[] }),
-  ]);
+  const resultatClients = await requete;
+  const profilsResult = estAdmin
+    ? await supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name")
+    : { data: [] as Pick<Profile, "id" | "full_name">[] };
 
+  const data = (resultatClients?.data ?? []) as ClientRow[];
+  const error = resultatClients?.error as { message?: string } | null | undefined;
   const profils = (profilsResult.data ?? []) as Pick<Profile, "id" | "full_name">[];
-  const noms = new Map(profils.map((p) => [p.id, p.full_name]));
-  const clients = ((data ?? []) as ClientRow[]).map((c) => ({
+  const noms = new Map<string, string>(profils.map((p) => [p.id, p.full_name]));
+  const clients: ClientAvecCommercial[] = data.map((c) => ({
     ...c,
     commercial: c.assigned_to ? noms.get(c.assigned_to) ?? "—" : "Réservoir",
   }));
@@ -83,11 +86,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     if (filtres.etape) p.set("etape", filtres.etape);
     if (filtres.commercial) p.set("commercial", filtres.commercial);
     if (filtres.vue) p.set("vue", filtres.vue);
-    for (const [k, v] of Object.entries(changes)) v ? p.set(k, v) : p.delete(k);
+    for (const [k, v] of Object.entries(changes)) {
+      if (v) p.set(k, v);
+      else p.delete(k);
+    }
     return `/clients?${p.toString()}`;
   }
-
-  const vuesEtapes = CLIENT_STAGES.filter((s) => s.label !== "Demande de cotation");
 
   return (
     <main className="w-full px-6 py-8">
@@ -124,7 +128,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       </form>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {error.message}</div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {error.message ?? "Erreur inconnue"}</div>
       ) : kanban ? (
         <div className="scroll-slim overflow-x-auto pb-3"><div className="flex min-w-max gap-4">
           {vuesEtapes.map((etape) => {
