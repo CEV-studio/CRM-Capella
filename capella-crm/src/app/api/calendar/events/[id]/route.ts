@@ -3,6 +3,19 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { deleteGoogleCalendarEvent, getCalendarAccount } from "@/lib/calendar";
 
+function nextActionLabel(kind: "rdv" | "rappel", startAt: string): string {
+  const date = new Date(startAt);
+  const formatted = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date).replace(",", " à");
+  return kind === "rdv" ? `Présentation comparatif — ${formatted}` : `Rappel — ${formatted}`;
+}
+
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -12,7 +25,7 @@ export async function DELETE(
   const supabase = await createClient();
   const { data: event } = await supabase
     .from("calendar_events")
-    .select("id, profile_id, google_event_id")
+    .select("id, profile_id, prospect_id, google_event_id")
     .eq("id", id)
     .eq("profile_id", profile.id)
     .maybeSingle();
@@ -28,6 +41,33 @@ export async function DELETE(
     await deleteGoogleCalendarEvent(account, event.google_event_id);
     const { error } = await supabase.from("calendar_events").delete().eq("id", id).eq("profile_id", profile.id);
     if (error) throw new Error(error.message);
+
+    const now = new Date().toISOString();
+    const { data: nextEvent } = await supabase
+      .from("calendar_events")
+      .select("kind, start_at")
+      .eq("prospect_id", event.prospect_id)
+      .eq("profile_id", profile.id)
+      .gte("end_at", now)
+      .order("start_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    await supabase
+      .from("prospects")
+      .update(nextEvent
+        ? {
+            next_action: nextActionLabel(nextEvent.kind as "rdv" | "rappel", nextEvent.start_at),
+            next_action_date: nextEvent.start_at.slice(0, 10),
+            last_action_at: now,
+          }
+        : {
+            next_action: null,
+            next_action_date: null,
+            last_action_at: now,
+          })
+      .eq("id", event.prospect_id);
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Suppression impossible." }, { status: 500 });
