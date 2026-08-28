@@ -22,6 +22,12 @@ function fmtEventDate(value: string): string {
   }
 }
 
+function eventClasses(kind: CalendarEvent["kind"]) {
+  return kind === "rappel"
+    ? "border-amber-200 bg-amber-50/80"
+    : "border-sky-200 bg-sky-50/80";
+}
+
 export function CalendarPanel({
   prospectId,
   prospectEmail,
@@ -63,7 +69,7 @@ export function CalendarPanel({
   async function creer() {
     if (!connected || !startLocal || saving) return;
     setSaving(true);
-    setStatus(null);
+    setStatus({ ok: true, text: "Création en cours…" });
     try {
       const response = await fetch(`/api/calendar/prospects/${prospectId}/events`, {
         method: "POST",
@@ -79,10 +85,26 @@ export function CalendarPanel({
           inviteClient,
         }),
       });
-      const data = await response.json() as { ok?: boolean; event?: CalendarEvent; error?: string };
-      if (!response.ok || !data.event) throw new Error(data.error || "Création impossible.");
+
+      const raw = await response.text();
+      let data: { ok?: boolean; event?: CalendarEvent; error?: string } = {};
+      try {
+        data = raw ? JSON.parse(raw) as typeof data : {};
+      } catch {
+        throw new Error(`Réponse calendrier invalide (${response.status}).`);
+      }
+
+      if (!response.ok || !data.event) {
+        throw new Error(data.error || `Création impossible (${response.status}).`);
+      }
+
       setLocalEvents((current) => [...current, data.event!]);
-      setStatus({ ok: true, text: kind === "rappel" ? "Rappel ajouté à Google Calendar." : "Rendez-vous ajouté à Google Calendar." });
+      setStatus({
+        ok: true,
+        text: kind === "rappel"
+          ? "Rappel ajouté à Google Calendar et à l’agenda CRM."
+          : "RDV comparatif ajouté à Google Calendar et à l’agenda CRM.",
+      });
       setTitle("");
       setDescription("");
       setLocation("");
@@ -101,7 +123,8 @@ export function CalendarPanel({
     setStatus(null);
     try {
       const response = await fetch(`/api/calendar/events/${event.id}`, { method: "DELETE" });
-      const data = await response.json() as { ok?: boolean; error?: string };
+      const raw = await response.text();
+      const data = raw ? JSON.parse(raw) as { ok?: boolean; error?: string } : {};
       if (!response.ok) throw new Error(data.error || "Suppression impossible.");
       setLocalEvents((current) => current.filter((item) => item.id !== event.id));
       setStatus({ ok: true, text: "Événement supprimé de Google Calendar." });
@@ -133,6 +156,11 @@ export function CalendarPanel({
         ) : null}
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold">
+        <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-sky-800">● RDV comparatif</span>
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-800">● Rappel</span>
+      </div>
+
       {!connected ? (
         <a href={`/api/calendar/connect?returnTo=${encodeURIComponent(`/prospection/${prospectId}`)}`} className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-navy-800 px-3 text-xs font-semibold text-white hover:bg-navy-700">
           Connecter Google Calendar
@@ -142,8 +170,8 @@ export function CalendarPanel({
       {open && connected ? (
         <div className="mt-4 grid gap-2 border-t border-navy-100 pt-4">
           <div className="grid grid-cols-2 gap-2">
-            <select value={kind} onChange={(e) => setKind(e.target.value as "rdv" | "rappel")} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-xs">
-              <option value="rdv">Rendez-vous</option>
+            <select value={kind} onChange={(e) => { setKind(e.target.value as "rdv" | "rappel"); setTitle(""); }} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-xs">
+              <option value="rdv">RDV comparatif</option>
               <option value="rappel">Rappel</option>
             </select>
             <select value={durationMinutes} onChange={(e) => setDurationMinutes(Number(e.target.value))} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-xs">
@@ -155,8 +183,10 @@ export function CalendarPanel({
               <option value={120}>2 h</option>
             </select>
           </div>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`${kind === "rappel" ? "Rappel" : "Rendez-vous"} — ${prospectLabel}`} className="h-9 rounded-lg border border-navy-200 px-3 text-xs" />
-          <input type="datetime-local" value={startLocal} onChange={(e) => setStartLocal(e.target.value)} className="h-9 rounded-lg border border-navy-200 px-2 text-xs" />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`${kind === "rappel" ? "Rappel" : "Présentation comparatif"} — ${prospectLabel}`} className="h-9 rounded-lg border border-navy-200 px-3 text-xs" />
+          <label className="text-[11px] font-semibold text-navy-700">Date & heure de la présentation
+            <input type="datetime-local" value={startLocal} onChange={(e) => setStartLocal(e.target.value)} className="mt-1 h-9 w-full rounded-lg border border-navy-200 px-2 text-xs" />
+          </label>
           <select value={reminderMinutes} onChange={(e) => setReminderMinutes(Number(e.target.value))} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-xs">
             <option value={0}>Aucun rappel Google</option>
             <option value={10}>Rappel 10 min avant</option>
@@ -169,23 +199,24 @@ export function CalendarPanel({
           {prospectEmail ? (
             <label className="flex items-start gap-2 rounded-lg bg-navy-50 px-3 py-2 text-xs text-navy-700">
               <input type="checkbox" checked={inviteClient} onChange={(e) => setInviteClient(e.target.checked)} className="mt-0.5" />
-              <span>Inviter le client à <strong>{prospectEmail}</strong></span>
+              <span>Inviter le client à <strong>{prospectEmail}</strong>. L’invitation indiquera la date et l’heure de présentation.</span>
             </label>
           ) : null}
           <button type="button" onClick={() => void creer()} disabled={saving || !startLocal} className="h-9 rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600 disabled:opacity-50">
-            {saving ? "Ajout…" : "Ajouter à Google Calendar"}
+            {saving ? "Création…" : kind === "rappel" ? "Créer le rappel" : "Envoyer le RDV comparatif"}
           </button>
+          {status ? <p className={`rounded-lg px-3 py-2 text-xs ${status.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{status.text}</p> : null}
         </div>
       ) : null}
 
       {sortedEvents.length ? (
         <div className="mt-4 space-y-2 border-t border-navy-100 pt-3">
           {sortedEvents.slice(0, 6).map((event) => (
-            <div key={event.id} className="rounded-lg bg-navy-50/70 p-2.5">
+            <div key={event.id} className={`rounded-lg border p-2.5 ${eventClasses(event.kind)}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="truncate text-xs font-semibold text-navy-800">{event.kind === "rappel" ? "⏰ " : "📅 "}{event.title}</div>
-                  <div className="mt-0.5 text-[11px] font-medium text-star-600">{fmtEventDate(event.start_at)}</div>
+                  <div className="truncate text-xs font-semibold text-navy-800">{event.kind === "rappel" ? "⏰ Rappel — " : "📅 RDV comparatif — "}{event.title}</div>
+                  <div className="mt-0.5 text-[11px] font-bold text-navy-700">{fmtEventDate(event.start_at)}</div>
                   {event.location ? <div className="mt-0.5 truncate text-[11px] text-grey-brand">{event.location}</div> : null}
                 </div>
                 <button type="button" onClick={() => void supprimer(event)} disabled={deletingId === event.id || !connected} className="shrink-0 text-xs text-grey-brand hover:text-red-700 disabled:opacity-40" title="Supprimer">×</button>
@@ -199,7 +230,7 @@ export function CalendarPanel({
         </div>
       ) : connected ? <p className="mt-3 text-xs text-grey-brand">Aucun rendez-vous lié à cette fiche.</p> : null}
 
-      {status ? <p className={`mt-3 text-xs ${status.ok ? "text-green-700" : "text-red-700"}`}>{status.text}</p> : null}
+      {!open && status ? <p className={`mt-3 rounded-lg px-3 py-2 text-xs ${status.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{status.text}</p> : null}
     </section>
   );
 }
