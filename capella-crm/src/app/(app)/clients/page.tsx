@@ -1,29 +1,41 @@
 import Link from "next/link";
-import { peutSupprimer, requireProfile } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui";
-import { CLIENT_STAGES } from "@/lib/domain/stages";
-import { normalizeDigits } from "@/lib/format";
-import { type LigneProspect } from "../prospection/ligne";
-import { ListeProspects } from "../prospection/liste-prospects";
-import { KanbanProspection } from "../prospection/kanban";
-import { chargerSources } from "@/lib/referentiels";
-import type { Prospect, Profile } from "@/lib/domain/database.types";
+import { CLIENT_STAGES, stageColor } from "@/lib/domain/stages";
+import { fmtDate } from "@/lib/format";
+import type { Profile } from "@/lib/domain/database.types";
 
 export const metadata = { title: "Clients — Capella CRM" };
 export const dynamic = "force-dynamic";
 
-const PAR_PAGE = 50;
-const TRIS = {
-  societe: { colonne: "raison_sociale", croissant: true },
-  action: { colonne: "last_action_at", croissant: false },
-  relance: { colonne: "next_action_date", croissant: true },
-  etape: { colonne: "stage", croissant: true },
-} as const;
-type CleTri = keyof typeof TRIS;
-type Recherche = { q?: string; etape?: string; commercial?: string; source?: string; tri?: string; page?: string; vue?: string };
+type Recherche = {
+  q?: string;
+  etape?: string;
+  commercial?: string;
+  vue?: string;
+};
 
-const ETAPES_CLIENT = CLIENT_STAGES.map((s) => s.label);
+type ClientRow = {
+  id: string;
+  ref: string | null;
+  raison_sociale: string | null;
+  nom: string | null;
+  prenom: string | null;
+  mail: string | null;
+  tel_mobile: string | null;
+  tel_fixe: string | null;
+  siren: string | null;
+  stage: string;
+  next_action: string | null;
+  next_action_date: string | null;
+  assigned_to: string | null;
+  became_client_at: string | null;
+  motif_ko: string | null;
+};
+
+function nomClient(c: ClientRow) {
+  return c.raison_sociale || [c.prenom, c.nom].filter(Boolean).join(" ") || "Client sans nom";
+}
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<Recherche> }) {
   const profil = await requireProfile();
@@ -31,102 +43,79 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const filtres = await searchParams;
   const supabase = await createClient();
 
-  const cleTri: CleTri = (filtres.tri ?? "action") in TRIS ? (filtres.tri as CleTri) : "action";
-  const tri = TRIS[cleTri];
-  const page = Math.max(1, Number(filtres.page ?? 1) || 1);
-  const kanban = filtres.vue === "kanban";
+  const etapesClients = CLIENT_STAGES.map((s) => s.label).filter((s) => s !== "Demande de cotation");
 
   let requete = supabase
     .from("prospects")
-    .select(
-      "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, notes, last_action_at, assigned_to, source_id, date_fin_contrat, became_client_at, entered_conversion_at, motif_ko",
-      { count: "exact" },
-    )
+    .select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, assigned_to, became_client_at, motif_ko")
     .is("deleted_at", null)
     .not("became_client_at", "is", null)
     .is("entered_conversion_at", null)
-    .in("stage", ETAPES_CLIENT);
+    .in("stage", etapesClients)
+    .order("became_client_at", { ascending: false });
 
-  if (filtres.etape && ETAPES_CLIENT.includes(filtres.etape as never)) requete = requete.eq("stage", filtres.etape);
+  const q = (filtres.q ?? "").trim();
+  if (q) {
+    const safe = q.replaceAll(",", " ");
+    requete = requete.or(`raison_sociale.ilike.%${safe}%,nom.ilike.%${safe}%,prenom.ilike.%${safe}%,mail.ilike.%${safe}%`);
+  }
+  if (filtres.etape && etapesClients.includes(filtres.etape)) {
+    requete = requete.eq("stage", filtres.etape);
+  }
   if (estAdmin && filtres.commercial) {
     requete = filtres.commercial === "reservoir"
       ? requete.is("assigned_to", null)
       : requete.eq("assigned_to", filtres.commercial);
   }
-  if (filtres.source) requete = requete.eq("source_id", filtres.source);
 
-  const q = (filtres.q ?? "").trim();
-  if (q) {
-    const chiffres = normalizeDigits(q);
-    const motifs = [
-      `raison_sociale.ilike.%${q}%`,
-      `nom.ilike.%${q}%`,
-      `prenom.ilike.%${q}%`,
-      `mail.ilike.%${q}%`,
-    ];
-    if (chiffres) motifs.push(
-      `siren_norm.like.%${chiffres}%`,
-      `mobile_norm.like.%${chiffres}%`,
-      `pdl_norm.like.%${chiffres}%`,
-      `pce_norm.like.%${chiffres}%`,
-    );
-    requete = requete.or(motifs.join(","));
-  }
-
-  const debut = (page - 1) * PAR_PAGE;
-  const resultat = await requete
-    .order(tri.colonne, { ascending: tri.croissant })
-    .range(debut, debut + PAR_PAGE - 1);
-
-  const [sources, profilsResult] = await Promise.all([
-    chargerSources(),
+  const [{ data, error }, profilsResult] = await Promise.all([
+    requete,
     estAdmin
       ? supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name")
-      : Promise.resolve({ data: [] as Pick<Profile, "id" | "full_name">[], error: null }),
+      : Promise.resolve({ data: [] as Pick<Profile, "id" | "full_name">[] }),
   ]);
 
-  const profils = profilsResult.data ?? [];
-  const noms = new Map<string, string>(profils.map((p) => [p.id, p.full_name]));
-  const src = new Map<string, string>(sources.map((s) => [s.id, s.name]));
-  const lignes: LigneProspect[] = ((resultat.data ?? []) as unknown as Prospect[]).map((p) => ({
-    ...p,
-    commercial: p.assigned_to ? (noms.get(p.assigned_to) ?? "—") : null,
-    source: p.source_id ? (src.get(p.source_id) ?? null) : null,
+  const profils = (profilsResult.data ?? []) as Pick<Profile, "id" | "full_name">[];
+  const noms = new Map(profils.map((p) => [p.id, p.full_name]));
+  const clients = ((data ?? []) as ClientRow[]).map((c) => ({
+    ...c,
+    commercial: c.assigned_to ? noms.get(c.assigned_to) ?? "—" : "Réservoir",
   }));
 
-  const total = resultat.count ?? 0;
-  const nbPages = Math.max(1, Math.ceil(total / PAR_PAGE));
+  const kanban = filtres.vue === "kanban";
+  const total = clients.length;
 
   function url(changes: Record<string, string | null>) {
-    const params = new URLSearchParams();
-    for (const [k, v] of Object.entries(filtres)) if (v) params.set(k, v);
-    for (const [k, v] of Object.entries(changes)) v ? params.set(k, v) : params.delete(k);
-    return `/clients?${params.toString()}`;
+    const p = new URLSearchParams();
+    if (filtres.q) p.set("q", filtres.q);
+    if (filtres.etape) p.set("etape", filtres.etape);
+    if (filtres.commercial) p.set("commercial", filtres.commercial);
+    if (filtres.vue) p.set("vue", filtres.vue);
+    for (const [k, v] of Object.entries(changes)) v ? p.set(k, v) : p.delete(k);
+    return `/clients?${p.toString()}`;
   }
-  const lienTri = (c: CleTri) => url({ tri: c, page: null });
-  const lienPage = (n: number) => url({ page: String(n) });
 
   return (
     <main className="w-full px-6 py-8">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy-800">Clients</h1>
-          <p className="mt-1 text-sm text-grey-brand">À partir de Demande ACD. « Demande de cotation » bascule automatiquement le dossier dans Cotations.</p>
+          <p className="mt-1 text-sm text-grey-brand">À partir de Demande ACD, jusqu’au passage en Demande de cotation.</p>
         </div>
         <div className="flex gap-2">
           <div className="inline-flex rounded-lg border border-navy-200 p-0.5">
-            <Link href={url({ vue: "liste", page: null })} className={!kanban ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white" : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700"}>Liste</Link>
-            <Link href={url({ vue: "kanban", page: null })} className={kanban ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white" : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700"}>Kanban</Link>
+            <Link href={url({ vue: "liste" })} className={!kanban ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white" : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700"}>Liste</Link>
+            <Link href={url({ vue: "kanban" })} className={kanban ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white" : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700"}>Kanban</Link>
           </div>
           <Link href="/conversion" className="inline-flex h-10 items-center rounded-lg border border-navy-200 bg-white px-4 text-sm font-semibold text-navy-700">Voir les cotations</Link>
         </div>
       </header>
 
-      <form method="get" className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-navy-100 bg-white p-3">
-        <input type="search" name="q" defaultValue={filtres.q ?? ""} placeholder="Rechercher…" className="h-9 min-w-64 flex-1 rounded-lg border border-navy-200 px-3 text-sm" />
+      <form method="get" className="mb-5 flex flex-wrap items-center gap-2 rounded-xl border border-navy-100 bg-white p-3">
+        <input type="search" name="q" defaultValue={filtres.q ?? ""} placeholder="Rechercher un client…" className="h-9 min-w-64 flex-1 rounded-lg border border-navy-200 px-3 text-sm" />
         <select name="etape" defaultValue={filtres.etape ?? ""} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-sm">
           <option value="">Toutes les étapes</option>
-          {CLIENT_STAGES.map((s) => <option key={s.label} value={s.label}>{s.label}</option>)}
+          {CLIENT_STAGES.filter((s) => s.label !== "Demande de cotation").map((s) => <option key={s.label} value={s.label}>{s.label}</option>)}
         </select>
         {estAdmin ? (
           <select name="commercial" defaultValue={filtres.commercial ?? ""} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-sm">
@@ -135,38 +124,60 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
             {profils.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
           </select>
         ) : null}
-        <select name="source" defaultValue={filtres.source ?? ""} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-sm">
-          <option value="">Toutes les sources</option>
-          {sources.filter((s) => s.is_active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        {filtres.vue ? <input type="hidden" name="vue" value={filtres.vue} /> : null}
+        <input type="hidden" name="vue" value={kanban ? "kanban" : "liste"} />
         <button className="h-9 rounded-lg bg-navy-800 px-4 text-sm font-semibold text-white">Filtrer</button>
         <span className="ml-auto text-xs text-grey-brand">{total} client{total > 1 ? "s" : ""}</span>
       </form>
 
-      {kanban ? (
-        <KanbanProspection lignes={lignes} afficherCommercial={estAdmin} etapes={CLIENT_STAGES} libelleVide="Aucun client" />
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {error.message}</div>
+      ) : kanban ? (
+        <div className="scroll-slim overflow-x-auto pb-3">
+          <div className="flex min-w-max gap-4">
+            {CLIENT_STAGES.filter((s) => s.label !== "Demande de cotation").map((etape) => {
+              const cartes = clients.filter((c) => c.stage === etape.label);
+              return (
+                <section key={etape.label} className="w-72 shrink-0">
+                  <header className="flex items-center justify-between rounded-t-lg px-3 py-2" style={{ backgroundColor: stageColor(etape.label, "prospect") }}>
+                    <h2 className="text-sm font-semibold text-navy-800">{etape.label}</h2>
+                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-navy-800">{cartes.length}</span>
+                  </header>
+                  <div className="min-h-24 space-y-2 rounded-b-lg border border-navy-100 bg-navy-50 p-2">
+                    {cartes.length === 0 ? <div className="px-2 py-6 text-center text-xs text-grey-brand">Aucun client</div> : cartes.map((c) => (
+                      <Link key={c.id} href={`/prospection/${c.id}`} className="block rounded-lg border border-navy-100 bg-white p-3 shadow-sm hover:border-star-300">
+                        <div className="truncate text-sm font-semibold text-navy-800">{nomClient(c)}</div>
+                        <div className="mt-0.5 text-[11px] text-grey-brand">{c.ref}{c.siren ? ` · ${c.siren}` : ""}</div>
+                        {c.next_action || c.next_action_date ? <div className="mt-2 text-[11px] text-navy-700">{c.next_action ?? ""}{c.next_action_date ? ` · ${fmtDate(c.next_action_date)}` : ""}</div> : null}
+                        {estAdmin ? <div className="mt-2 text-[11px] text-grey-brand">{c.commercial}</div> : null}
+                        {c.stage === "KO" && c.motif_ko ? <div className="mt-2 rounded bg-red-50 px-2 py-1 text-[11px] text-red-700">{c.motif_ko}</div> : null}
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        </div>
       ) : (
-        <Card className="overflow-hidden">
-          <ListeProspects
-            lignes={lignes}
-            afficherCommercial={estAdmin}
-            peutSupprimer={peutSupprimer(profil)}
-            etapes={CLIENT_STAGES}
-            libelleVide="Aucun client ne correspond."
-            triLiens={{ societe: lienTri("societe"), etape: lienTri("etape"), relance: lienTri("relance"), action: lienTri("action") }}
-            messageErreur={resultat.error?.message}
-          />
-          {nbPages > 1 ? (
-            <div className="flex justify-between border-t border-navy-100 px-4 py-3 text-sm">
-              <span>Page {page} sur {nbPages}</span>
-              <div className="flex gap-2">
-                {page > 1 ? <Link href={lienPage(page - 1)} className="rounded-lg border px-3 py-1.5">Précédent</Link> : null}
-                {page < nbPages ? <Link href={lienPage(page + 1)} className="rounded-lg border px-3 py-1.5">Suivant</Link> : null}
-              </div>
-            </div>
-          ) : null}
-        </Card>
+        <div className="overflow-x-auto rounded-xl border border-navy-100 bg-white">
+          <table className="w-full min-w-[60rem] border-collapse text-sm">
+            <thead className="bg-navy-800 text-left text-[11px] uppercase tracking-wide text-navy-200">
+              <tr><th className="px-3 py-2">Société</th><th className="px-3 py-2">Contact</th><th className="px-3 py-2">Étape</th><th className="px-3 py-2">Prochaine action</th>{estAdmin ? <th className="px-3 py-2">Commercial</th> : null}<th className="px-3 py-2">Motif KO</th></tr>
+            </thead>
+            <tbody>
+              {clients.length === 0 ? <tr><td colSpan={estAdmin ? 6 : 5} className="px-3 py-10 text-center text-grey-brand">Aucun client.</td></tr> : clients.map((c) => (
+                <tr key={c.id} className="border-b border-navy-100 hover:bg-navy-50">
+                  <td className="px-3 py-2"><Link href={`/prospection/${c.id}`} className="font-semibold text-navy-800 hover:text-star-600">{nomClient(c)}</Link><div className="text-[11px] text-grey-brand">{c.ref}{c.siren ? ` · ${c.siren}` : ""}</div></td>
+                  <td className="px-3 py-2 text-navy-700">{[c.prenom, c.nom].filter(Boolean).join(" ") || "—"}<div className="text-[11px] text-grey-brand">{c.mail || c.tel_mobile || c.tel_fixe || ""}</div></td>
+                  <td className="px-3 py-2"><span className="rounded-full px-2.5 py-1 text-xs font-semibold text-navy-800" style={{ backgroundColor: stageColor(c.stage, "prospect") }}>{c.stage}</span></td>
+                  <td className="px-3 py-2 text-navy-700">{c.next_action || "—"}{c.next_action_date ? <div className="text-[11px] text-grey-brand">{fmtDate(c.next_action_date)}</div> : null}</td>
+                  {estAdmin ? <td className="px-3 py-2 text-navy-700">{c.commercial}</td> : null}
+                  <td className="px-3 py-2 text-xs text-red-700">{c.stage === "KO" ? c.motif_ko || "—" : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
