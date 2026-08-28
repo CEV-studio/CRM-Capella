@@ -25,8 +25,6 @@ function env(name: string): string {
 }
 
 function oauthRedirectUri(origin: string): string {
-  // Réutilise le callback déjà autorisé pour Gmail afin d'éviter une seconde
-  // URI à enregistrer dans Google Cloud.
   return `${origin.replace(/\/$/, "")}/api/gmail/callback`;
 }
 
@@ -168,16 +166,24 @@ export async function createGoogleCalendarEvent(account: CalendarAccount, input:
     },
   );
 
-  const json = await response.json() as {
+  const json = await response.json().catch(() => ({})) as {
     id?: string;
     htmlLink?: string;
     status?: string;
     start?: { dateTime?: string };
     end?: { dateTime?: string };
-    error?: { message?: string };
+    error?: { message?: string; errors?: Array<{ reason?: string; message?: string }> };
   };
   if (!response.ok || !json.id || !json.start?.dateTime || !json.end?.dateTime) {
-    throw new Error(json.error?.message || "Création du rendez-vous Google Calendar impossible.");
+    const reason = json.error?.errors?.[0]?.reason;
+    const detail = json.error?.message || json.error?.errors?.[0]?.message;
+    if (response.status === 403 && reason === "accessNotConfigured") {
+      throw new Error("Google Calendar API n’est pas activée sur le projet Google Cloud utilisé par le CRM.");
+    }
+    if (response.status === 401) {
+      throw new Error("La connexion Google Calendar a expiré. Déconnecte puis reconnecte l’agenda.");
+    }
+    throw new Error(`Google Calendar (${response.status}) : ${detail || reason || "création refusée"}`);
   }
 
   return {
