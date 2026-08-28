@@ -15,7 +15,7 @@ export type Prospect = {
   raison_sociale:string|null; siren:string|null; naf:string|null; code_postal:string|null; nb_sites:number|null; segment:string|null;
   pdl:string|null; pce:string|null; car_electricite:number|null; car_gaz:number|null; option_tarifaire:string|null;
   fournisseur_electricite:string|null; fournisseur_gaz:string|null; date_fin_contrat:string|null; champs_perso:Record<string,string>;
-  stage:string; next_action:string|null; next_action_date:string|null; notes:string|null; score:number|null; last_action_at:string|null;
+  stage:string; next_action:string|null; next_action_date:string|null; notes:string|null; ko_reason:string|null; score:number|null; last_action_at:string|null;
   source_id:string|null; assigned_to:string|null; assigned_at:string|null; deleted_at:string|null; acd_downloaded_at:string|null;
   siren_norm:string|null; pdl_norm:string|null; pce_norm:string|null; mobile_norm:string|null;
   legacy_ref:string|null; legacy_sheet:string|null; legacy_stage:string|null; legacy_payload:Record<string,unknown>;
@@ -27,7 +27,7 @@ export type Affaire = {
   raison_sociale:string; adresse_conso:string|null; siren:string|null; nom:string|null; prenom:string|null; mail:string|null; telephone:string|null;
   fournisseur:string|null; type_energie:TypeEnergie|null; contrat:string|null; pdl_elec:string|null; pce_gaz:string|null; stage:string;
   date_debut:string|null; date_echeance:string|null; car_mwh:number|null; date_entree:string; date_signature:string|null; date_relance:string|null;
-  commission:number; facture:string|null; acd:string|null; notes:string|null; deleted_at:string|null;
+  commission:number; facture:string|null; acd:string|null; notes:string|null; ko_reason:string|null; deleted_at:string|null;
   legacy_ref:string|null; legacy_payload:Record<string,unknown>; created_by:string|null; created_at:string; updated_at:string;
 };
 
