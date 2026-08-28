@@ -8,12 +8,7 @@ import type { Profile } from "@/lib/domain/database.types";
 export const metadata = { title: "Clients — Capella CRM" };
 export const dynamic = "force-dynamic";
 
-type Recherche = {
-  q?: string;
-  etape?: string;
-  commercial?: string;
-  vue?: string;
-};
+type Recherche = { q?: string; etape?: string; commercial?: string; vue?: string };
 
 type ClientRow = {
   id: string;
@@ -30,7 +25,7 @@ type ClientRow = {
   next_action_date: string | null;
   assigned_to: string | null;
   became_client_at: string | null;
-  motif_ko: string | null;
+  ko_reason: string | null;
 };
 
 function nomClient(c: ClientRow) {
@@ -42,12 +37,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const estAdmin = profil.role === "admin";
   const filtres = await searchParams;
   const supabase = await createClient();
+  const db = supabase as any;
 
   const etapesClients = CLIENT_STAGES.map((s) => s.label).filter((s) => s !== "Demande de cotation");
 
-  let requete = supabase
+  let requete = db
     .from("prospects")
-    .select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, assigned_to, became_client_at, motif_ko")
+    .select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, assigned_to, became_client_at, ko_reason")
     .is("deleted_at", null)
     .not("became_client_at", "is", null)
     .is("entered_conversion_at", null)
@@ -59,13 +55,9 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     const safe = q.replaceAll(",", " ");
     requete = requete.or(`raison_sociale.ilike.%${safe}%,nom.ilike.%${safe}%,prenom.ilike.%${safe}%,mail.ilike.%${safe}%`);
   }
-  if (filtres.etape && etapesClients.includes(filtres.etape)) {
-    requete = requete.eq("stage", filtres.etape);
-  }
+  if (filtres.etape && etapesClients.includes(filtres.etape)) requete = requete.eq("stage", filtres.etape);
   if (estAdmin && filtres.commercial) {
-    requete = filtres.commercial === "reservoir"
-      ? requete.is("assigned_to", null)
-      : requete.eq("assigned_to", filtres.commercial);
+    requete = filtres.commercial === "reservoir" ? requete.is("assigned_to", null) : requete.eq("assigned_to", filtres.commercial);
   }
 
   const [{ data, error }, profilsResult] = await Promise.all([
@@ -95,6 +87,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     return `/clients?${p.toString()}`;
   }
 
+  const vuesEtapes = CLIENT_STAGES.filter((s) => s.label !== "Demande de cotation");
+
   return (
     <main className="w-full px-6 py-8">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -115,7 +109,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <input type="search" name="q" defaultValue={filtres.q ?? ""} placeholder="Rechercher un client…" className="h-9 min-w-64 flex-1 rounded-lg border border-navy-200 px-3 text-sm" />
         <select name="etape" defaultValue={filtres.etape ?? ""} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-sm">
           <option value="">Toutes les étapes</option>
-          {CLIENT_STAGES.filter((s) => s.label !== "Demande de cotation").map((s) => <option key={s.label} value={s.label}>{s.label}</option>)}
+          {vuesEtapes.map((s) => <option key={s.label} value={s.label}>{s.label}</option>)}
         </select>
         {estAdmin ? (
           <select name="commercial" defaultValue={filtres.commercial ?? ""} className="h-9 rounded-lg border border-navy-200 bg-white px-2 text-sm">
@@ -132,50 +126,22 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {error.message}</div>
       ) : kanban ? (
-        <div className="scroll-slim overflow-x-auto pb-3">
-          <div className="flex min-w-max gap-4">
-            {CLIENT_STAGES.filter((s) => s.label !== "Demande de cotation").map((etape) => {
-              const cartes = clients.filter((c) => c.stage === etape.label);
-              return (
-                <section key={etape.label} className="w-72 shrink-0">
-                  <header className="flex items-center justify-between rounded-t-lg px-3 py-2" style={{ backgroundColor: stageColor(etape.label, "prospect") }}>
-                    <h2 className="text-sm font-semibold text-navy-800">{etape.label}</h2>
-                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-navy-800">{cartes.length}</span>
-                  </header>
-                  <div className="min-h-24 space-y-2 rounded-b-lg border border-navy-100 bg-navy-50 p-2">
-                    {cartes.length === 0 ? <div className="px-2 py-6 text-center text-xs text-grey-brand">Aucun client</div> : cartes.map((c) => (
-                      <Link key={c.id} href={`/prospection/${c.id}`} className="block rounded-lg border border-navy-100 bg-white p-3 shadow-sm hover:border-star-300">
-                        <div className="truncate text-sm font-semibold text-navy-800">{nomClient(c)}</div>
-                        <div className="mt-0.5 text-[11px] text-grey-brand">{c.ref}{c.siren ? ` · ${c.siren}` : ""}</div>
-                        {c.next_action || c.next_action_date ? <div className="mt-2 text-[11px] text-navy-700">{c.next_action ?? ""}{c.next_action_date ? ` · ${fmtDate(c.next_action_date)}` : ""}</div> : null}
-                        {estAdmin ? <div className="mt-2 text-[11px] text-grey-brand">{c.commercial}</div> : null}
-                        {c.stage === "KO" && c.motif_ko ? <div className="mt-2 rounded bg-red-50 px-2 py-1 text-[11px] text-red-700">{c.motif_ko}</div> : null}
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
-        </div>
+        <div className="scroll-slim overflow-x-auto pb-3"><div className="flex min-w-max gap-4">
+          {vuesEtapes.map((etape) => {
+            const cartes = clients.filter((c) => c.stage === etape.label);
+            return <section key={etape.label} className="w-72 shrink-0">
+              <header className="flex items-center justify-between rounded-t-lg px-3 py-2" style={{ backgroundColor: stageColor(etape.label, "prospect") }}><h2 className="text-sm font-semibold text-navy-800">{etape.label}</h2><span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-navy-800">{cartes.length}</span></header>
+              <div className="min-h-24 space-y-2 rounded-b-lg border border-navy-100 bg-navy-50 p-2">
+                {cartes.length === 0 ? <div className="px-2 py-6 text-center text-xs text-grey-brand">Aucun client</div> : cartes.map((c) => <Link key={c.id} href={`/prospection/${c.id}`} className="block rounded-lg border border-navy-100 bg-white p-3 shadow-sm hover:border-star-300"><div className="truncate text-sm font-semibold text-navy-800">{nomClient(c)}</div><div className="mt-0.5 text-[11px] text-grey-brand">{c.ref}{c.siren ? ` · ${c.siren}` : ""}</div>{c.next_action || c.next_action_date ? <div className="mt-2 text-[11px] text-navy-700">{c.next_action ?? ""}{c.next_action_date ? ` · ${fmtDate(c.next_action_date)}` : ""}</div> : null}{estAdmin ? <div className="mt-2 text-[11px] text-grey-brand">{c.commercial}</div> : null}{c.stage === "KO" && c.ko_reason ? <div className="mt-2 rounded bg-red-50 px-2 py-1 text-[11px] text-red-700">{c.ko_reason}</div> : null}</Link>)}
+              </div>
+            </section>;
+          })}
+        </div></div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-navy-100 bg-white">
           <table className="w-full min-w-[60rem] border-collapse text-sm">
-            <thead className="bg-navy-800 text-left text-[11px] uppercase tracking-wide text-navy-200">
-              <tr><th className="px-3 py-2">Société</th><th className="px-3 py-2">Contact</th><th className="px-3 py-2">Étape</th><th className="px-3 py-2">Prochaine action</th>{estAdmin ? <th className="px-3 py-2">Commercial</th> : null}<th className="px-3 py-2">Motif KO</th></tr>
-            </thead>
-            <tbody>
-              {clients.length === 0 ? <tr><td colSpan={estAdmin ? 6 : 5} className="px-3 py-10 text-center text-grey-brand">Aucun client.</td></tr> : clients.map((c) => (
-                <tr key={c.id} className="border-b border-navy-100 hover:bg-navy-50">
-                  <td className="px-3 py-2"><Link href={`/prospection/${c.id}`} className="font-semibold text-navy-800 hover:text-star-600">{nomClient(c)}</Link><div className="text-[11px] text-grey-brand">{c.ref}{c.siren ? ` · ${c.siren}` : ""}</div></td>
-                  <td className="px-3 py-2 text-navy-700">{[c.prenom, c.nom].filter(Boolean).join(" ") || "—"}<div className="text-[11px] text-grey-brand">{c.mail || c.tel_mobile || c.tel_fixe || ""}</div></td>
-                  <td className="px-3 py-2"><span className="rounded-full px-2.5 py-1 text-xs font-semibold text-navy-800" style={{ backgroundColor: stageColor(c.stage, "prospect") }}>{c.stage}</span></td>
-                  <td className="px-3 py-2 text-navy-700">{c.next_action || "—"}{c.next_action_date ? <div className="text-[11px] text-grey-brand">{fmtDate(c.next_action_date)}</div> : null}</td>
-                  {estAdmin ? <td className="px-3 py-2 text-navy-700">{c.commercial}</td> : null}
-                  <td className="px-3 py-2 text-xs text-red-700">{c.stage === "KO" ? c.motif_ko || "—" : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
+            <thead className="bg-navy-800 text-left text-[11px] uppercase tracking-wide text-navy-200"><tr><th className="px-3 py-2">Société</th><th className="px-3 py-2">Contact</th><th className="px-3 py-2">Étape</th><th className="px-3 py-2">Prochaine action</th>{estAdmin ? <th className="px-3 py-2">Commercial</th> : null}<th className="px-3 py-2">Motif KO</th></tr></thead>
+            <tbody>{clients.length === 0 ? <tr><td colSpan={estAdmin ? 6 : 5} className="px-3 py-10 text-center text-grey-brand">Aucun client.</td></tr> : clients.map((c) => <tr key={c.id} className="border-b border-navy-100 hover:bg-navy-50"><td className="px-3 py-2"><Link href={`/prospection/${c.id}`} className="font-semibold text-navy-800 hover:text-star-600">{nomClient(c)}</Link><div className="text-[11px] text-grey-brand">{c.ref}{c.siren ? ` · ${c.siren}` : ""}</div></td><td className="px-3 py-2 text-navy-700">{[c.prenom, c.nom].filter(Boolean).join(" ") || "—"}<div className="text-[11px] text-grey-brand">{c.mail || c.tel_mobile || c.tel_fixe || ""}</div></td><td className="px-3 py-2"><span className="rounded-full px-2.5 py-1 text-xs font-semibold text-navy-800" style={{ backgroundColor: stageColor(c.stage, "prospect") }}>{c.stage}</span></td><td className="px-3 py-2 text-navy-700">{c.next_action || "—"}{c.next_action_date ? <div className="text-[11px] text-grey-brand">{fmtDate(c.next_action_date)}</div> : null}</td>{estAdmin ? <td className="px-3 py-2 text-navy-700">{c.commercial}</td> : null}<td className="px-3 py-2 text-xs text-red-700">{c.stage === "KO" ? c.ko_reason || "—" : "—"}</td></tr>)}</tbody>
           </table>
         </div>
       )}
