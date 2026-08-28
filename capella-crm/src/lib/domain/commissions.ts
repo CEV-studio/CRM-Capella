@@ -1,12 +1,13 @@
 /**
  * Calcul des indicateurs et des commissions.
  *
- * Règle métier reprise du CRM Sheets :
+ * Règle métier :
  *   - la colonne « Commission (€) » d'une affaire est ce que Capella encaisse ;
  *   - la part d'un commercial = ce montant × son taux ;
  *   - la part d'un apporteur  = ce montant × son taux.
- * Seules les affaires à l'étape « Signé » comptent, et elles sont rattachées
- * au mois de leur DATE DE SIGNATURE — pas de leur date d'entrée.
+ * Les commissions signées sont comptabilisées sur le mois de signature.
+ * Une commission déjà renseignée sur un dossier non signé reste visible comme
+ * « en attente », sans être mélangée à la comptabilité signée.
  */
 
 import type { Affaire } from "./database.types";
@@ -28,7 +29,7 @@ export function filtrerAffaires(
     if (f.apporteurId && a.apporteur_id !== f.apporteurId) return false;
 
     // L'année et le mois ne s'appliquent qu'aux affaires signées : une affaire
-    // en cours n'a pas encore de date de signature et doit rester comptée.
+    // en cours n'a pas encore de date de signature et doit rester visible.
     if ((f.annee || f.mois) && a.stage === "Signé") {
       if (!a.date_signature) return false;
       const d = new Date(a.date_signature);
@@ -41,12 +42,14 @@ export function filtrerAffaires(
 
 export type Indicateurs = {
   caSigne: number;
+  caEnAttente: number;
   nbSignees: number;
   nbEnCours: number;
   nbPerdues: number;
   tauxConversion: number;
   relancesAVenir: number;
   commissionsCommerciaux: number;
+  commissionsCommerciauxEnAttente: number;
   commissionsApporteurs: number;
 };
 
@@ -58,10 +61,18 @@ export function calculerIndicateurs(
   const signees = affaires.filter((a) => a.stage === "Signé");
   const perdues = affaires.filter((a) => a.stage === "KO");
   const enCours = affaires.filter((a) => a.stage !== "Signé" && a.stage !== "KO");
+  const avecCommissionEnAttente = enCours.filter((a) => Number(a.commission ?? 0) > 0);
 
   const caSigne = signees.reduce((s, a) => s + Number(a.commission ?? 0), 0);
+  const caEnAttente = avecCommissionEnAttente.reduce((s, a) => s + Number(a.commission ?? 0), 0);
 
   const commissionsCommerciaux = signees.reduce(
+    (s, a) =>
+      s + Number(a.commission ?? 0) * (tauxCommercial.get(a.commercial_id) ?? 0),
+    0,
+  );
+
+  const commissionsCommerciauxEnAttente = avecCommissionEnAttente.reduce(
     (s, a) =>
       s + Number(a.commission ?? 0) * (tauxCommercial.get(a.commercial_id) ?? 0),
     0,
@@ -82,12 +93,14 @@ export function calculerIndicateurs(
 
   return {
     caSigne,
+    caEnAttente,
     nbSignees: signees.length,
     nbEnCours: enCours.length,
     nbPerdues: perdues.length,
     tauxConversion: affaires.length > 0 ? signees.length / affaires.length : 0,
     relancesAVenir,
     commissionsCommerciaux,
+    commissionsCommerciauxEnAttente,
     commissionsApporteurs,
   };
 }
