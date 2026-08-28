@@ -31,6 +31,18 @@ function contactNom(p: Prospect): string {
   return nomComplet(p.nom, p.prenom) || "Contact non renseigné";
 }
 
+function calendarLabel(event: CalendarEvent): string {
+  const date = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(event.start_at)).replace(",", " à");
+  return event.kind === "rappel" ? `Rappel — ${date}` : `Présentation comparatif — ${date}`;
+}
+
 export default async function FicheProspectPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ acd?: string; calendar?: string; message?: string }>;
@@ -83,6 +95,10 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const sourceName = sources.find((s) => s.id === p.source_id)?.name ?? null;
   const phone = p.tel_mobile || p.tel_fixe;
   const prospectLabel = p.raison_sociale || contactNom(p);
+  const prochaineAction = calendarEvents[0] ?? null;
+  const prochaineActionManuelle = !prochaineAction && p.next_action && !/^(Rappel|Présentation comparatif)/.test(p.next_action)
+    ? p.next_action
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-[1720px] px-4 py-5 2xl:px-6">
@@ -121,12 +137,25 @@ export default async function FicheProspectPage({ params, searchParams }: {
               <CalendarPanel prospectId={p.id} prospectEmail={p.mail} prospectLabel={prospectLabel} connected={Boolean(calendarAccount)} accountEmail={calendarAccount?.email || null} events={calendarEvents} />
             </div>
 
+            {prochaineAction ? (
+              <div className={`mt-4 rounded-lg border px-3 py-2.5 ${prochaineAction.kind === "rappel" ? "border-amber-200 bg-amber-50" : "border-sky-200 bg-sky-50"}`}>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-grey-brand">Prochaine action</div>
+                <div className="mt-1 flex items-start gap-2 text-xs font-semibold text-navy-800">
+                  <span aria-hidden>{prochaineAction.kind === "rappel" ? "⏰" : "📅"}</span>
+                  <span>{calendarLabel(prochaineAction)}</span>
+                </div>
+              </div>
+            ) : prochaineActionManuelle ? (
+              <div className="mt-4 rounded-lg border border-navy-100 bg-navy-50/60 px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-grey-brand">Prochaine action</div>
+                <div className="mt-1 text-xs font-semibold text-navy-800">{prochaineActionManuelle}</div>
+              </div>
+            ) : null}
+
             {p.stage === "Demande ACD" ? <div className="mt-2">{estAdmin ? <a href={`/api/acd/${p.id}`} className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Télécharger l’ACD</a> : <form action={`/api/acd/${p.id}/demander`} method="post"><button type="submit" className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Demander l&apos;ACD</button></form>}</div> : null}
           </section>
 
           <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
-
-          {(p.next_action || p.next_action_date) ? <section className="rounded-xl border border-star-200 bg-star-50/40 p-4"><div className="text-[11px] font-semibold uppercase tracking-wide text-grey-brand">À faire</div><div className="mt-1 text-sm font-semibold text-navy-800">{p.next_action || "Prochaine action"}</div>{p.next_action_date ? <div className="mt-1 text-xs text-grey-brand">Prévue le {p.next_action_date}</div> : null}</section> : null}
 
           {affaireLiee ? <Link href={`/conversion/${affaireLiee.id}`} className="block rounded-xl p-4 text-sm text-navy-800 hover:opacity-90" style={{ backgroundColor: "var(--color-status-signe)" }}><strong>Déjà converti en affaire</strong><span className="mt-1 block text-xs">Voir {affaireLiee.ref} →</span></Link> : pretATransferer ? <section className="rounded-xl p-4 text-sm text-navy-800" style={{ backgroundColor: "var(--color-status-avance)" }}><strong>Prêt à convertir</strong><p className="mt-1 text-xs">La fiche affaire sera pré-remplie.</p><Link href={`/conversion/nouvelle?prospect=${p.id}`} className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Convertir en affaire</Link></section> : null}
 
