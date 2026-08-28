@@ -7,6 +7,8 @@ type ProspectNote = {
   body: string;
   author_name: string;
   created_at: string;
+  updated_at?: string | null;
+  can_edit?: boolean;
 };
 
 function fmtNoteDate(value: string): string {
@@ -26,6 +28,9 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingBody, setEditingBody] = useState("");
+  const [busyNoteId, setBusyNoteId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -78,6 +83,53 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
     }
   }
 
+  async function modifier(noteId: string) {
+    const text = editingBody.trim();
+    if (!text || busyNoteId) return;
+    setBusyNoteId(noteId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/prospects/${prospectId}/notes`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ noteId, body: text }),
+      });
+      const data = await response.json() as { note?: ProspectNote; error?: string };
+      if (!response.ok || !data.note) throw new Error(data.error || "Modification impossible.");
+      setNotes((current) => current.map((note) => note.id === noteId ? data.note! : note));
+      setEditingId(null);
+      setEditingBody("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Modification impossible.");
+    } finally {
+      setBusyNoteId(null);
+    }
+  }
+
+  async function supprimer(noteId: string) {
+    if (busyNoteId || !window.confirm("Supprimer cette note ?")) return;
+    setBusyNoteId(noteId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/prospects/${prospectId}/notes`, {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ noteId }),
+      });
+      const data = await response.json() as { ok?: boolean; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || "Suppression impossible.");
+      setNotes((current) => current.filter((note) => note.id !== noteId));
+      if (editingId === noteId) {
+        setEditingId(null);
+        setEditingBody("");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Suppression impossible.");
+    } finally {
+      setBusyNoteId(null);
+    }
+  }
+
   return (
     <section className="rounded-xl border border-navy-100 bg-white">
       <div className="border-b border-navy-100 p-3">
@@ -119,10 +171,57 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
           {notes.map((note) => (
             <article key={note.id} className="px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-navy-700">{note.author_name}</span>
-                <time className="text-[10px] text-grey-brand" dateTime={note.created_at}>{fmtNoteDate(note.created_at)}</time>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-navy-700">{note.author_name}</span>
+                  <time className="text-[10px] text-grey-brand" dateTime={note.created_at}>{fmtNoteDate(note.created_at)}</time>
+                  {note.updated_at ? <span className="text-[10px] italic text-grey-brand">modifiée {fmtNoteDate(note.updated_at)}</span> : null}
+                </div>
+                {note.can_edit ? (
+                  <div className="flex items-center gap-2 text-[10px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(note.id);
+                        setEditingBody(note.body);
+                        setError(null);
+                      }}
+                      className="text-navy-600 hover:text-navy-900"
+                    >Modifier</button>
+                    <button
+                      type="button"
+                      onClick={() => void supprimer(note.id)}
+                      disabled={busyNoteId === note.id}
+                      className="text-red-600 hover:text-red-800 disabled:opacity-40"
+                    >Supprimer</button>
+                  </div>
+                ) : null}
               </div>
-              <p className="mt-1.5 whitespace-pre-wrap text-sm leading-5 text-navy-800">{note.body}</p>
+
+              {editingId === note.id ? (
+                <div className="mt-2">
+                  <textarea
+                    rows={3}
+                    value={editingBody}
+                    onChange={(e) => setEditingBody(e.target.value)}
+                    className="w-full resize-y rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm leading-5 text-navy-800 outline-none focus:border-star-500 focus:ring-2 focus:ring-star-500/15"
+                  />
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void modifier(note.id)}
+                      disabled={busyNoteId === note.id || !editingBody.trim()}
+                      className="inline-flex h-8 items-center rounded-lg bg-navy-800 px-3 text-xs font-semibold text-white hover:bg-navy-700 disabled:opacity-40"
+                    >{busyNoteId === note.id ? "Enregistrement…" : "Enregistrer"}</button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditingId(null); setEditingBody(""); }}
+                      className="inline-flex h-8 items-center rounded-lg border border-navy-200 px-3 text-xs font-semibold text-navy-700 hover:bg-navy-50"
+                    >Annuler</button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-5 text-navy-800">{note.body}</p>
+              )}
             </article>
           ))}
         </div>
