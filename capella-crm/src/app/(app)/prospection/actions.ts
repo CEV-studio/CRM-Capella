@@ -65,10 +65,14 @@ export async function changerEtape(_prev: ActionResult | null, formData: FormDat
   const profil = await requireProfile();
   const id = String(formData.get("id") ?? "");
   const stage = String(formData.get("stage") ?? "");
+  const koReason = String(formData.get("ko_reason") ?? "").trim();
   if (!id || !stage) return { ok: false, message: "Prospect introuvable." };
+  if (stage === "KO" && !koReason) return { ok: false, message: "Explique pourquoi ce dossier est KO." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("prospects").update({ stage }).eq("id", id);
+  const patch: { stage: string; ko_reason?: string } = { stage };
+  if (stage === "KO") patch.ko_reason = koReason;
+  const { error } = await supabase.from("prospects").update(patch).eq("id", id);
   if (error) return { ok: false, message: messageLisible(error.message) };
 
   if (stage === "Demande de cotation") {
@@ -85,7 +89,7 @@ export async function changerEtape(_prev: ActionResult | null, formData: FormDat
   revalidatePath("/conversion");
   revalidatePath("/adv");
   revalidatePath(`/prospection/${id}`);
-  return { ok: true, message: stage === "Demande de cotation" ? "Client basculé dans Cotations." : `Étape : ${stage}` };
+  return { ok: true, message: stage === "Demande de cotation" ? "Client basculé dans Cotations." : stage === "KO" ? "Dossier passé en KO avec motif." : `Étape : ${stage}` };
 }
 
 export async function enregistrerProchaineAction(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
@@ -119,7 +123,7 @@ const CHAMPS_FICHE = [
   "nom", "prenom", "mail", "tel_mobile", "tel_fixe",
   "raison_sociale", "siren", "naf", "code_postal", "segment",
   "pdl", "pce", "option_tarifaire",
-  "fournisseur_electricite", "fournisseur_gaz", "notes", "next_action",
+  "fournisseur_electricite", "fournisseur_gaz", "notes", "next_action", "ko_reason",
 ] as const;
 const CHAMPS_DATE = ["date_fin_contrat", "next_action_date"] as const;
 const CHAMPS_NOMBRE = ["nb_sites", "score"] as const;
@@ -162,6 +166,7 @@ export async function enregistrerFiche(_prev: ActionResult | null, formData: For
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, message: "Prospect introuvable." };
   const patch = lireFormulaire(formData);
+  if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
   const supabase = await createClient();
   const { error } = await supabase.from("prospects").update(patch).eq("id", id);
   if (error) return { ok: false, message: messageLisible(error.message) };
@@ -186,9 +191,8 @@ export async function enregistrerFiche(_prev: ActionResult | null, formData: For
 export async function creerProspect(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const profil = await requireProfile();
   const patch = lireFormulaire(formData);
-  if (!patch.raison_sociale && !patch.nom && !patch.prenom) {
-    return { ok: false, message: "Renseigne au moins une raison sociale ou un nom." };
-  }
+  if (!patch.raison_sociale && !patch.nom && !patch.prenom) return { ok: false, message: "Renseigne au moins une raison sociale ou un nom." };
+  if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
   const supabase = await createClient();
   const proprietaire = profil.role === "admin" ? String(formData.get("assigned_to") ?? "").trim() || null : profil.id;
   const { data, error } = await supabase.from("prospects").insert({ ...patch, assigned_to: proprietaire, created_by: profil.id }).select("id").single();
