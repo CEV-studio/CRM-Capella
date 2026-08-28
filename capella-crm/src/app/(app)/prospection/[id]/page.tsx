@@ -155,8 +155,6 @@ export default async function FicheProspectPage({ params, searchParams }: {
             {p.stage === "Demande ACD" ? <div className="mt-2">{estAdmin ? <a href={`/api/acd/${p.id}`} className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Télécharger l’ACD</a> : <form action={`/api/acd/${p.id}/demander`} method="post"><button type="submit" className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Demander l&apos;ACD</button></form>}</div> : null}
           </section>
 
-          <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
-
           {affaireLiee ? <Link href={`/conversion/${affaireLiee.id}`} className="block rounded-xl p-4 text-sm text-navy-800 hover:opacity-90" style={{ backgroundColor: "var(--color-status-signe)" }}><strong>Déjà converti en affaire</strong><span className="mt-1 block text-xs">Voir {affaireLiee.ref} →</span></Link> : pretATransferer ? <section className="rounded-xl p-4 text-sm text-navy-800" style={{ backgroundColor: "var(--color-status-avance)" }}><strong>Prêt à convertir</strong><p className="mt-1 text-xs">La fiche affaire sera pré-remplie.</p><Link href={`/conversion/nouvelle?prospect=${p.id}`} className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Convertir en affaire</Link></section> : null}
 
           {peutGerer(profil) ? <div className="px-1"><BoutonSupprimer cible="prospect" id={p.id} libelle={prospectLabel} retour="/prospection" /></div> : null}
@@ -169,6 +167,10 @@ export default async function FicheProspectPage({ params, searchParams }: {
               <p className="text-xs text-grey-brand">Vue rapide de la relation. Les outils complets s’ouvrent dans les fenêtres d’action.</p>
             </div>
             <span className="rounded-full bg-navy-50 px-3 py-1 text-xs font-semibold text-navy-700">{activityEmails.length} récent{activityEmails.length > 1 ? "s" : ""}</span>
+          </div>
+
+          <div className="mb-4">
+            <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
           </div>
 
           <div className="rounded-xl border border-navy-100 bg-white">
