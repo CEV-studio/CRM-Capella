@@ -21,6 +21,7 @@ export async function enregistrerAdv(
   const commission = brut === "" ? 0 : Number(brut);
 
   if (!id) return { ok: false, message: "Dossier introuvable." };
+  if (stage === "KO") return { ok: false, message: "Le KO est décidé par le commercial depuis son espace." };
   if (!Number.isFinite(commission) || commission < 0) {
     return { ok: false, message: "Commission invalide." };
   }
