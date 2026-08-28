@@ -18,6 +18,15 @@ import type { CalendarEvent, PieceJointe, Prospect, Profile } from "@/lib/domain
 
 export const dynamic = "force-dynamic";
 
+type ActivityEmail = {
+  id: string;
+  direction: "incoming" | "outgoing";
+  subject: string | null;
+  snippet: string | null;
+  sent_at: string | null;
+  from_email: string | null;
+};
+
 function contactNom(p: Prospect): string {
   return nomComplet(p.nom, p.prenom) || "Contact non renseigné";
 }
@@ -49,6 +58,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
     champsPerso,
     calendarAccount,
     { data: calendarEventData },
+    { data: activityEmailData },
     { data: fichePrecedente },
     { data: ficheSuivante },
   ] = await Promise.all([
@@ -59,6 +69,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
     chargerChampsPersonnalises(),
     getCalendarAccount(profil.id).catch(() => null),
     supabase.from("calendar_events").select("*").eq("prospect_id", id).eq("profile_id", profil.id).gte("end_at", calendarSince).order("start_at", { ascending: true }).limit(20),
+    supabase.from("email_messages").select("id, direction, subject, snippet, sent_at, from_email").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(12),
     supabase.from("prospects").select(navigationSelection).is("deleted_at", null).or(plusRecent).order("created_at", { ascending: true }).order("id", { ascending: true }).limit(1).maybeSingle(),
     supabase.from("prospects").select(navigationSelection).is("deleted_at", null).or(plusAncien).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
   ]);
@@ -67,13 +78,14 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const pieces = (piecesData ?? []) as PieceJointe[];
   const piecesVisibles = estAdmin ? pieces : pieces.filter((x) => x.type !== "ACD");
   const calendarEvents = (calendarEventData ?? []) as CalendarEvent[];
+  const activityEmails = (activityEmailData ?? []) as ActivityEmail[];
   const ownerName = p.assigned_to === profil.id ? profil.full_name : (profils ?? []).find((x) => x.id === p.assigned_to)?.full_name ?? null;
   const sourceName = sources.find((s) => s.id === p.source_id)?.name ?? null;
   const phone = p.tel_mobile || p.tel_fixe;
   const prospectLabel = p.raison_sociale || contactNom(p);
 
   return (
-    <main className="mx-auto w-full max-w-[1500px] px-4 py-5 2xl:px-6">
+    <main className="mx-auto w-full max-w-[1720px] px-4 py-5 2xl:px-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Link href="/prospection" className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700">← Retour à la prospection</Link>
         <div className="flex items-center gap-3">
@@ -90,7 +102,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
       {query.calendar === "connecte" ? <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Google Calendar connecté à ton compte CRM.</div> : null}
       {query.calendar === "erreur" ? <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-800">Connexion Google Calendar impossible : {query.message || "erreur inconnue"}</div> : null}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[290px_minmax(0,1fr)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[290px_minmax(0,1fr)_360px]">
         <aside className="space-y-4 xl:sticky xl:top-5">
           <section className="rounded-xl border border-navy-100 bg-white p-5">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-navy-50 font-display text-lg font-bold text-navy-700">{(p.raison_sociale || p.nom || "C").slice(0, 1).toUpperCase()}</div>
@@ -121,10 +133,49 @@ export default async function FicheProspectPage({ params, searchParams }: {
           {peutGerer(profil) ? <div className="px-1"><BoutonSupprimer cible="prospect" id={p.id} libelle={prospectLabel} retour="/prospection" /></div> : null}
         </aside>
 
-        <section className="grid min-w-0 gap-5 lg:grid-cols-2">
+        <section className="min-w-0">
+          <div className="mb-3 flex items-end justify-between gap-3 px-1">
+            <div>
+              <h2 className="font-display text-xl font-bold text-navy-800">Activité & échanges</h2>
+              <p className="text-xs text-grey-brand">Vue rapide de la relation. Les outils complets s’ouvrent dans les fenêtres d’action.</p>
+            </div>
+            <span className="rounded-full bg-navy-50 px-3 py-1 text-xs font-semibold text-navy-700">{activityEmails.length} récent{activityEmails.length > 1 ? "s" : ""}</span>
+          </div>
+
+          <div className="rounded-xl border border-navy-100 bg-white">
+            {activityEmails.length ? (
+              <div className="divide-y divide-navy-100">
+                {activityEmails.map((email) => (
+                  <article key={email.id} className="p-4 hover:bg-navy-50/40">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${email.direction === "incoming" ? "bg-star-100 text-star-800" : "bg-navy-100 text-navy-700"}`}>
+                            {email.direction === "incoming" ? "Reçu" : "Envoyé"}
+                          </span>
+                          <strong className="truncate text-sm text-navy-800">{email.subject || "Sans objet"}</strong>
+                        </div>
+                        {email.snippet ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-grey-brand">{email.snippet}</p> : null}
+                      </div>
+                      <span className="shrink-0 text-[11px] text-grey-brand">{fmtDateHeure(email.sent_at)}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="px-5 py-12 text-center">
+                <div className="text-2xl">✉️</div>
+                <p className="mt-2 text-sm font-semibold text-navy-700">Aucun échange enregistré</p>
+                <p className="mt-1 text-xs text-grey-brand">Utilise le bouton Email en haut à gauche pour envoyer ou synchroniser les échanges.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <aside className="space-y-5 xl:sticky xl:top-5 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
           <ProspectInfoSidebar prospect={p} ownerName={ownerName} sourceName={sourceName} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} />
           <PiecesJointes scope="prospect" parentId={p.id} pieces={piecesVisibles} compact />
-        </section>
+        </aside>
       </div>
     </main>
   );
