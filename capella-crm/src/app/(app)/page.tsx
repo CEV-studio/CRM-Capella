@@ -35,16 +35,12 @@ export default async function TableauDeBordPage({
 
   const supabase = await createClient();
 
-  // RLS filtre déjà : un commercial ne récupère que ses propres lignes,
-  // ses indicateurs ne peuvent donc porter que sur son périmètre.
   const [
     { data: affairesBrutes },
     { data: prospectsBruts },
     { data: profils },
     apporteurs,
   ] = await Promise.all([
-    // Les KPI ne nécessitent pas le contenu complet d'une affaire (fichiers,
-    // adresses, notes…). Réduire la charge rend l'accueil plus immédiat.
     supabase
       .from("affaires")
       .select("commercial_id, apporteur_id, stage, date_signature, date_relance, commission")
@@ -90,7 +86,6 @@ export default async function TableauDeBordPage({
     { nb: 0, ca: 0, com: 0 },
   );
 
-  // Répartitions par étape
   const affairesParEtape = new Map<string, number>();
   for (const a of affaires) {
     affairesParEtape.set(a.stage, (affairesParEtape.get(a.stage) ?? 0) + 1);
@@ -156,9 +151,14 @@ export default async function TableauDeBordPage({
           hint="Ni signées ni perdues"
         />
         <KpiTile
-          label={estAdmin ? "Commissions commerciaux" : "Ma commission"}
+          label={estAdmin ? "Commissions commerciaux signées" : "Ma commission signée"}
           value={fmtEuros(kpi.commissionsCommerciaux)}
-          hint="Sur le CA signé de la période"
+          hint="Comptabilisée uniquement sur les dossiers signés"
+        />
+        <KpiTile
+          label={estAdmin ? "Commission Capella en attente" : "Ma commission en attente"}
+          value={fmtEuros(estAdmin ? kpi.caEnAttente : kpi.commissionsCommerciauxEnAttente)}
+          hint={estAdmin ? "Commission globale déjà renseignée sur dossiers non signés" : "Déjà renseignée par l’ADV, en attente de signature"}
         />
         <KpiTile
           label="Relances à venir"
