@@ -58,7 +58,7 @@ function SectionUpload({ titre, type, scope, parentId, pieces, heritees }: {
   const inputRef = useRef<HTMLInputElement>(null);
   const propres = pieces.filter((p) => p.type === type && !estComparatif(p));
   const dHeritees = heritees.filter((p) => p.type === type && !estComparatif(p));
-  const libelleSelection = fichiers.length ? (fichiers.length === 1 ? fichiers[0] : `${fichiers.length} fichiers sélectionnés`) : "PDF, JPG ou PNG · 10 Mo max";
+  const libelleSelection = fichiers.length ? (fichiers.length === 1 ? fichiers[0] : `${fichiers.length} fichiers sélectionnés`) : "PDF uniquement · 10 Mo max";
 
   return (
     <div>
@@ -66,7 +66,7 @@ function SectionUpload({ titre, type, scope, parentId, pieces, heritees }: {
       <form action={action} className="flex flex-wrap items-center gap-2 border-t border-navy-100 px-3 py-2.5">
         <input type="hidden" name="scope" value={scope} /><input type="hidden" name="parent_id" value={parentId} /><input type="hidden" name="type" value={type} />
         <label className="inline-flex h-8 cursor-pointer items-center rounded-lg border border-navy-200 px-2.5 text-[11px] font-semibold text-navy-700 hover:bg-navy-50">Choisir
-          <input ref={inputRef} type="file" name="fichiers" accept="application/pdf,image/jpeg,image/png" multiple required className="sr-only" onChange={(e) => setFichiers(Array.from(e.currentTarget.files ?? []).map((f) => f.name))} />
+          <input ref={inputRef} type="file" name="fichiers" accept="application/pdf,.pdf" multiple required className="sr-only" onChange={(e) => setFichiers(Array.from(e.currentTarget.files ?? []).map((f) => f.name))} />
         </label>
         <span className="min-w-0 flex-1 truncate text-[10px] text-grey-brand" title={fichiers.join(", ")}>{libelleSelection}</span>
         <button type="submit" disabled={enCours || fichiers.length === 0} className="inline-flex h-8 items-center rounded-lg bg-star-500 px-2.5 text-[11px] font-semibold text-white hover:bg-star-600 disabled:opacity-50">{enCours ? "…" : "Ajouter"}</button>
@@ -82,7 +82,7 @@ export function PiecesJointes({ scope, parentId, pieces, heritees = [], compact 
 
   return (
     <Card>
-      <CardHeader title="Documents" hint={compact ? "Factures, comparatifs et ACD." : "ACD, factures et comparatifs enregistrés sur la fiche."} />
+      <CardHeader title="Documents" hint={compact ? "Factures, comparatifs et ACD en PDF." : "ACD, factures et comparatifs PDF enregistrés sur la fiche."} />
       <div className={compact ? "grid grid-cols-1 gap-px bg-navy-100" : "grid gap-px bg-navy-100 lg:grid-cols-3"}>
         <div className="bg-white"><SectionUpload titre="ACD" type="ACD" scope={scope} parentId={parentId} pieces={pieces} heritees={heritees} /></div>
         <div className="bg-white"><SectionUpload titre="Factures" type="Facture" scope={scope} parentId={parentId} pieces={pieces} heritees={heritees} /></div>
