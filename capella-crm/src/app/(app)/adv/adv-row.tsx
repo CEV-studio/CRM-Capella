@@ -1,23 +1,36 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
+import { CalendarDays } from "lucide-react";
 import { enregistrerAdv } from "./actions";
 import type { ActionResult } from "@/lib/action-result";
 import { AFFAIRE_STAGES } from "@/lib/domain/stages";
 import { fmtEuros, fmtDate } from "@/lib/format";
 
-export function AdvRow({a}:{a:{id:string;ref:string|null;raison_sociale:string;stage:string;commercial:string;taux:number;commission:number;date_signature:string|null;ko_reason:string|null}}){
+type RdvComparatif={start_at:string;html_link:string|null;title:string};
+type AdvData={id:string;ref:string|null;raison_sociale:string;stage:string;commercial:string;taux:number;commission:number;date_signature:string|null;ko_reason:string|null;prospectId:string|null;rdvComparatif:RdvComparatif|null};
+
+function fmtRdv(value:string){return new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",weekday:"short",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(value)).replace(","," à");}
+
+export function AdvRow({a}:{a:AdvData}){
  const [etat,action,enCours]=useActionState<ActionResult|null,FormData>(enregistrerAdv,null);
  const due=Number(a.commission||0)*Number(a.taux||0);
  const valide=a.stage==="Signé";
  const ko=a.stage==="KO";
  const etapesAdv=AFFAIRE_STAGES.filter(s=>s.label!=="KO");
+ const rdvPasse=Boolean(a.rdvComparatif&&new Date(a.rdvComparatif.start_at).getTime()<Date.now());
 
  return <article className="rounded-xl border border-navy-100 bg-white p-4 shadow-sm">
   <div className="flex items-start justify-between gap-3">
    <div className="min-w-0"><div className="truncate font-semibold text-navy-800">{a.raison_sociale}</div><div className="mt-0.5 text-xs text-grey-brand">{a.ref} · {a.commercial} · {(a.taux*100).toFixed(0)} %</div></div>
    <span className={valide?"shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800":ko?"shrink-0 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800":"shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"}>{valide?"Signé":ko?"KO":a.stage}</span>
   </div>
+
+  {a.rdvComparatif?<div className={`mt-3 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${rdvPasse?"border-navy-100 bg-navy-50":"border-sky-capella-200 bg-sky-capella-50"}`}>
+   <div className="flex min-w-0 items-center gap-2.5"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-sky-capella-700 shadow-sm"><CalendarDays size={16}/></span><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-wide text-navy-400">RDV comparatif{rdvPasse?" · passé":""}</div><div className="mt-0.5 text-xs font-bold text-navy-800">{fmtRdv(a.rdvComparatif.start_at)}</div></div></div>
+   {a.prospectId?<Link href={`/prospection/${a.prospectId}`} className="shrink-0 text-[10px] font-bold text-sky-capella-700 hover:text-star-600">Voir fiche</Link>:null}
+  </div>:null}
 
   {ko?<div className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3"><div className="text-[10px] font-semibold uppercase tracking-wide text-red-700">Motif KO — commercial</div><p className="mt-1 text-sm text-red-900">{a.ko_reason||"Aucun motif renseigné sur cet ancien dossier."}</p></div>:null}
 
@@ -26,7 +39,7 @@ export function AdvRow({a}:{a:{id:string;ref:string|null;raison_sociale:string;s
     <div className="rounded-lg bg-navy-50 p-3"><div className="text-[10px] font-semibold uppercase tracking-wide text-grey-brand">Commission Capella</div><div className="mt-1 text-lg font-bold text-navy-800">{fmtEuros(a.commission)}</div></div>
     <div className="rounded-lg bg-star-50 p-3"><div className="text-[10px] font-semibold uppercase tracking-wide text-grey-brand">Part commercial</div><div className="mt-1 text-lg font-bold text-star-600">{fmtEuros(due)}</div></div>
    </div>
-   {valide&&a.date_signature?<div className="mt-3 text-xs text-green-700">✓ Comptabilisé le {fmtDate(a.date_signature)}</div>:a.commission>0?<div className="mt-3 text-xs text-amber-700">Commission renseignée · validation finale à faire</div>:<div className="mt-3 text-xs text-grey-brand">Commission à renseigner</div>}
+   {valide&&a.date_signature?<div className="mt-3 text-xs text-green-700">Comptabilisé le {fmtDate(a.date_signature)}</div>:a.commission>0?<div className="mt-3 text-xs text-amber-700">Commission renseignée · validation finale à faire</div>:<div className="mt-3 text-xs text-grey-brand">Commission à renseigner</div>}
   </>:null}
 
   {!ko?<details className="mt-4 border-t border-navy-100 pt-3">
