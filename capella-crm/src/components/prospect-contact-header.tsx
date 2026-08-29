@@ -42,13 +42,13 @@ function InlineContactField({ prospectId, field, value, placeholder, type = "tex
   return <button type="button" onClick={() => { setDraft(current); setEditing(true); }} className={`rounded-lg px-1.5 py-1 text-left text-sm transition hover:bg-sky-capella-50 ${current ? "font-medium text-navy-800" : "font-medium text-navy-300"}`} title="Cliquer pour modifier">{saving ? "Enregistrement…" : current || placeholder}</button>;
 }
 
-export function ProspectContactHeader({ prospectId, prenom, nom, mail, mobile, fixe }: {
+export function ProspectContactHeader({ prospectId, prenom, nom, mail, mobile, fixe = null }: {
   prospectId: string;
   prenom: string | null;
   nom: string | null;
   mail: string | null;
   mobile: string | null;
-  fixe: string | null;
+  fixe?: string | null;
 }) {
   const phoneField: "tel_mobile" | "tel_fixe" = mobile ? "tel_mobile" : fixe ? "tel_fixe" : "tel_mobile";
   const phoneValue = mobile || fixe;
