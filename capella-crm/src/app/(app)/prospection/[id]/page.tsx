@@ -7,13 +7,12 @@ import {
   ChevronRight,
   Clock3,
   Flame,
-  Mail,
   Phone,
-  UserRound,
 } from "lucide-react";
 import { peutGerer, requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { ProspectStageEditor } from "@/components/prospect-stage-editor";
+import { ProspectContactHeader } from "@/components/prospect-contact-header";
 import { isTransferable } from "@/lib/domain/stages";
 import { fmtDateHeure } from "@/lib/format";
 import { nomComplet } from "@/lib/domain/noms";
@@ -121,10 +120,11 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const phone = p.tel_mobile || p.tel_fixe;
   const prospectLabel = p.raison_sociale || contactNom(p);
   const prochaineAction = calendarEvents[0] ?? null;
+  const nextComparatif = calendarEvents.find((event) => event.kind === "rdv") ?? null;
   const prochaineActionManuelle = !prochaineAction && p.next_action && !/^(Rappel|Présentation comparatif)/.test(p.next_action) ? p.next_action : null;
   const initials = (p.raison_sociale || p.nom || "C").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x.slice(0, 1)).join("").toUpperCase();
   const qualif = qualification(p.score);
-  const relanceEnRetard = Boolean(p.next_action_date && p.next_action_date < new Date().toISOString().slice(0, 10));
+  const relanceEnRetard = prochaineAction ? new Date(prochaineAction.start_at).getTime() < Date.now() : Boolean(p.next_action_date && p.next_action_date < new Date().toISOString().slice(0, 10));
 
   return (
     <main className="mx-auto w-full max-w-[1760px] px-4 py-4 lg:px-6 2xl:px-8">
@@ -148,11 +148,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
                     {p.ref ? <span className="text-[11px] font-semibold tabular text-grey-brand">{p.ref}</span> : null}
                   </div>
                   <div className="mt-1 text-[11px] font-medium text-grey-brand">Créé le {formatCreated(p.created_at)}</div>
-                  <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-navy-600">
-                    <span className="inline-flex items-center gap-2"><UserRound size={16} className="text-navy-400" />{contactNom(p)}</span>
-                    {phone ? <a href={`tel:${phone}`} className="inline-flex items-center gap-2 font-semibold text-navy-800 hover:text-sky-capella-700"><Phone size={16} />{phone}</a> : <span className="text-grey-brand">Téléphone non renseigné</span>}
-                    {p.mail ? <a href={`mailto:${p.mail}`} className="inline-flex max-w-full items-center gap-2 font-medium text-navy-800 hover:text-sky-capella-700"><Mail size={16} /><span className="truncate">{p.mail}</span></a> : <span className="text-grey-brand">E-mail non renseigné</span>}
-                  </div>
+                  <ProspectContactHeader prospectId={p.id} prenom={p.prenom} nom={p.nom} mail={p.mail} mobile={p.tel_mobile || p.tel_fixe} />
                 </div>
               </div>
 
@@ -173,7 +169,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
               <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${(prochaineAction || prochaineActionManuelle || p.next_action_date) ? "bg-star-100 text-star-600" : "bg-navy-50 text-navy-400"}`}>{prochaineAction?.kind === "rdv" ? <CalendarDays size={20}/> : <AlarmClock size={20}/>}</div>
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-navy-500">Prochaine action</div>
-                {(prochaineAction || prochaineActionManuelle || p.next_action_date) ? <><div className="mt-1 text-sm font-bold text-navy-900">{prochaineAction ? calendarLabel(prochaineAction) : prochaineActionManuelle || "Relance à effectuer"}</div>{!prochaineAction && p.next_action_date ? <div className="mt-0.5 text-xs font-medium text-star-700">Date de relance : {p.next_action_date}{relanceEnRetard ? " · en retard" : ""}</div> : null}</> : <div className="mt-1 text-sm font-semibold text-navy-500">Aucune action programmée</div>}
+                {(prochaineAction || prochaineActionManuelle || p.next_action_date) ? <><div className="mt-1 text-sm font-bold text-navy-900">{prochaineAction ? calendarLabel(prochaineAction) : prochaineActionManuelle || "Relance à effectuer"}</div>{!prochaineAction && p.next_action_date ? <div className="mt-0.5 text-xs font-medium text-star-700">RDV comparatif : {p.next_action_date}{relanceEnRetard ? " · en retard" : ""}</div> : null}</> : <div className="mt-1 text-sm font-semibold text-navy-500">Aucune action programmée</div>}
               </div>
             </div>
             <Link href="/agenda" className={`inline-flex h-9 shrink-0 items-center justify-center rounded-xl px-4 text-xs font-bold ${(prochaineAction || prochaineActionManuelle || p.next_action_date) ? "bg-star-500 text-white hover:bg-star-600" : "border border-navy-200 bg-white text-navy-700 hover:bg-navy-50"}`}>Ouvrir l’agenda</Link>
@@ -197,7 +193,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-semibold text-navy-500 shadow-sm ring-1 ring-navy-100"><Clock3 size={12}/>Dernière action {fmtDateHeure(p.last_action_at)}</div>
           </div>
-          <ProspectInfoSidebar prospect={p} ownerName={ownerName} sourceName={sourceName} isAdmin={estAdmin} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} />
+          <ProspectInfoSidebar prospect={p} ownerName={ownerName} sourceName={sourceName} nextComparatif={nextComparatif} isAdmin={estAdmin} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} />
         </aside>
       </div>
     </main>
