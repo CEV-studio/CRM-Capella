@@ -26,14 +26,18 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
  const affairesAdv=(affaires??[]) as AffaireAdv[];
  const prospectIds=[...new Set(affairesAdv.map(a=>a.prospect_id).filter((id):id is string=>Boolean(id)))];
  const {data:rdvs}=prospectIds.length
-  ? await supabase.from("calendar_events").select("prospect_id, start_at, html_link, title").in("prospect_id",prospectIds).eq("kind","rdv").order("start_at",{ascending:true})
+  ? await supabase.from("calendar_events").select("prospect_id, start_at, html_link, title").in("prospect_id",prospectIds).eq("kind","rdv").eq("status","confirmed").order("start_at",{ascending:true})
   : {data:[] as RdvAdv[]};
 
  const now=Date.now();
  const rdvMap=new Map<string,RdvAdv>();
- for(const prospectId of prospectIds){
-  const events=((rdvs??[]) as RdvAdv[]).filter(e=>e.prospect_id===prospectId);
-  const prochain=events.find(e=>new Date(e.start_at).getTime()>=now)??events.at(-1)??null;
+ const eventsParProspect=new Map<string,RdvAdv[]>();
+ for(const event of (rdvs??[]) as RdvAdv[]){
+  const events=eventsParProspect.get(event.prospect_id);
+  if(events)events.push(event);else eventsParProspect.set(event.prospect_id,[event]);
+ }
+ for(const [prospectId,events] of eventsParProspect){
+  const prochain=events.find(e=>new Date(e.start_at).getTime()>=now)??events.at(-1);
   if(prochain)rdvMap.set(prospectId,prochain);
  }
 
