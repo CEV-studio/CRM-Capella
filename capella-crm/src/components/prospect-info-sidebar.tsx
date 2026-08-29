@@ -2,12 +2,24 @@
 
 import { useState } from "react";
 import { BriefcaseBusiness, Building2, Pencil, UserRound, Zap } from "lucide-react";
-import { ProspectStageEditor } from "@/components/prospect-stage-editor";
-import type { Prospect } from "@/lib/domain/database.types";
+import type { CalendarEvent, Prospect } from "@/lib/domain/database.types";
 
 function valeur(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "Non renseigné";
   return String(value);
+}
+
+function fmtRdv(value: string): string {
+  try {
+    return new Intl.DateTimeFormat("fr-FR", {
+      timeZone: "Europe/Paris",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value)).replace(",", " à");
+  } catch { return value; }
 }
 
 type EditableFieldProps = {
@@ -52,11 +64,12 @@ function Section({ title, icon: Icon, children }: { title: string; icon: typeof 
   return <section className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-[var(--crm-shadow-sm)]"><div className="flex items-center gap-2 border-b border-navy-100 px-4 py-3.5"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-capella-50 text-sky-capella-700"><Icon size={16}/></span><h3 className="font-display text-sm font-bold text-navy-900">{title}</h3></div><dl className="divide-y divide-navy-100/70 px-4 py-1">{children}</dl></section>;
 }
 
-export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPerso, isAdmin = false }: {
+export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPerso, nextComparatif, isAdmin = false }: {
   prospect: Prospect;
   ownerName: string | null;
   sourceName: string | null;
   champsPerso: Array<{ cle: string; libelle: string }>;
+  nextComparatif: CalendarEvent | null;
   isAdmin?: boolean;
 }) {
   const p = prospect;
@@ -73,6 +86,7 @@ export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPer
       </Section>
 
       <Section title="Informations énergie" icon={Zap}>
+        <InfoRow label="Segment"><EditableField prospectId={p.id} field="segment" value={p.segment}/></InfoRow>
         <InfoRow label="Fournisseur élec"><EditableField prospectId={p.id} field="fournisseur_electricite" value={p.fournisseur_electricite}/></InfoRow>
         <InfoRow label="Fournisseur gaz"><EditableField prospectId={p.id} field="fournisseur_gaz" value={p.fournisseur_gaz}/></InfoRow>
         <InfoRow label="Fin de contrat"><EditableField prospectId={p.id} field="date_fin_contrat" value={p.date_fin_contrat} type="date"/></InfoRow>
@@ -84,9 +98,8 @@ export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPer
       </Section>
 
       <Section title="Gestion du dossier" icon={BriefcaseBusiness}>
-        <InfoRow label="Étape"><ProspectStageEditor prospectId={p.id} stage={p.stage}/></InfoRow>
         <InfoRow label="Prochaine action"><EditableField prospectId={p.id} field="next_action" value={p.next_action}/></InfoRow>
-        <InfoRow label="Date de relance"><EditableField prospectId={p.id} field="next_action_date" value={p.next_action_date} type="date"/></InfoRow>
+        <InfoRow label="RDV comparatif">{nextComparatif ? <a href="/agenda" className="text-xs font-bold text-star-600 hover:text-star-700">{fmtRdv(nextComparatif.start_at)}</a> : <a href="/agenda" className="text-xs font-medium text-navy-300 hover:text-sky-capella-700">Non programmé</a>}</InfoRow>
         <InfoRow label="Score"><EditableField prospectId={p.id} field="score" value={p.score} type="number" suffix="/5"/></InfoRow>
         {isAdmin ? <InfoRow label="Commercial"><span className="text-xs font-semibold text-navy-900">{valeur(ownerName)}</span></InfoRow> : null}
         <InfoRow label="Source"><span className="text-xs font-semibold text-navy-900">{valeur(sourceName)}</span></InfoRow>
@@ -98,7 +111,6 @@ export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPer
         <InfoRow label="SIREN"><EditableField prospectId={p.id} field="siren" value={p.siren}/></InfoRow>
         <InfoRow label="NAF"><EditableField prospectId={p.id} field="naf" value={p.naf}/></InfoRow>
         <InfoRow label="Code postal"><EditableField prospectId={p.id} field="code_postal" value={p.code_postal}/></InfoRow>
-        <InfoRow label="Segment"><EditableField prospectId={p.id} field="segment" value={p.segment}/></InfoRow>
         <InfoRow label="Nombre de sites"><EditableField prospectId={p.id} field="nb_sites" value={p.nb_sites} type="number"/></InfoRow>
       </Section>
     </div>
