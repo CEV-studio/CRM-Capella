@@ -31,7 +31,10 @@
   --color-sky-capella-50: #F1F8FF;
   --color-sky-capella-100: #DFEEFC;
   --color-sky-capella-200: #BDDDF7;
+  --color-sky-capella-300: #8EC4EC;
+  --color-sky-capella-400: #67AFE2;
   --color-sky-capella-500: #4F9BD8;
+  --color-sky-capella-600: #347FBC;
   --color-sky-capella-700: #24679E;
 
   --color-grey-brand: #7D899B;
@@ -56,44 +59,26 @@
   --crm-shadow-sm: 0 1px 2px rgba(8, 17, 30, .04), 0 4px 14px rgba(13, 27, 46, .04);
   --crm-shadow-card: 0 8px 26px rgba(13, 27, 46, .07);
   --crm-shadow-hover: 0 12px 30px rgba(13, 27, 46, .11);
-  --crm-gradient-navy: linear-gradient(135deg, #0D1B2E 0%, #142F51 100%);
+  --crm-gradient-navy: linear-gradient(180deg, #081A31 0%, #0D2848 100%);
   --crm-gradient-accent: linear-gradient(135deg, #0D1B2E 0%, #183B62 72%, #6D3A2B 100%);
 }
 
 body {
-  background:
-    radial-gradient(circle at 92% 2%, rgba(79, 155, 216, .07), transparent 27rem),
-    var(--color-surface);
+  background: radial-gradient(circle at 92% 2%, rgba(79, 155, 216, .07), transparent 27rem), var(--color-surface);
   color: var(--color-navy-800);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, .font-display {
-  font-family: var(--font-display);
-  letter-spacing: -0.018em;
-}
-
+h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing: -0.018em; }
 .tabular { font-variant-numeric: tabular-nums; }
-
 .scroll-slim::-webkit-scrollbar { height: 8px; width: 8px; }
-.scroll-slim::-webkit-scrollbar-thumb {
-  background: var(--color-navy-200);
-  border-radius: 9999px;
-}
-
+.scroll-slim::-webkit-scrollbar-thumb { background: var(--color-navy-200); border-radius: 9999px; }
 ::selection { background: var(--color-star-500); color: #fff; }
+:focus-visible { outline: 2px solid var(--color-star-500); outline-offset: 2px; }
 
-:focus-visible {
-  outline: 2px solid var(--color-star-500);
-  outline-offset: 2px;
-}
-
-/* Couche visuelle commune appliquée à toutes les pages du CRM. */
 .crm-shell {
-  background:
-    radial-gradient(circle at 100% 0%, rgba(79, 155, 216, .055), transparent 34rem),
-    linear-gradient(180deg, #F8FAFD 0, var(--color-surface) 22rem);
+  background: radial-gradient(circle at 100% 0%, rgba(79, 155, 216, .055), transparent 34rem), linear-gradient(180deg, #F8FAFD 0, var(--color-surface) 22rem);
 }
 
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]),
@@ -103,23 +88,15 @@ h1, h2, h3, h4, .font-display {
   box-shadow: 0 1px 2px rgba(13, 27, 46, .025);
   transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
-
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]):hover,
 .crm-shell main select:hover,
 .crm-shell main textarea:hover { border-color: var(--color-navy-300); }
-
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]):focus,
 .crm-shell main select:focus,
-.crm-shell main textarea:focus {
-  border-color: var(--color-star-400);
-  box-shadow: 0 0 0 3px rgba(232, 96, 48, .10);
-  outline: none;
-}
-
+.crm-shell main textarea:focus { border-color: var(--color-star-400); box-shadow: 0 0 0 3px rgba(232, 96, 48, .10); outline: none; }
 .crm-shell main table { border-spacing: 0; }
 .crm-shell main tbody tr { transition: background-color .14s ease, box-shadow .14s ease; }
 .crm-shell main tbody tr:hover { background-color: rgba(223, 238, 252, .38); }
-
 .crm-shell main button,
 .crm-shell main a { transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
 
@@ -131,19 +108,5 @@ h1, h2, h3, h4, .font-display {
   background: linear-gradient(135deg, #fff 0%, #F7FAFE 70%, #FFF8F4 100%);
   box-shadow: var(--crm-shadow-sm);
 }
-
-.crm-page-header::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background: linear-gradient(180deg, var(--color-star-500), var(--color-star-300));
-}
-
-.crm-table-shell {
-  overflow: hidden;
-  border: 1px solid var(--crm-border);
-  border-radius: var(--radius-card);
-  background: white;
-  box-shadow: var(--crm-shadow-sm);
-}
+.crm-page-header::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: linear-gradient(180deg, var(--color-star-500), var(--color-star-300)); }
+.crm-table-shell { overflow: hidden; border: 1px solid var(--crm-border); border-radius: var(--radius-card); background: white; box-shadow: var(--crm-shadow-sm); }
