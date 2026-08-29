@@ -4,12 +4,14 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AdvRow } from "./adv-row";
 import { fmtEuros } from "@/lib/format";
-import type { Affaire, Profile } from "@/lib/domain/database.types";
+import type { Profile } from "@/lib/domain/database.types";
 
 export const metadata={title:"ADV — Capella CRM"};
 export const dynamic="force-dynamic";
 
 type Recherche={q?:string;statut?:string;commercial?:string};
+type AffaireAdv={id:string;ref:string|null;raison_sociale:string;commercial_id:string;prospect_id:string|null;stage:string;commission:number|null;date_signature:string|null;ko_reason:string|null};
+type RdvAdv={prospect_id:string;start_at:string;html_link:string|null;title:string};
 
 export default async function AdvPage({searchParams}:{searchParams:Promise<Recherche>}){
  const profil=await requireProfile();
@@ -17,13 +19,27 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
  const filtres=await searchParams;
  const supabase=await createClient();
  const [{data:affaires,error},{data:profils}]=await Promise.all([
-  supabase.from("affaires").select("id, ref, raison_sociale, commercial_id, stage, commission, date_signature, date_entree, ko_reason").is("deleted_at",null).order("date_entree",{ascending:false}),
+  supabase.from("affaires").select("id, ref, raison_sociale, commercial_id, prospect_id, stage, commission, date_signature, date_entree, ko_reason").is("deleted_at",null).order("date_entree",{ascending:false}),
   supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active",true).order("full_name"),
  ]);
 
+ const affairesAdv=(affaires??[]) as AffaireAdv[];
+ const prospectIds=[...new Set(affairesAdv.map(a=>a.prospect_id).filter((id):id is string=>Boolean(id)))];
+ const {data:rdvs}=prospectIds.length
+  ? await supabase.from("calendar_events").select("prospect_id, start_at, html_link, title").in("prospect_id",prospectIds).eq("kind","rdv").order("start_at",{ascending:true})
+  : {data:[] as RdvAdv[]};
+
+ const now=Date.now();
+ const rdvMap=new Map<string,RdvAdv>();
+ for(const prospectId of prospectIds){
+  const events=((rdvs??[]) as RdvAdv[]).filter(e=>e.prospect_id===prospectId);
+  const prochain=events.find(e=>new Date(e.start_at).getTime()>=now)??events.at(-1)??null;
+  if(prochain)rdvMap.set(prospectId,prochain);
+ }
+
  const listeProfils=((profils??[]) as Pick<Profile,"id"|"full_name"|"commission_rate">[]);
  const map=new Map(listeProfils.map(p=>[p.id,p]));
- const toutes=((affaires??[]) as Affaire[]).map(a=>{const p=map.get(a.commercial_id);return{id:a.id,ref:a.ref,raison_sociale:a.raison_sociale,stage:a.stage,commission:Number(a.commission??0),date_signature:a.date_signature,ko_reason:a.ko_reason,commercial:p?.full_name??"—",commercialId:a.commercial_id,taux:Number(p?.commission_rate??0)}});
+ const toutes=affairesAdv.map(a=>{const p=map.get(a.commercial_id);return{id:a.id,ref:a.ref,raison_sociale:a.raison_sociale,stage:a.stage,commission:Number(a.commission??0),date_signature:a.date_signature,ko_reason:a.ko_reason,commercial:p?.full_name??"—",commercialId:a.commercial_id,taux:Number(p?.commission_rate??0),prospectId:a.prospect_id,rdvComparatif:a.prospect_id?rdvMap.get(a.prospect_id)??null:null}});
 
  const q=(filtres.q??"").trim().toLowerCase();
  const statut=filtres.statut??"a_traiter";
