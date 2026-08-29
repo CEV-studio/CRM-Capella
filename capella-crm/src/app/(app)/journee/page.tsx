@@ -75,16 +75,20 @@ function WorkCard({ item, rank }: { item: WorkItem; rank?: number }) {
 export default async function JourneePage() {
   const profile = await requireProfile();
   const supabase = await createClient();
+  const today = parisDateKey(new Date());
+  const prospectColumns = "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, stage, next_action, next_action_date, last_action_at, date_fin_contrat, became_client_at, created_at, updated_at, segment, car_electricite, car_gaz, fournisseur_electricite, fournisseur_gaz, assigned_to";
   let prospectsQuery = (supabase as any)
     .from("prospects")
-    .select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, stage, next_action, next_action_date, last_action_at, date_fin_contrat, became_client_at, created_at, updated_at, segment, car_electricite, car_gaz, fournisseur_electricite, fournisseur_gaz, assigned_to")
+    .select(prospectColumns)
     .is("deleted_at", null)
-    .is("entered_conversion_at", null);
+    .is("entered_conversion_at", null)
+    .not("next_action_date", "is", null)
+    .lte("next_action_date", today);
   if (profile.role !== "admin") prospectsQuery = prospectsQuery.eq("assigned_to", profile.id);
 
   let eventsQuery = (supabase as any)
     .from("calendar_events")
-    .select("prospect_id, kind, title, start_at, end_at")
+    .select(`prospect_id, kind, title, start_at, end_at, prospect:prospects!inner(${prospectColumns})`)
     .eq("status", "confirmed")
     .gte("start_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
     .lt("start_at", new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
@@ -92,15 +96,17 @@ export default async function JourneePage() {
   if (profile.role !== "admin") eventsQuery = eventsQuery.eq("profile_id", profile.id);
 
   const [{ data: prospectData, error }, { data: eventData }] = await Promise.all([prospectsQuery, eventsQuery]);
-  const prospects = (prospectData ?? []) as Row[];
-  const events = (eventData ?? []) as DisciplineEvent[];
-  const today = parisDateKey(new Date());
+  const prospectsById = new Map<string, Row>(((prospectData ?? []) as Row[]).map((prospect) => [prospect.id, prospect]));
+  const events = (eventData ?? []) as Array<DisciplineEvent & { prospect?: Row | Row[] | null }>;
   const nextByProspect = new Map<string, DisciplineEvent>();
   for (const event of events) {
     if (parisDateKey(event.start_at) === today && !nextByProspect.has(event.prospect_id)) {
       nextByProspect.set(event.prospect_id, event);
+      const linkedProspect = Array.isArray(event.prospect) ? event.prospect[0] : event.prospect;
+      if (linkedProspect) prospectsById.set(linkedProspect.id, linkedProspect);
     }
   }
+  const prospects = [...prospectsById.values()];
 
   const items = prospects
     .map((prospect): WorkItem | null => {
