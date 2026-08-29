@@ -22,9 +22,10 @@ import { ProspectActivity } from "@/components/prospect-activity";
 import { ProspectTopbar } from "@/components/prospect-topbar";
 import { CalendarPanel } from "@/components/calendar-panel";
 import { ProspectToolsModal } from "@/components/prospect-tools-modal";
+import { RelationContractHistory } from "@/components/relation-contract-history";
 import { chargerSources, chargerChampsPersonnalises } from "@/lib/referentiels";
 import { getCalendarAccount } from "@/lib/calendar";
-import type { CalendarEvent, PieceJointe, Prospect, Profile } from "@/lib/domain/database.types";
+import type { CalendarEvent, ContactEntreprise, ContratEnergie, CrmContact, Entreprise, PieceJointe, Prospect, ProspectCompteur, Profile } from "@/lib/domain/database.types";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,8 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const navigationSelection = "id, raison_sociale, nom, prenom";
   const plusRecent = `created_at.gt.${p.created_at},and(created_at.eq.${p.created_at},id.gt.${p.id})`;
   const plusAncien = `created_at.lt.${p.created_at},and(created_at.eq.${p.created_at},id.lt.${p.id})`;
+  // La page est explicitement dynamique : cette borne doit suivre l'heure de la requête.
+  // eslint-disable-next-line react-hooks/purity
   const calendarSince = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
   const [
@@ -98,6 +101,10 @@ export default async function FicheProspectPage({ params, searchParams }: {
     { data: activityEmailData },
     { data: fichePrecedente },
     { data: ficheSuivante },
+    { data: entrepriseData },
+    { data: contactsLiesData },
+    { data: compteursData },
+    { data: contratsData },
   ] = await Promise.all([
     chargerSources(),
     estAdmin ? supabase.from("profiles").select("id, full_name").eq("is_active", true).order("full_name") : Promise.resolve({ data: [] as Pick<Profile, "id" | "full_name">[] }),
@@ -109,6 +116,16 @@ export default async function FicheProspectPage({ params, searchParams }: {
     supabase.from("email_messages").select("id, direction, subject, snippet, sent_at, from_email").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(20),
     isPopup ? Promise.resolve({ data: null }) : supabase.from("prospects").select(navigationSelection).is("deleted_at", null).or(plusRecent).order("created_at", { ascending: true }).order("id", { ascending: true }).limit(1).maybeSingle(),
     isPopup ? Promise.resolve({ data: null }) : supabase.from("prospects").select(navigationSelection).is("deleted_at", null).or(plusAncien).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
+    // Les relations viennent d'être ajoutées au miroir manuel des types ; les
+    // jointures PostgREST seront régénérées lors du prochain type pull.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    p.entreprise_id ? (supabase as any).from("entreprises").select("*").eq("id", p.entreprise_id).is("archived_at", null).maybeSingle() : Promise.resolve({ data:null }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    p.entreprise_id ? (supabase as any).from("contact_entreprises").select("*, contact:crm_contacts(*)").eq("entreprise_id", p.entreprise_id).is("archived_at", null).order("is_primary", { ascending:false }) : Promise.resolve({ data:[] }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    p.entreprise_id ? (supabase as any).from("prospect_compteurs").select("*").eq("entreprise_id", p.entreprise_id).is("archived_at", null).order("created_at") : Promise.resolve({ data:[] }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    p.entreprise_id ? (supabase as any).from("contrats_energie").select("*").eq("entreprise_id", p.entreprise_id).is("archived_at", null).order("date_debut") : Promise.resolve({ data:[] }),
   ]);
 
   const pretATransferer = isTransferable(p.stage);
@@ -125,7 +142,15 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const prochaineActionManuelle = !prochaineAction && p.next_action && !/^(Rappel|Présentation comparatif)/.test(p.next_action) ? p.next_action : null;
   const initials = (p.raison_sociale || p.nom || "C").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x.slice(0, 1)).join("").toUpperCase();
   const qualif = qualification(p.score);
+  // eslint-disable-next-line react-hooks/purity
   const relanceEnRetard = prochaineAction ? new Date(prochaineAction.start_at).getTime() < Date.now() : Boolean(p.next_action_date && p.next_action_date < new Date().toISOString().slice(0, 10));
+  const contactRows = (contactsLiesData ?? []) as Array<ContactEntreprise & { contact:CrmContact }>;
+  const contactIds = contactRows.map((row) => row.contact_id);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: toutesRelationsContact } = contactIds.length ? await (supabase as any).from("contact_entreprises").select("contact_id").in("contact_id", contactIds).is("archived_at", null) : { data:[] };
+  const contactCounts = new Map<string,number>();
+  for (const relation of toutesRelationsContact ?? []) contactCounts.set(relation.contact_id, (contactCounts.get(relation.contact_id) ?? 0) + 1);
+  const contactsLies = contactRows.map((row) => ({ ...row, entreprises_count:contactCounts.get(row.contact_id) ?? 1 }));
 
   return (
     <main className="mx-auto w-full max-w-[1760px] px-4 py-4 lg:px-6 2xl:px-8">
@@ -177,6 +202,8 @@ export default async function FicheProspectPage({ params, searchParams }: {
           </section>
 
           {affaireLiee ? <Link href={`/conversion/${affaireLiee.id}`} className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 hover:bg-green-100"><span><strong>Dossier déjà converti</strong><span className="ml-2 text-xs">{affaireLiee.ref}</span></span><ChevronRight size={17}/></Link> : pretATransferer ? <section className="flex flex-col gap-3 rounded-xl border border-sky-capella-200 bg-sky-capella-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><strong className="text-sm text-navy-900">Prêt à convertir en affaire</strong><p className="mt-0.5 text-xs text-navy-500">La fiche affaire sera pré-remplie avec les données connues.</p></div><Link href={`/conversion/nouvelle?prospect=${p.id}`} className="inline-flex h-9 items-center justify-center rounded-xl bg-navy-900 px-4 text-xs font-bold text-white hover:bg-navy-700">Convertir</Link></section> : null}
+
+          <RelationContractHistory prospectId={p.id} entreprise={(entrepriseData as Entreprise|null) ?? null} contacts={contactsLies} compteurs={(compteursData ?? []) as ProspectCompteur[]} contrats={(contratsData ?? []) as ContratEnergie[]} />
 
           {p.stage === "Demande ACD" ? <section className="rounded-xl border border-star-200 bg-star-50 px-4 py-3">{estAdmin ? <a href={`/api/acd/${p.id}`} className="inline-flex h-9 items-center justify-center rounded-xl bg-star-500 px-4 text-xs font-bold text-white hover:bg-star-600">Télécharger l’ACD</a> : <form action={`/api/acd/${p.id}/demander`} method="post"><button type="submit" className="inline-flex h-9 items-center justify-center rounded-xl bg-star-500 px-4 text-xs font-bold text-white hover:bg-star-600">Demander l&apos;ACD</button></form>}</section> : null}
 
