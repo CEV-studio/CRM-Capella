@@ -16,17 +16,17 @@ import {
   LogOut,
   Mail,
   MailCheck,
-  Settings2,
   ShieldCheck,
   Trash2,
   Users,
 } from "lucide-react";
 import { Logotype } from "@/components/brand";
-import { peutGerer } from "@/lib/auth";
 import type { Profile } from "@/lib/domain/database.types";
 
 type IconType = typeof LayoutDashboard;
 type NavItem = { href: string; label: string; icon: IconType; adminOnly?: boolean; needs?: (p: Profile) => boolean };
+const peutGererLocal = (profile: Profile) => profile.role === "admin" || profile.can_manage_team;
+
 const NAV: { titre: string; items: NavItem[] }[] = [
   { titre: "Commercial", items: [
     { href: "/", label: "Tableau de bord", icon: LayoutDashboard },
@@ -46,7 +46,7 @@ const NAV: { titre: string; items: NavItem[] }[] = [
     { href: "/admin/boites-email", label: "Boîtes e-mail", icon: Inbox, adminOnly: true },
     { href: "/admin/commerciaux", label: "Commerciaux", icon: Users, adminOnly: true },
     { href: "/admin/reservoir", label: "Réservoir & attribution", icon: Database, adminOnly: true },
-    { href: "/admin/export", label: "Export", icon: FileDown, needs: p => peutGerer(p) || p.can_export },
+    { href: "/admin/export", label: "Export", icon: FileDown, needs: p => peutGererLocal(p) || p.can_export },
     { href: "/admin/corbeille", label: "Corbeille", icon: Trash2, adminOnly: true },
   ] },
 ];
@@ -58,7 +58,7 @@ function actif(pathname: string, href: string) {
 
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const pathname = usePathname();
-  const gere = peutGerer(profile);
+  const gere = peutGererLocal(profile);
   const visible = (i: NavItem) => (!i.adminOnly || profile.role === "admin") && (!i.needs || i.needs(profile));
   const sections = NAV.filter(s => s.items.some(visible));
 
