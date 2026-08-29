@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { PROSPECTION_STAGES, stageColor } from "@/lib/domain/stages";
 
 export function ProspectStageEditor({ prospectId, stage }: { prospectId: string; stage: string }) {
+  const pathname = usePathname();
   const [draft, setDraft] = useState(stage);
   const [dirty, setDirty] = useState(false);
   const [koReason, setKoReason] = useState("");
@@ -41,13 +43,14 @@ export function ProspectStageEditor({ prospectId, stage }: { prospectId: string;
   }
 
   useEffect(() => {
+    const initialPath = pathname;
     const onPageHide = () => flush();
     window.addEventListener("pagehide", onPageHide);
     return () => {
       window.removeEventListener("pagehide", onPageHide);
-      flush();
+      if (window.location.pathname !== initialPath) flush();
     };
-  }, [prospectId]);
+  }, [prospectId, pathname]);
 
   return (
     <div className="inline-flex flex-col items-start gap-1">
