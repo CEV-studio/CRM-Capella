@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlarmClock, ArrowRight, CalendarDays, CircleAlert, Clock3, Flame, RotateCcw, Target, Zap } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { evaluateDiscipline, formatParisDateTime, type DisciplineEvent } from "@/lib/domain/discipline";
+import { formatParisDateTime, type DisciplineEvent } from "@/lib/domain/discipline";
 import type { Prospect } from "@/lib/domain/database.types";
 
 export const metadata = { title: "Ma journée — Capella CRM" };
@@ -20,6 +20,8 @@ type WorkItem = {
   anomaly: boolean;
 };
 
+const CLOSED_STAGES = new Set(["KO", "Numéro KO", "Pas intéressé"]);
+
 function label(p: Row) {
   return p.raison_sociale || [p.prenom, p.nom].filter(Boolean).join(" ") || "Prospect sans nom";
 }
@@ -31,6 +33,15 @@ function energySummary(p: Row) {
   if (p.car_gaz) bits.push(`${p.car_gaz} MWh gaz`);
   if (p.date_fin_contrat) bits.push(`DDF ${new Intl.DateTimeFormat("fr-FR").format(new Date(`${p.date_fin_contrat}T12:00:00Z`))}`);
   return bits.join(" · ");
+}
+
+function parisDateKey(value: Date | string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(typeof value === "string" ? new Date(value) : value);
 }
 
 function WorkCard({ item, rank }: { item: WorkItem; rank?: number }) {
@@ -73,31 +84,45 @@ export default async function JourneePage() {
   let eventsQuery = (supabase as any)
     .from("calendar_events")
     .select("prospect_id, kind, title, start_at, end_at")
-    .gte("end_at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString())
+    .eq("status", "confirmed")
+    .gte("start_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .lt("start_at", new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
     .order("start_at", { ascending: true });
   if (profile.role !== "admin") eventsQuery = eventsQuery.eq("profile_id", profile.id);
 
   const [{ data: prospectData, error }, { data: eventData }] = await Promise.all([prospectsQuery, eventsQuery]);
   const prospects = (prospectData ?? []) as Row[];
   const events = (eventData ?? []) as DisciplineEvent[];
+  const today = parisDateKey(new Date());
   const nextByProspect = new Map<string, DisciplineEvent>();
-  for (const event of events) if (!nextByProspect.has(event.prospect_id)) nextByProspect.set(event.prospect_id, event);
+  for (const event of events) {
+    if (parisDateKey(event.start_at) === today && !nextByProspect.has(event.prospect_id)) {
+      nextByProspect.set(event.prospect_id, event);
+    }
+  }
 
   const items = prospects
     .map((prospect): WorkItem | null => {
       const event = nextByProspect.get(prospect.id) ?? null;
-      const result = evaluateDiscipline(prospect, event);
-      if (result.bucket === "ignore") return null;
-      const bucket: WorkItem["bucket"] = result.bucket;
+      const hasDueAction = Boolean(prospect.next_action_date && prospect.next_action_date <= today);
+      if (CLOSED_STAGES.has(prospect.stage) || (!event && !hasDueAction)) return null;
+
+      const actionIsLate = Boolean(prospect.next_action_date && prospect.next_action_date < today);
+      const eventIsPast = Boolean(event && new Date(event.start_at).getTime() < Date.now());
+      const reason = event
+        ? event.kind === "rdv"
+          ? eventIsPast ? "RDV comparatif passé" : "RDV comparatif aujourd’hui"
+          : eventIsPast ? "Rappel dépassé" : "Rappel aujourd’hui"
+        : actionIsLate ? "Action en retard" : "À faire aujourd’hui";
       return {
         prospect,
         event,
-        priority: result.priority,
-        bucket,
-        reason: result.reason,
-        detail: result.detail,
-        urgent: result.urgent,
-        anomaly: result.anomaly,
+        priority: event ? (event.kind === "rdv" ? 116 : 112) : actionIsLate ? 114 : 108,
+        bucket: "maintenant",
+        reason,
+        detail: event?.title || prospect.next_action,
+        urgent: true,
+        anomaly: actionIsLate || eventIsPast,
       };
     })
     .filter((item): item is WorkItem => Boolean(item))
@@ -122,7 +147,7 @@ export default async function JourneePage() {
 
       {error ? <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {error.message}</div> : null}
 
-      <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {items.length ? <><section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-star-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-star-700">À faire maintenant</span><Flame size={17} className="text-star-500"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{maintenant.length}</div><div className="mt-1 text-xs text-grey-brand">Retards, RDV, rappels et dossiers chauds</div></div>
         <div className="rounded-2xl border border-navy-100 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-navy-500">À travailler</span><Target size={17} className="text-sky-capella-600"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{travail.length}</div><div className="mt-1 text-xs text-grey-brand">Prospection active à poursuivre</div></div>
         <div className="rounded-2xl border border-sky-capella-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-sky-capella-700">À réactiver</span><RotateCcw size={17} className="text-sky-capella-600"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{reactiver.length}</div><div className="mt-1 text-xs text-grey-brand">DDF à moins de 6 mois</div></div>
@@ -146,7 +171,7 @@ export default async function JourneePage() {
             {travail.length ? <div className="space-y-3">{travail.slice(0, 8).map((item) => <WorkCard key={item.prospect.id} item={item}/>)}</div> : <div className="rounded-2xl border border-dashed border-navy-200 bg-white p-6 text-center text-sm text-grey-brand">Aucun dossier actif à reprendre.</div>}
           </section>
         </div>
-      </div>
+      </div></> : <div className="rounded-2xl border border-dashed border-green-200 bg-green-50/50 p-12 text-center shadow-sm"><div className="font-display text-lg font-bold text-green-800">Votre journée est à jour — aucune action prévue pour le moment.</div></div>}
     </main>
   );
 }
