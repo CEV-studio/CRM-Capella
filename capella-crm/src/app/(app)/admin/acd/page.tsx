@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fmtDateHeure } from "@/lib/format";
+import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +82,7 @@ export default async function AcdATraiterPage() {
                 return (
                   <tr key={ligne.id} className="align-middle">
                     <td className="px-4 py-4">
-                      <div className="font-semibold text-navy-800">{libelleProspect(ligne)}</div>
+                      <ProspectFichePopup prospectId={ligne.id} prospectLabel={libelleProspect(ligne)} className="text-left font-semibold text-navy-800 hover:text-sky-capella-700">{libelleProspect(ligne)}</ProspectFichePopup>
                       <div className="mt-0.5 text-xs text-grey-brand">{ligne.ref || "Sans référence"}</div>
                       <div className="mt-1 text-xs text-grey-brand">
                         {[ligne.mail, telephone].filter(Boolean).join(" · ")}
@@ -104,7 +104,7 @@ export default async function AcdATraiterPage() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex justify-end gap-2">
-                        <Link href={`/prospection/${ligne.id}`} className="rounded-lg border border-navy-200 px-3 py-2 text-xs font-semibold text-navy-700">Voir la fiche</Link>
+                        <ProspectFichePopup prospectId={ligne.id} prospectLabel={libelleProspect(ligne)} className="rounded-lg border border-navy-200 px-3 py-2 text-xs font-semibold text-navy-700 hover:bg-navy-50">Voir la fiche</ProspectFichePopup>
                         <a href={`/api/acd/${ligne.id}/telecharger`} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-star-500 px-3 py-2 text-xs font-semibold text-white hover:bg-star-600">
                           {ligne.acd_downloaded_at ? "Retélécharger" : "Télécharger l’ACD"}
                         </a>
