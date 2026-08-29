@@ -5,7 +5,7 @@ import { BriefcaseBusiness, Building2, Pencil, UserRound, Zap } from "lucide-rea
 import type { Prospect } from "@/lib/domain/database.types";
 
 function valeur(value: string | number | null | undefined): string {
-  if (value === null || value === undefined || value === "") return "—";
+  if (value === null || value === undefined || value === "") return "Non renseigné";
   return String(value);
 }
 
@@ -49,120 +49,58 @@ function EditableField({ prospectId, field, value, type = "text", suffix }: Edit
   }
 
   if (editing) {
-    return (
-      <div className="min-w-0">
-        <input
-          autoFocus
-          type={type}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => void save()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") { e.preventDefault(); void save(); }
-            if (e.key === "Escape") { setDraft(current); setEditing(false); setError(null); }
-          }}
-          className="h-8 w-full rounded-lg border border-sky-capella-300 bg-white px-2 text-right text-xs font-semibold text-navy-900 outline-none ring-sky-capella-500/10 focus:ring-2"
-        />
-        {error ? <div className="mt-1 text-[10px] text-red-700">{error}</div> : null}
-      </div>
-    );
+    return <div className="min-w-0"><input autoFocus type={type} value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => void save()} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void save(); } if (e.key === "Escape") { setDraft(current); setEditing(false); setError(null); } }} className="h-8 w-full rounded-lg border border-sky-capella-300 bg-white px-2 text-right text-xs font-semibold text-navy-900 outline-none focus:ring-2 focus:ring-sky-capella-100" />{error ? <div className="mt-1 text-[10px] text-red-700">{error}</div> : null}</div>;
   }
 
-  return (
-    <button
-      type="button"
-      onClick={() => { setDraft(current); setEditing(true); }}
-      className="group inline-flex max-w-full items-center justify-end gap-1.5 rounded-lg px-1.5 py-1 text-right text-xs font-semibold text-navy-900 transition hover:bg-sky-capella-50 hover:text-sky-capella-700"
-      title="Cliquer pour modifier"
-    >
-      <span className="min-w-0 break-words">{current ? `${current}${suffix ?? ""}` : "—"}</span>
-      <Pencil size={11} className="shrink-0 opacity-0 transition group-hover:opacity-100" />
-      {saving ? <span className="text-[10px] text-grey-brand">…</span> : null}
-    </button>
-  );
+  return <button type="button" onClick={() => { setDraft(current); setEditing(true); }} className="group inline-flex max-w-full items-center justify-end gap-1.5 rounded-lg px-1.5 py-1 text-right text-xs font-semibold text-navy-900 hover:bg-sky-capella-50 hover:text-sky-capella-700" title="Cliquer pour modifier"><span className={`min-w-0 break-words ${current ? "" : "font-medium text-navy-300"}`}>{current ? `${current}${suffix ?? ""}` : "Non renseigné"}</span><Pencil size={11} className="shrink-0 opacity-0 transition group-hover:opacity-100" />{saving ? <span className="text-[10px] text-grey-brand">…</span> : null}</button>;
 }
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] items-center gap-3 py-2.5">
-      <dt className="text-xs font-medium leading-5 text-navy-400">{label}</dt>
-      <dd className="min-w-0 text-right">{children}</dd>
-    </div>
-  );
+  return <div className="grid grid-cols-[minmax(0,.9fr)_minmax(0,1.25fr)] items-center gap-3 border-b border-navy-100/75 py-2.5 last:border-0"><dt className="text-xs font-medium leading-5 text-navy-500">{label}</dt><dd className="min-w-0 text-right">{children}</dd></div>;
 }
 
-function Section({ title, icon: Icon, children }: { title: string; icon: typeof Building2; children: React.ReactNode }) {
-  return (
-    <section className="border-b border-navy-100 last:border-b-0">
-      <div className="flex items-center gap-2 px-4 pb-1 pt-4">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-capella-50 text-sky-capella-700"><Icon size={16}/></span>
-        <h3 className="font-display text-sm font-bold text-navy-900">{title}</h3>
-      </div>
-      <dl className="divide-y divide-navy-100/70 px-4 pb-3">{children}</dl>
-    </section>
-  );
+function Card({ title, icon: Icon, children }: { title: string; icon: typeof Building2; children: React.ReactNode }) {
+  return <section className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-[var(--crm-shadow-sm)]"><div className="flex items-center justify-between gap-3 border-b border-navy-100 px-4 py-3.5"><div className="flex items-center gap-2.5"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-capella-50 text-sky-capella-700"><Icon size={16}/></span><h3 className="font-display text-sm font-bold text-navy-900">{title}</h3></div><Pencil size={14} className="text-navy-300" /></div><dl className="px-4 py-1">{children}</dl></section>;
 }
 
-export function ProspectInfoSidebar({
-  prospect,
-  ownerName,
-  sourceName,
-  champsPerso,
-}: {
-  prospect: Prospect;
-  ownerName: string | null;
-  sourceName: string | null;
-  champsPerso: Array<{ cle: string; libelle: string }>;
-}) {
+export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPerso }: { prospect: Prospect; ownerName: string | null; sourceName: string | null; champsPerso: Array<{ cle: string; libelle: string }> }) {
   const p = prospect;
   const champs = champsPerso.map((c) => ({ ...c, value: p.champs_perso?.[c.cle] })).filter((c) => c.value);
+  return <div className="space-y-4">
+    <Card title="Informations entreprise" icon={Building2}>
+      <InfoRow label="Raison sociale"><EditableField prospectId={p.id} field="raison_sociale" value={p.raison_sociale} /></InfoRow>
+      <InfoRow label="SIREN"><EditableField prospectId={p.id} field="siren" value={p.siren} /></InfoRow>
+      <InfoRow label="NAF / secteur"><EditableField prospectId={p.id} field="naf" value={p.naf} /></InfoRow>
+      <InfoRow label="Code postal"><EditableField prospectId={p.id} field="code_postal" value={p.code_postal} /></InfoRow>
+      <InfoRow label="Segment"><EditableField prospectId={p.id} field="segment" value={p.segment} /></InfoRow>
+      <InfoRow label="Nombre de sites"><EditableField prospectId={p.id} field="nb_sites" value={p.nb_sites} type="number" /></InfoRow>
+      <div className="my-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] text-navy-400"><UserRound size={12}/>Contact principal</div>
+      <InfoRow label="Prénom"><EditableField prospectId={p.id} field="prenom" value={p.prenom} /></InfoRow>
+      <InfoRow label="Nom"><EditableField prospectId={p.id} field="nom" value={p.nom} /></InfoRow>
+      <InfoRow label="E-mail"><EditableField prospectId={p.id} field="mail" value={p.mail} type="email" /></InfoRow>
+      <InfoRow label="Mobile"><EditableField prospectId={p.id} field="tel_mobile" value={p.tel_mobile} type="tel" /></InfoRow>
+      <InfoRow label="Fixe"><EditableField prospectId={p.id} field="tel_fixe" value={p.tel_fixe} type="tel" /></InfoRow>
+    </Card>
 
-  return (
-    <div>
-      <div className="mb-3 px-1">
-        <h2 className="font-display text-base font-bold text-navy-900">Informations du dossier</h2>
-        <p className="mt-0.5 text-[11px] text-grey-brand">Clique sur une valeur pour la modifier directement.</p>
-      </div>
+    <Card title="Informations énergie" icon={Zap}>
+      <InfoRow label="Fournisseur élec"><EditableField prospectId={p.id} field="fournisseur_electricite" value={p.fournisseur_electricite} /></InfoRow>
+      <InfoRow label="Fournisseur gaz"><EditableField prospectId={p.id} field="fournisseur_gaz" value={p.fournisseur_gaz} /></InfoRow>
+      <InfoRow label="Fin de contrat"><EditableField prospectId={p.id} field="date_fin_contrat" value={p.date_fin_contrat} type="date" /></InfoRow>
+      <InfoRow label="PDL"><EditableField prospectId={p.id} field="pdl" value={p.pdl} /></InfoRow>
+      <InfoRow label="PCE"><EditableField prospectId={p.id} field="pce" value={p.pce} /></InfoRow>
+      <InfoRow label="CAR élec"><EditableField prospectId={p.id} field="car_electricite" value={p.car_electricite} type="number" suffix=" MWh" /></InfoRow>
+      <InfoRow label="CAR gaz"><EditableField prospectId={p.id} field="car_gaz" value={p.car_gaz} type="number" suffix=" MWh" /></InfoRow>
+      <InfoRow label="Option tarifaire"><EditableField prospectId={p.id} field="option_tarifaire" value={p.option_tarifaire} /></InfoRow>
+    </Card>
 
-      <div className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-[var(--shadow-card)]">
-        <Section title="Informations entreprise" icon={Building2}>
-          <InfoRow label="Raison sociale"><EditableField prospectId={p.id} field="raison_sociale" value={p.raison_sociale} /></InfoRow>
-          <InfoRow label="SIREN"><EditableField prospectId={p.id} field="siren" value={p.siren} /></InfoRow>
-          <InfoRow label="NAF"><EditableField prospectId={p.id} field="naf" value={p.naf} /></InfoRow>
-          <InfoRow label="Code postal"><EditableField prospectId={p.id} field="code_postal" value={p.code_postal} /></InfoRow>
-          <InfoRow label="Segment"><EditableField prospectId={p.id} field="segment" value={p.segment} /></InfoRow>
-          <InfoRow label="Nombre de sites"><EditableField prospectId={p.id} field="nb_sites" value={p.nb_sites} type="number" /></InfoRow>
-        </Section>
-
-        <Section title="Contact" icon={UserRound}>
-          <InfoRow label="Prénom"><EditableField prospectId={p.id} field="prenom" value={p.prenom} /></InfoRow>
-          <InfoRow label="Nom"><EditableField prospectId={p.id} field="nom" value={p.nom} /></InfoRow>
-          <InfoRow label="Email"><EditableField prospectId={p.id} field="mail" value={p.mail} type="email" /></InfoRow>
-          <InfoRow label="Mobile"><EditableField prospectId={p.id} field="tel_mobile" value={p.tel_mobile} type="tel" /></InfoRow>
-          <InfoRow label="Fixe"><EditableField prospectId={p.id} field="tel_fixe" value={p.tel_fixe} type="tel" /></InfoRow>
-        </Section>
-
-        <Section title="Informations énergie" icon={Zap}>
-          <InfoRow label="Fournisseur élec"><EditableField prospectId={p.id} field="fournisseur_electricite" value={p.fournisseur_electricite} /></InfoRow>
-          <InfoRow label="Fournisseur gaz"><EditableField prospectId={p.id} field="fournisseur_gaz" value={p.fournisseur_gaz} /></InfoRow>
-          <InfoRow label="PDL"><EditableField prospectId={p.id} field="pdl" value={p.pdl} /></InfoRow>
-          <InfoRow label="PCE"><EditableField prospectId={p.id} field="pce" value={p.pce} /></InfoRow>
-          <InfoRow label="CAR élec"><EditableField prospectId={p.id} field="car_electricite" value={p.car_electricite} type="number" suffix=" MWh" /></InfoRow>
-          <InfoRow label="CAR gaz"><EditableField prospectId={p.id} field="car_gaz" value={p.car_gaz} type="number" suffix=" MWh" /></InfoRow>
-          <InfoRow label="Option tarifaire"><EditableField prospectId={p.id} field="option_tarifaire" value={p.option_tarifaire} /></InfoRow>
-          <InfoRow label="Fin de contrat"><EditableField prospectId={p.id} field="date_fin_contrat" value={p.date_fin_contrat} type="date" /></InfoRow>
-        </Section>
-
-        <Section title="Gestion du dossier" icon={BriefcaseBusiness}>
-          <InfoRow label="Étape"><span className="text-xs font-semibold text-navy-900">{valeur(p.stage)}</span></InfoRow>
-          <InfoRow label="Prochaine action"><EditableField prospectId={p.id} field="next_action" value={p.next_action} /></InfoRow>
-          <InfoRow label="Date de relance"><EditableField prospectId={p.id} field="next_action_date" value={p.next_action_date} type="date" /></InfoRow>
-          <InfoRow label="Score"><EditableField prospectId={p.id} field="score" value={p.score} type="number" suffix="/5" /></InfoRow>
-          <InfoRow label="Commercial"><span className="text-xs font-semibold text-navy-900">{valeur(ownerName)}</span></InfoRow>
-          <InfoRow label="Source"><span className="text-xs font-semibold text-navy-900">{valeur(sourceName)}</span></InfoRow>
-          {champs.map((c) => <InfoRow key={c.cle} label={c.libelle}><span className="text-xs font-semibold text-navy-900">{valeur(c.value)}</span></InfoRow>)}
-        </Section>
-      </div>
-    </div>
-  );
+    <Card title="Gestion du dossier" icon={BriefcaseBusiness}>
+      <InfoRow label="Commercial"><span className="text-xs font-semibold text-navy-900">{valeur(ownerName)}</span></InfoRow>
+      <InfoRow label="Source"><span className="text-xs font-semibold text-navy-900">{valeur(sourceName)}</span></InfoRow>
+      <InfoRow label="Étape"><span className="text-xs font-semibold text-navy-900">{valeur(p.stage)}</span></InfoRow>
+      <InfoRow label="Date de relance"><EditableField prospectId={p.id} field="next_action_date" value={p.next_action_date} type="date" /></InfoRow>
+      <InfoRow label="Prochaine action"><EditableField prospectId={p.id} field="next_action" value={p.next_action} /></InfoRow>
+      <InfoRow label="Score"><EditableField prospectId={p.id} field="score" value={p.score} type="number" suffix="/5" /></InfoRow>
+      {champs.length ? <details className="mt-2 border-t border-navy-100 py-2"><summary className="cursor-pointer text-xs font-semibold text-navy-600">Informations complémentaires ({champs.length})</summary><div className="mt-2">{champs.map((c) => <InfoRow key={c.cle} label={c.libelle}><span className="text-xs font-semibold text-navy-900">{valeur(c.value)}</span></InfoRow>)}</div></details> : null}
+    </Card>
+  </div>;
 }
