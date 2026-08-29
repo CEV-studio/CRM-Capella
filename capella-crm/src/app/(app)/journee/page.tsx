@@ -4,7 +4,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatParisDateTime, type DisciplineEvent } from "@/lib/domain/discipline";
 import type { Prospect } from "@/lib/domain/database.types";
-import { ProspectFichePopup } from "./prospect-fiche-popup";
+import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 
 export const metadata = { title: "Ma journée — Capella CRM" };
 export const dynamic = "force-dynamic";
