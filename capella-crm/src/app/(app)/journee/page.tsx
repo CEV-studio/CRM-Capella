@@ -4,6 +4,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatParisDateTime, type DisciplineEvent } from "@/lib/domain/discipline";
 import type { Prospect } from "@/lib/domain/database.types";
+import { MaintenantPopup } from "./maintenant-popup";
 
 export const metadata = { title: "Ma journée — Capella CRM" };
 export const dynamic = "force-dynamic";
@@ -148,18 +149,13 @@ export default async function JourneePage() {
       {error ? <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {error.message}</div> : null}
 
       {items.length ? <><section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-star-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-star-700">À faire maintenant</span><Flame size={17} className="text-star-500"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{maintenant.length}</div><div className="mt-1 text-xs text-grey-brand">Retards, RDV, rappels et dossiers chauds</div></div>
+        <MaintenantPopup count={maintenant.length}>{maintenant.map((item, i) => <WorkCard key={item.prospect.id} item={item} rank={i + 1}/>)}</MaintenantPopup>
         <div className="rounded-2xl border border-navy-100 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-navy-500">À travailler</span><Target size={17} className="text-sky-capella-600"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{travail.length}</div><div className="mt-1 text-xs text-grey-brand">Prospection active à poursuivre</div></div>
         <div className="rounded-2xl border border-sky-capella-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-sky-capella-700">À réactiver</span><RotateCcw size={17} className="text-sky-capella-600"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{reactiver.length}</div><div className="mt-1 text-xs text-grey-brand">DDF à moins de 6 mois</div></div>
         <div className={`rounded-2xl border bg-white p-4 shadow-sm ${anomalies.length ? "border-red-200" : "border-green-200"}`}><div className="flex items-center justify-between"><span className={`text-xs font-bold uppercase tracking-wide ${anomalies.length ? "text-red-700" : "text-green-700"}`}>Anomalies</span><CircleAlert size={17} className={anomalies.length ? "text-red-500" : "text-green-500"}/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{anomalies.length}</div><div className="mt-1 text-xs text-grey-brand">La cible opérationnelle est 0</div></div>
       </section>
 
-      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,.6fr)]">
-        <section>
-          <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-lg font-bold text-navy-900">À faire maintenant</h2><p className="text-xs text-grey-brand">Traite cette file de haut en bas.</p></div><span className="rounded-full bg-star-100 px-2.5 py-1 text-xs font-bold text-star-700">{maintenant.length}</span></div>
-          {maintenant.length ? <div className="space-y-3">{maintenant.map((item, i) => <WorkCard key={item.prospect.id} item={item} rank={i + 1}/>)}</div> : <div className="rounded-2xl border border-dashed border-green-200 bg-green-50/50 p-10 text-center"><div className="font-display text-lg font-bold text-green-800">File critique vide</div><p className="mt-1 text-sm text-green-700">Aucun retard ou dossier sans prochaine action détecté.</p></div>}
-        </section>
-
+      <div className="grid gap-6 2xl:grid-cols-2">
         <div className="space-y-6">
           <section>
             <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-lg font-bold text-navy-900">À réactiver</h2><p className="text-xs text-grey-brand">Les contrats futurs reviennent automatiquement dans le radar.</p></div><RotateCcw size={17} className="text-sky-capella-600"/></div>
