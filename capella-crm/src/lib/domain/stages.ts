@@ -6,7 +6,8 @@ export const PROSPECTION_STAGES = [
   { label: "Demande de facture", category: "actif", color: "#E3EFFF" },
   // Étape de transition : dès qu'elle est choisie, la fiche passe dans Clients.
   { label: "Demande ACD", category: "client", color: "#E3EFFF" },
-  { label: "DFF trop éloigné", category: "clos", color: "#FFD9D9" },
+  // DDF = date de fin de contrat. Une DDF éloignée est une opportunité future, pas un oubli.
+  { label: "DDF trop éloignée", category: "clos", color: "#FFD9D9" },
   { label: "KO", category: "clos", color: "#FFD9D9" },
   { label: "Numéro KO", category: "clos", color: "#FFD9D9" },
   { label: "Pas intéressé", category: "clos", color: "#FFD9D9" },
@@ -14,8 +15,8 @@ export const PROSPECTION_STAGES = [
 
 export const CLIENT_STAGES = [
   { label: "Demande ACD", category: "client", color: "#E3EFFF" },
+  // Le RDV comparatif est la présentation : une seule étape métier.
   { label: "RDV comparatif", category: "client", color: "#E3F5EE" },
-  { label: "Présentation", category: "client", color: "#E3EFFF" },
   { label: "RIB", category: "client", color: "#E3F5EE" },
   // Étape de transition : crée/bascule le dossier dans Cotations.
   { label: "Demande de cotation", category: "cotation", color: "#E3F5EE" },
