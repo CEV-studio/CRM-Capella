@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   Source,
@@ -28,51 +29,56 @@ import type {
  */
 
 /** Toutes les sources, triées par nom (actives ET inactives). */
-export const chargerSources = cache(async (): Promise<Source[]> => {
+const sourcesCache = unstable_cache(async (): Promise<Source[]> => {
   const admin = createAdminClient();
   const { data } = await admin.from("sources").select("*").order("name");
   return (data ?? []) as Source[];
-});
+}, ["referentiels-sources"], { revalidate: 60 });
+export const chargerSources = cache(sourcesCache);
 
 /** Tous les apporteurs, triés par nom (actifs ET inactifs). */
-export const chargerApporteurs = cache(async (): Promise<Apporteur[]> => {
+const apporteursCache = unstable_cache(async (): Promise<Apporteur[]> => {
   const admin = createAdminClient();
   const { data } = await admin.from("apporteurs").select("*").order("name");
   return (data ?? []) as Apporteur[];
-});
+}, ["referentiels-apporteurs"], { revalidate: 60 });
+export const chargerApporteurs = cache(apporteursCache);
 
 /** Tous les fournisseurs d'énergie mis en concurrence, ordre d'affichage. */
-export const chargerFournisseurs = cache(async (): Promise<Fournisseur[]> => {
+const fournisseursCache = unstable_cache(async (): Promise<Fournisseur[]> => {
   const admin = createAdminClient();
   const { data } = await admin
     .from("fournisseurs")
     .select("*")
     .order("sort_order");
   return (data ?? []) as Fournisseur[];
-});
+}, ["referentiels-fournisseurs"], { revalidate: 60 });
+export const chargerFournisseurs = cache(fournisseursCache);
 
 /** Les étapes du pipeline prospection, dans l'ordre. */
-export const chargerEtapesProspect = cache(async (): Promise<StageRow[]> => {
+const etapesProspectCache = unstable_cache(async (): Promise<StageRow[]> => {
   const admin = createAdminClient();
   const { data } = await admin
     .from("prospect_stages")
     .select("*")
     .order("sort_order");
   return (data ?? []) as StageRow[];
-});
+}, ["referentiels-etapes-prospect"], { revalidate: 60 });
+export const chargerEtapesProspect = cache(etapesProspectCache);
 
 /** Les étapes du pipeline conversion (affaires), dans l'ordre. */
-export const chargerEtapesAffaire = cache(async (): Promise<StageRow[]> => {
+const etapesAffaireCache = unstable_cache(async (): Promise<StageRow[]> => {
   const admin = createAdminClient();
   const { data } = await admin
     .from("affaire_stages")
     .select("*")
     .order("sort_order");
   return (data ?? []) as StageRow[];
-});
+}, ["referentiels-etapes-affaire"], { revalidate: 60 });
+export const chargerEtapesAffaire = cache(etapesAffaireCache);
 
 /** Les définitions de champs personnalisés, triées par libellé. */
-export const chargerChampsPersonnalises = cache(
+const champsPersonnalisesCache = unstable_cache(
   async (): Promise<ChampPersonnalise[]> => {
     const admin = createAdminClient();
     const { data } = await admin
@@ -80,5 +86,6 @@ export const chargerChampsPersonnalises = cache(
       .select("*")
       .order("libelle");
     return (data ?? []) as ChampPersonnalise[];
-  },
+  }, ["referentiels-champs-personnalises"], { revalidate: 60 },
 );
+export const chargerChampsPersonnalises = cache(champsPersonnalisesCache);
