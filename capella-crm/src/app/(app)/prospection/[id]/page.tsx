@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  Activity,
   AlarmClock,
   CalendarDays,
   ChevronLeft,
@@ -14,8 +13,8 @@ import {
 } from "lucide-react";
 import { peutGerer, requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { StageBadge } from "@/components/ui";
-import { isTransferable, stageColor } from "@/lib/domain/stages";
+import { ProspectStageEditor } from "@/components/prospect-stage-editor";
+import { isTransferable } from "@/lib/domain/stages";
 import { fmtDateHeure } from "@/lib/format";
 import { nomComplet } from "@/lib/domain/noms";
 import { BoutonSupprimer } from "../../admin/corbeille/bouton-supprimer";
@@ -58,10 +57,8 @@ function calendarLabel(event: CalendarEvent): string {
 
 function formatCreated(value: string): string {
   try {
-    return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
-  } catch {
-    return value;
-  }
+    return new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+  } catch { return value; }
 }
 
 function qualification(score: number | null): { label: string; className: string } | null {
@@ -119,7 +116,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const piecesVisibles = estAdmin ? pieces : pieces.filter((x) => x.type !== "ACD");
   const calendarEvents = (calendarEventData ?? []) as CalendarEvent[];
   const activityEmails = (activityEmailData ?? []) as ActivityEmail[];
-  const ownerName = p.assigned_to === profil.id ? profil.full_name : (profils ?? []).find((x) => x.id === p.assigned_to)?.full_name ?? null;
+  const ownerName = estAdmin ? ((profils ?? []).find((x) => x.id === p.assigned_to)?.full_name ?? (p.assigned_to === profil.id ? profil.full_name : null)) : null;
   const sourceName = sources.find((s) => s.id === p.source_id)?.name ?? null;
   const phone = p.tel_mobile || p.tel_fixe;
   const prospectLabel = p.raison_sociale || contactNom(p);
@@ -146,14 +143,13 @@ export default async function FicheProspectPage({ params, searchParams }: {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="font-display text-2xl font-bold leading-tight text-navy-900 lg:text-[30px]">{prospectLabel}</h1>
-                    <StageBadge label={p.stage} color={stageColor(p.stage, "prospect")} />
+                    <ProspectStageEditor prospectId={p.id} stage={p.stage} />
                     {p.segment ? <span className="rounded-full bg-navy-50 px-2.5 py-1 text-[11px] font-semibold text-navy-600">{p.segment}</span> : null}
                     {p.ref ? <span className="text-[11px] font-semibold tabular text-grey-brand">{p.ref}</span> : null}
                   </div>
                   <div className="mt-1 text-[11px] font-medium text-grey-brand">Créé le {formatCreated(p.created_at)}</div>
                   <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-navy-600">
                     <span className="inline-flex items-center gap-2"><UserRound size={16} className="text-navy-400" />{contactNom(p)}</span>
-                    {ownerName ? <span className="inline-flex items-center gap-2"><Activity size={16} className="text-navy-400" />{ownerName}</span> : null}
                     {phone ? <a href={`tel:${phone}`} className="inline-flex items-center gap-2 font-semibold text-navy-800 hover:text-sky-capella-700"><Phone size={16} />{phone}</a> : <span className="text-grey-brand">Téléphone non renseigné</span>}
                     {p.mail ? <a href={`mailto:${p.mail}`} className="inline-flex max-w-full items-center gap-2 font-medium text-navy-800 hover:text-sky-capella-700"><Mail size={16} /><span className="truncate">{p.mail}</span></a> : <span className="text-grey-brand">E-mail non renseigné</span>}
                   </div>
@@ -201,7 +197,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-semibold text-navy-500 shadow-sm ring-1 ring-navy-100"><Clock3 size={12}/>Dernière action {fmtDateHeure(p.last_action_at)}</div>
           </div>
-          <ProspectInfoSidebar prospect={p} ownerName={ownerName} sourceName={sourceName} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} />
+          <ProspectInfoSidebar prospect={p} ownerName={ownerName} sourceName={sourceName} isAdmin={estAdmin} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} />
         </aside>
       </div>
     </main>
