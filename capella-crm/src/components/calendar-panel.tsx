@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { AlarmClock, CalendarDays, ExternalLink, Trash2, X } from "lucide-react";
 import type { CalendarEvent } from "@/lib/domain/database.types";
 
@@ -13,6 +14,7 @@ function localDateTimeInput(date: Date): string {
 function fmtEventDate(value: string): string {
   try {
     return new Intl.DateTimeFormat("fr-FR", {
+      timeZone: "Europe/Paris",
       weekday: "short",
       day: "2-digit",
       month: "short",
@@ -36,6 +38,7 @@ export function CalendarPanel({ prospectId, prospectEmail, prospectLabel, connec
   accountEmail: string | null;
   events: CalendarEvent[];
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [kind, setKind] = useState<"rdv" | "rappel">("rappel");
@@ -56,6 +59,7 @@ export function CalendarPanel({ prospectId, prospectEmail, prospectLabel, connec
   const [localEvents, setLocalEvents] = useState(events);
 
   useEffect(() => setMounted(true), []);
+  useEffect(() => setLocalEvents(events), [events]);
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
@@ -87,6 +91,7 @@ export function CalendarPanel({ prospectId, prospectEmail, prospectLabel, connec
       setLocalEvents((current) => [...current, data.event!]);
       setStatus({ ok: true, text: kind === "rappel" ? "Rappel ajouté à Google Calendar et à l’agenda CRM." : "RDV comparatif ajouté à Google Calendar et à l’agenda CRM." });
       setTitle(""); setDescription(""); setLocation(""); setInviteClient(false);
+      router.refresh();
     } catch (error) {
       setStatus({ ok: false, text: error instanceof Error ? error.message : "Création impossible." });
     } finally { setSaving(false); }
@@ -102,6 +107,7 @@ export function CalendarPanel({ prospectId, prospectEmail, prospectLabel, connec
       if (!response.ok) throw new Error(data.error || "Suppression impossible.");
       setLocalEvents((current) => current.filter((item) => item.id !== event.id));
       setStatus({ ok: true, text: "Événement supprimé de Google Calendar." });
+      router.refresh();
     } catch (error) {
       setStatus({ ok: false, text: error instanceof Error ? error.message : "Suppression impossible." });
     } finally { setDeletingId(null); }
