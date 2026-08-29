@@ -1,5 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  Activity,
+  AlarmClock,
+  ArrowLeft,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Mail,
+  Phone,
+  UserRound,
+} from "lucide-react";
 import { peutGerer, requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { StageBadge } from "@/components/ui";
@@ -34,13 +46,14 @@ function contactNom(p: Prospect): string {
 function calendarLabel(event: CalendarEvent): string {
   const date = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
+    weekday: "short",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(event.start_at)).replace(",", " à");
-  return event.kind === "rappel" ? `Rappel — ${date}` : `Présentation comparatif — ${date}`;
+  return event.kind === "rappel" ? `Rappel · ${date}` : `Présentation comparatif · ${date}`;
 }
 
 export default async function FicheProspectPage({ params, searchParams }: {
@@ -96,120 +109,164 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const phone = p.tel_mobile || p.tel_fixe;
   const prospectLabel = p.raison_sociale || contactNom(p);
   const prochaineAction = calendarEvents[0] ?? null;
-  const prochaineActionManuelle = !prochaineAction && p.next_action && !/^(Rappel|Présentation comparatif)/.test(p.next_action)
-    ? p.next_action
-    : null;
+  const prochaineActionManuelle = !prochaineAction && p.next_action && !/^(Rappel|Présentation comparatif)/.test(p.next_action) ? p.next_action : null;
+  const initials = (p.raison_sociale || p.nom || "C").split(/\s+/).slice(0, 2).map((x) => x.slice(0, 1)).join("").toUpperCase();
 
   return (
-    <main className="mx-auto w-full max-w-[1720px] px-4 py-5 2xl:px-6">
+    <main className="mx-auto w-full max-w-[1760px] px-4 py-5 lg:px-6 2xl:px-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/prospection" className="text-sm font-semibold text-navy-500 underline decoration-star-400 underline-offset-4 hover:text-star-600">← Retour à la prospection</Link>
+        <Link href="/prospection" className="inline-flex items-center gap-2 text-sm font-semibold text-navy-500 transition hover:text-star-600">
+          <ArrowLeft size={16} /> Retour aux prospects
+        </Link>
         <div className="flex items-center gap-3">
-          <div className="inline-flex overflow-hidden rounded-lg border border-navy-200 bg-white shadow-sm">
-            {fichePrecedente ? <Link href={`/prospection/${fichePrecedente.id}`} className="inline-flex h-9 w-10 items-center justify-center text-xl font-semibold text-navy-700 hover:bg-star-50 hover:text-star-600" title={`Fiche précédente : ${fichePrecedente.raison_sociale || nomComplet(fichePrecedente.nom, fichePrecedente.prenom)}`}>‹</Link> : <span className="inline-flex h-9 w-10 items-center justify-center text-xl text-navy-200">‹</span>}
+          <div className="inline-flex overflow-hidden rounded-xl border border-navy-200 bg-white shadow-sm">
+            {fichePrecedente ? (
+              <Link href={`/prospection/${fichePrecedente.id}`} className="inline-flex h-9 w-10 items-center justify-center text-navy-700 transition hover:bg-sky-capella-50 hover:text-sky-capella-700" title={`Fiche précédente : ${fichePrecedente.raison_sociale || nomComplet(fichePrecedente.nom, fichePrecedente.prenom)}`}>
+                <ChevronLeft size={18} />
+              </Link>
+            ) : <span className="inline-flex h-9 w-10 items-center justify-center text-navy-200"><ChevronLeft size={18} /></span>}
             <span className="w-px bg-navy-100" />
-            {ficheSuivante ? <Link href={`/prospection/${ficheSuivante.id}`} className="inline-flex h-9 w-10 items-center justify-center text-xl font-semibold text-navy-700 hover:bg-star-50 hover:text-star-600" title={`Fiche suivante : ${ficheSuivante.raison_sociale || nomComplet(ficheSuivante.nom, ficheSuivante.prenom)}`}>›</Link> : <span className="inline-flex h-9 w-10 items-center justify-center text-xl text-navy-200">›</span>}
+            {ficheSuivante ? (
+              <Link href={`/prospection/${ficheSuivante.id}`} className="inline-flex h-9 w-10 items-center justify-center text-navy-700 transition hover:bg-sky-capella-50 hover:text-sky-capella-700" title={`Fiche suivante : ${ficheSuivante.raison_sociale || nomComplet(ficheSuivante.nom, ficheSuivante.prenom)}`}>
+                <ChevronRight size={18} />
+              </Link>
+            ) : <span className="inline-flex h-9 w-10 items-center justify-center text-navy-200"><ChevronRight size={18} /></span>}
           </div>
-          <div className="rounded-full bg-navy-800 px-3 py-1.5 text-[11px] font-semibold text-navy-100">Dernière action {fmtDateHeure(p.last_action_at)}</div>
+          <div className="hidden items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-navy-500 shadow-sm ring-1 ring-navy-100 sm:flex">
+            <Clock3 size={13} /> Dernière action {fmtDateHeure(p.last_action_at)}
+          </div>
         </div>
       </div>
 
-      {query.acd === "transmise" ? <div className="mb-4 rounded-lg border-l-4 border-star-500 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div> : null}
-      {query.calendar === "connecte" ? <div className="mb-4 rounded-lg border-l-4 border-star-500 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Google Calendar connecté à ton compte CRM.</div> : null}
-      {query.calendar === "erreur" ? <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-800">Connexion Google Calendar impossible : {query.message || "erreur inconnue"}</div> : null}
+      {query.acd === "transmise" ? <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div> : null}
+      {query.calendar === "connecte" ? <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Google Calendar connecté à ton compte CRM.</div> : null}
+      {query.calendar === "erreur" ? <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">Connexion Google Calendar impossible : {query.message || "erreur inconnue"}</div> : null}
 
-      <div className="grid items-start gap-5 xl:grid-cols-[290px_minmax(0,1fr)_360px]">
-        <aside className="space-y-4 xl:sticky xl:top-5">
-          <section className="overflow-hidden rounded-2xl border border-navy-700 bg-navy-800 shadow-lg shadow-navy-900/10">
-            <div className="h-1.5 bg-star-500" />
-            <div className="p-5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-star-500 font-display text-lg font-bold text-white shadow-sm">{(p.raison_sociale || p.nom || "C").slice(0, 1).toUpperCase()}</div>
-              <h1 className="mt-3 font-display text-xl font-bold leading-tight text-white">{prospectLabel}</h1>
-              <p className="mt-1 text-sm font-medium text-navy-200">{contactNom(p)}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2"><StageBadge label={p.stage} color={stageColor(p.stage, "prospect")} />{p.ref ? <span className="rounded-full bg-navy-700 px-2 py-1 text-[10px] font-semibold tabular text-navy-100">{p.ref}</span> : null}</div>
-
-              <div className="mt-4 space-y-2 border-t border-navy-600 pt-4 text-sm">
-                {p.mail ? <span className="block truncate text-navy-100" title={p.mail}>{p.mail}</span> : <span className="block text-navy-300">Email non renseigné</span>}
-                {phone ? <a href={`tel:${phone}`} className="block font-bold text-white">{phone}</a> : <span className="block text-navy-300">Téléphone non renseigné</span>}
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-white/5 p-2">
-                {phone ? <a href={`tel:${phone}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-star-500 px-2 text-xs font-bold text-white transition hover:bg-star-600">📞 Appeler</a> : null}
-                <ProspectToolsModal prospectId={p.id} prospectLabel={prospectLabel} />
-                <CalendarPanel prospectId={p.id} prospectEmail={p.mail} prospectLabel={prospectLabel} connected={Boolean(calendarAccount)} accountEmail={calendarAccount?.email || null} events={calendarEvents} />
-              </div>
-
-              {prochaineAction ? (
-                <div className={`mt-4 rounded-lg border px-3 py-2.5 ${prochaineAction.kind === "rappel" ? "border-star-400/50 bg-star-500/10" : "border-navy-400 bg-white/10"}`}>
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-navy-300">Prochaine action</div>
-                  <div className="mt-1 flex items-start gap-2 text-xs font-semibold text-white">
-                    <span aria-hidden>{prochaineAction.kind === "rappel" ? "⏰" : "📅"}</span>
-                    <span>{calendarLabel(prochaineAction)}</span>
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_390px]">
+        <div className="min-w-0 space-y-4">
+          <section className="rounded-2xl border border-navy-100 bg-white p-5 shadow-[var(--shadow-card)] lg:p-6">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+              <div className="flex min-w-0 items-start gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-capella-600 to-sky-capella-400 font-display text-xl font-bold text-white shadow-lg shadow-sky-capella-500/15">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="font-display text-2xl font-bold leading-tight text-navy-900 lg:text-[28px]">{prospectLabel}</h1>
+                    <StageBadge label={p.stage} color={stageColor(p.stage, "prospect")} />
+                    {p.segment ? <span className="rounded-full bg-navy-50 px-2.5 py-1 text-[11px] font-semibold text-navy-600">{p.segment}</span> : null}
+                    {p.ref ? <span className="text-[11px] font-semibold tabular text-grey-brand">{p.ref}</span> : null}
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-navy-600">
+                    <span className="inline-flex items-center gap-2"><UserRound size={16} className="text-navy-400" />{contactNom(p)}</span>
+                    {ownerName ? <span className="inline-flex items-center gap-2"><Activity size={16} className="text-navy-400" />{ownerName}</span> : null}
+                    {phone ? <a href={`tel:${phone}`} className="inline-flex items-center gap-2 font-semibold text-navy-700 hover:text-sky-capella-700"><Phone size={16} />{phone}</a> : null}
+                    {p.mail ? <a href={`mailto:${p.mail}`} className="inline-flex max-w-full items-center gap-2 font-medium text-navy-700 hover:text-sky-capella-700"><Mail size={16} /><span className="truncate">{p.mail}</span></a> : null}
                   </div>
                 </div>
-              ) : prochaineActionManuelle ? (
-                <div className="mt-4 rounded-lg border border-navy-500 bg-white/10 px-3 py-2.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-navy-300">Prochaine action</div>
-                  <div className="mt-1 text-xs font-semibold text-white">{prochaineActionManuelle}</div>
-                </div>
-              ) : null}
+              </div>
 
-              {p.stage === "Demande ACD" ? <div className="mt-3">{estAdmin ? <a href={`/api/acd/${p.id}`} className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-bold text-white hover:bg-star-600">Télécharger l’ACD</a> : <form action={`/api/acd/${p.id}/demander`} method="post"><button type="submit" className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-bold text-white hover:bg-star-600">Demander l&apos;ACD</button></form>}</div> : null}
+              <div className="flex shrink-0 items-center gap-3 xl:flex-col xl:items-end">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border-[5px] border-star-100 bg-white font-display text-xl font-bold text-star-600 shadow-sm">
+                  {p.score == null ? "—" : `${p.score}/5`}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-grey-brand">Score</span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-2 border-t border-navy-100 pt-5">
+              {phone ? <a href={`tel:${phone}`} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-navy-900 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-navy-700"><Phone size={16} />Appeler</a> : null}
+              <ProspectToolsModal prospectId={p.id} prospectLabel={prospectLabel} />
+              <CalendarPanel prospectId={p.id} prospectEmail={p.mail} prospectLabel={prospectLabel} connected={Boolean(calendarAccount)} accountEmail={calendarAccount?.email || null} events={calendarEvents} />
+              {p.stage === "Demande ACD" ? estAdmin ? (
+                <a href={`/api/acd/${p.id}`} className="inline-flex h-10 items-center justify-center rounded-xl bg-star-500 px-4 text-sm font-bold text-white shadow-sm hover:bg-star-600">Télécharger l’ACD</a>
+              ) : (
+                <form action={`/api/acd/${p.id}/demander`} method="post"><button type="submit" className="inline-flex h-10 items-center justify-center rounded-xl bg-star-500 px-4 text-sm font-bold text-white shadow-sm hover:bg-star-600">Demander l&apos;ACD</button></form>
+              ) : null}
             </div>
           </section>
 
-          {affaireLiee ? <Link href={`/conversion/${affaireLiee.id}`} className="block rounded-xl border-l-4 border-l-star-500 bg-white p-4 text-sm text-navy-800 shadow-sm hover:bg-star-50"><strong>Déjà converti en affaire</strong><span className="mt-1 block text-xs">Voir {affaireLiee.ref} →</span></Link> : pretATransferer ? <section className="rounded-xl border-l-4 border-l-star-500 bg-white p-4 text-sm text-navy-800 shadow-sm"><strong>Prêt à convertir</strong><p className="mt-1 text-xs text-grey-brand">La fiche affaire sera pré-remplie.</p><Link href={`/conversion/nouvelle?prospect=${p.id}`} className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-bold text-white hover:bg-star-600">Convertir en affaire</Link></section> : null}
+          {(prochaineAction || prochaineActionManuelle || p.next_action_date) ? (
+            <section className="flex flex-col gap-4 rounded-2xl border border-star-200 bg-gradient-to-r from-star-50 via-white to-sky-capella-50/40 px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-star-100 text-star-600">
+                  {prochaineAction?.kind === "rdv" ? <CalendarDays size={20} /> : <AlarmClock size={20} />}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-navy-500">Prochaine action</div>
+                  <div className="mt-1 text-sm font-bold text-navy-900">
+                    {prochaineAction ? calendarLabel(prochaineAction) : prochaineActionManuelle || "Relance à effectuer"}
+                  </div>
+                  {!prochaineAction && p.next_action_date ? <div className="mt-0.5 text-xs font-medium text-star-700">Date de relance : {p.next_action_date}</div> : null}
+                </div>
+              </div>
+              <span className="shrink-0 rounded-full bg-star-500 px-3 py-1.5 text-[11px] font-bold text-white">Priorité commerciale</span>
+            </section>
+          ) : null}
+
+          {affaireLiee ? (
+            <Link href={`/conversion/${affaireLiee.id}`} className="flex items-center justify-between rounded-2xl border border-green-200 bg-green-50 px-5 py-3 text-sm text-green-900 transition hover:bg-green-100">
+              <span><strong>Dossier déjà converti</strong><span className="ml-2 text-xs">{affaireLiee.ref}</span></span><ChevronRight size={17} />
+            </Link>
+          ) : pretATransferer ? (
+            <section className="flex flex-col gap-3 rounded-2xl border border-sky-capella-200 bg-sky-capella-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div><strong className="text-sm text-navy-900">Prêt à convertir en affaire</strong><p className="mt-0.5 text-xs text-navy-500">La fiche affaire sera pré-remplie avec les données connues.</p></div>
+              <Link href={`/conversion/nouvelle?prospect=${p.id}`} className="inline-flex h-9 items-center justify-center rounded-xl bg-navy-900 px-4 text-xs font-bold text-white hover:bg-navy-700">Convertir</Link>
+            </section>
+          ) : null}
+
+          <section className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-[var(--shadow-card)]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy-100 px-5 py-4">
+              <div>
+                <h2 className="font-display text-lg font-bold text-navy-900">Activité & échanges</h2>
+                <p className="mt-0.5 text-xs text-grey-brand">Notes commerciales et échanges récents avec ce prospect.</p>
+              </div>
+              <span className="rounded-full bg-sky-capella-50 px-3 py-1 text-xs font-bold text-sky-capella-700">{activityEmails.length} échange{activityEmails.length > 1 ? "s" : ""}</span>
+            </div>
+
+            <div className="p-4 sm:p-5">
+              <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
+            </div>
+
+            <div className="border-t border-navy-100 px-4 py-3 sm:px-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-navy-500">Historique récent</h3>
+                <span className="text-[11px] text-grey-brand">Emails synchronisés</span>
+              </div>
+              {activityEmails.length ? (
+                <div className="relative space-y-3 before:absolute before:bottom-4 before:left-[17px] before:top-4 before:w-px before:bg-navy-100">
+                  {activityEmails.map((email) => (
+                    <article key={email.id} className="relative flex gap-3 rounded-xl border border-navy-100 bg-white p-3 transition hover:border-sky-capella-200 hover:bg-sky-capella-50/30">
+                      <div className={`relative z-10 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${email.direction === "incoming" ? "bg-star-50 text-star-600" : "bg-sky-capella-50 text-sky-capella-700"}`}>
+                        <Mail size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase tracking-wide text-navy-400">{email.direction === "incoming" ? "Email reçu" : "Email envoyé"}</span></div>
+                            <strong className="mt-0.5 block truncate text-sm text-navy-900">{email.subject || "Sans objet"}</strong>
+                          </div>
+                          <span className="shrink-0 text-[10px] font-semibold text-grey-brand">{fmtDateHeure(email.sent_at)}</span>
+                        </div>
+                        {email.snippet ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-navy-500">{email.snippet}</p> : null}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-navy-50 px-5 py-8 text-center">
+                  <Mail size={22} className="mx-auto text-navy-300" />
+                  <p className="mt-2 text-sm font-bold text-navy-700">Aucun échange enregistré</p>
+                  <p className="mt-1 text-xs text-grey-brand">Utilise E-mail pour envoyer ou synchroniser les échanges.</p>
+                </div>
+              )}
+            </div>
+          </section>
 
           {peutGerer(profil) ? <div className="px-1"><BoutonSupprimer cible="prospect" id={p.id} libelle={prospectLabel} retour="/prospection" /></div> : null}
-        </aside>
+        </div>
 
-        <section className="min-w-0">
-          <div className="mb-3 flex items-end justify-between gap-3 rounded-xl bg-navy-800 px-4 py-3 text-white shadow-sm">
-            <div className="flex items-start gap-3">
-              <span className="mt-1 h-8 w-1 rounded-full bg-star-500" />
-              <div>
-                <h2 className="font-display text-xl font-bold text-white">Activité & échanges</h2>
-                <p className="text-xs text-navy-200">Vue rapide de la relation. Les outils complets s’ouvrent dans les fenêtres d’action.</p>
-              </div>
-            </div>
-            <span className="rounded-full bg-star-500 px-3 py-1 text-xs font-bold text-white">{activityEmails.length} récent{activityEmails.length > 1 ? "s" : ""}</span>
-          </div>
-
-          <div className="mb-4">
-            <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-navy-200 border-t-4 border-t-star-400 bg-white shadow-sm">
-            {activityEmails.length ? (
-              <div className="divide-y divide-navy-100">
-                {activityEmails.map((email) => (
-                  <article key={email.id} className="p-4 transition hover:bg-star-50/40">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${email.direction === "incoming" ? "bg-star-100 text-star-800" : "bg-navy-800 text-white"}`}>
-                            {email.direction === "incoming" ? "Reçu" : "Envoyé"}
-                          </span>
-                          <strong className="truncate text-sm text-navy-800">{email.subject || "Sans objet"}</strong>
-                        </div>
-                        {email.snippet ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-grey-brand">{email.snippet}</p> : null}
-                      </div>
-                      <span className="shrink-0 rounded-full bg-navy-50 px-2 py-1 text-[10px] font-semibold text-navy-500">{fmtDateHeure(email.sent_at)}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="px-5 py-12 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-star-50 text-2xl">✉️</div>
-                <p className="mt-3 text-sm font-bold text-navy-700">Aucun échange enregistré</p>
-                <p className="mt-1 text-xs text-grey-brand">Utilise le bouton Email en haut à gauche pour envoyer ou synchroniser les échanges.</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <aside className="space-y-5 xl:sticky xl:top-5 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
+        <aside className="space-y-4 xl:sticky xl:top-5 xl:max-h-[calc(100vh-2.5rem)] xl:overflow-y-auto xl:pr-1">
           <ProspectInfoSidebar prospect={p} ownerName={ownerName} sourceName={sourceName} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} />
           <PiecesJointes scope="prospect" parentId={p.id} pieces={piecesVisibles} compact />
         </aside>
