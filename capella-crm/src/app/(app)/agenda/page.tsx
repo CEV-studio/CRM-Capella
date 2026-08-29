@@ -26,8 +26,9 @@ export default async function AgendaPage({ searchParams }: {
     getCalendarAccount(profile.id).catch(() => null),
     supabase
       .from("calendar_events")
-      .select("*")
+      .select("id, prospect_id, kind, title, start_at, end_at, location, invite_client, html_link, status")
       .eq("profile_id", profile.id)
+      .eq("status", "confirmed")
       .gte("end_at", since)
       .order("start_at", { ascending: true })
       .limit(100),
