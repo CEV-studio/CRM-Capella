@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
 import type { Prospect } from "@/lib/domain/database.types";
 
 function valeur(value: string | number | null | undefined): string {
@@ -6,11 +8,84 @@ function valeur(value: string | number | null | undefined): string {
   return String(value);
 }
 
+type EditableFieldProps = {
+  prospectId: string;
+  field: string;
+  value: string | number | null | undefined;
+  type?: "text" | "email" | "tel" | "date" | "number";
+  suffix?: string;
+};
+
+function EditableField({ prospectId, field, value, type = "text", suffix }: EditableFieldProps) {
+  const [editing, setEditing] = useState(false);
+  const [current, setCurrent] = useState(value == null ? "" : String(value));
+  const [draft, setDraft] = useState(current);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    if (saving) return;
+    if (draft === current) { setEditing(false); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/prospects/${prospectId}/inline`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ field, value: draft }),
+      });
+      const data = await response.json() as { value?: string | number | null; error?: string };
+      if (!response.ok) throw new Error(data.error || "Enregistrement impossible.");
+      const next = data.value == null ? "" : String(data.value);
+      setCurrent(next);
+      setDraft(next);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="min-w-0">
+        <input
+          autoFocus
+          type={type}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => void save()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); void save(); }
+            if (e.key === "Escape") { setDraft(current); setEditing(false); setError(null); }
+          }}
+          className="h-8 w-full rounded-md border border-star-300 bg-white px-2 text-right text-xs font-medium text-navy-800 outline-none ring-star-500/20 focus:ring-2"
+        />
+        {error ? <div className="mt-1 text-[10px] text-red-700">{error}</div> : null}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => { setDraft(current); setEditing(true); }}
+      className="group inline-flex max-w-full items-center justify-end gap-1 rounded-md px-1.5 py-1 text-right text-xs font-medium text-navy-800 hover:bg-navy-50"
+      title="Cliquer pour modifier"
+    >
+      <span className="min-w-0 break-words">{current ? `${current}${suffix ?? ""}` : "—"}</span>
+      <span className="shrink-0 text-[10px] text-grey-brand opacity-0 transition group-hover:opacity-100">✎</span>
+      {saving ? <span className="text-[10px] text-grey-brand">…</span> : null}
+    </button>
+  );
+}
+
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-3 border-b border-navy-50 py-2.5 last:border-0">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-center gap-3 border-b border-navy-50 py-2 last:border-0">
       <dt className="text-xs leading-5 text-grey-brand">{label}</dt>
-      <dd className="min-w-0 break-words text-right text-xs font-medium leading-5 text-navy-800">{children}</dd>
+      <dd className="min-w-0 text-right">{children}</dd>
     </div>
   );
 }
@@ -45,62 +120,59 @@ export function ProspectInfoSidebar({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 px-1">
-        <div>
-          <h2 className="text-sm font-semibold text-navy-800">Informations</h2>
-          <p className="text-[11px] text-grey-brand">Données de la fiche client</p>
-        </div>
-        <Link href={`/prospection/${p.id}/modifier`} className="rounded-lg border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50">Modifier</Link>
+      <div className="px-1">
+        <h2 className="text-sm font-semibold text-navy-800">Informations</h2>
+        <p className="text-[11px] text-grey-brand">Clique directement sur une valeur pour la modifier</p>
       </div>
 
       <Panel title="Suivi commercial">
         <dl>
-          <InfoRow label="Étape">{valeur(p.stage)}</InfoRow>
-          <InfoRow label="Prochaine action">{valeur(p.next_action)}</InfoRow>
-          <InfoRow label="Date de relance">{valeur(p.next_action_date)}</InfoRow>
-          <InfoRow label="Score">{p.score === null ? "—" : `${p.score}/5`}</InfoRow>
-          <InfoRow label="Commercial">{valeur(ownerName)}</InfoRow>
-          <InfoRow label="Source">{valeur(sourceName)}</InfoRow>
+          <InfoRow label="Étape"><span className="text-xs font-medium text-navy-800">{valeur(p.stage)}</span></InfoRow>
+          <InfoRow label="Prochaine action"><EditableField prospectId={p.id} field="next_action" value={p.next_action} /></InfoRow>
+          <InfoRow label="Date de relance"><EditableField prospectId={p.id} field="next_action_date" value={p.next_action_date} type="date" /></InfoRow>
+          <InfoRow label="Score"><EditableField prospectId={p.id} field="score" value={p.score} type="number" suffix="/5" /></InfoRow>
+          <InfoRow label="Commercial"><span className="text-xs font-medium text-navy-800">{valeur(ownerName)}</span></InfoRow>
+          <InfoRow label="Source"><span className="text-xs font-medium text-navy-800">{valeur(sourceName)}</span></InfoRow>
         </dl>
       </Panel>
 
       <Panel title="Contact">
         <dl>
-          <InfoRow label="Prénom">{valeur(p.prenom)}</InfoRow>
-          <InfoRow label="Nom">{valeur(p.nom)}</InfoRow>
-          <InfoRow label="Email">{p.mail ? <a className="text-navy-700 underline underline-offset-2" href={`mailto:${p.mail}`}>{p.mail}</a> : "—"}</InfoRow>
-          <InfoRow label="Mobile">{p.tel_mobile ? <a className="text-navy-700 underline underline-offset-2" href={`tel:${p.tel_mobile}`}>{p.tel_mobile}</a> : "—"}</InfoRow>
-          <InfoRow label="Fixe">{p.tel_fixe ? <a className="text-navy-700 underline underline-offset-2" href={`tel:${p.tel_fixe}`}>{p.tel_fixe}</a> : "—"}</InfoRow>
+          <InfoRow label="Prénom"><EditableField prospectId={p.id} field="prenom" value={p.prenom} /></InfoRow>
+          <InfoRow label="Nom"><EditableField prospectId={p.id} field="nom" value={p.nom} /></InfoRow>
+          <InfoRow label="Email"><EditableField prospectId={p.id} field="mail" value={p.mail} type="email" /></InfoRow>
+          <InfoRow label="Mobile"><EditableField prospectId={p.id} field="tel_mobile" value={p.tel_mobile} type="tel" /></InfoRow>
+          <InfoRow label="Fixe"><EditableField prospectId={p.id} field="tel_fixe" value={p.tel_fixe} type="tel" /></InfoRow>
         </dl>
       </Panel>
 
       <Panel title="Énergie & contrat">
         <dl>
-          <InfoRow label="Fournisseur élec">{valeur(p.fournisseur_electricite)}</InfoRow>
-          <InfoRow label="Fournisseur gaz">{valeur(p.fournisseur_gaz)}</InfoRow>
-          <InfoRow label="PDL">{valeur(p.pdl)}</InfoRow>
-          <InfoRow label="PCE">{valeur(p.pce)}</InfoRow>
-          <InfoRow label="CAR élec">{p.car_electricite === null ? "—" : `${p.car_electricite} MWh`}</InfoRow>
-          <InfoRow label="CAR gaz">{p.car_gaz === null ? "—" : `${p.car_gaz} MWh`}</InfoRow>
-          <InfoRow label="Option tarifaire">{valeur(p.option_tarifaire)}</InfoRow>
-          <InfoRow label="Fin de contrat">{valeur(p.date_fin_contrat)}</InfoRow>
+          <InfoRow label="Fournisseur élec"><EditableField prospectId={p.id} field="fournisseur_electricite" value={p.fournisseur_electricite} /></InfoRow>
+          <InfoRow label="Fournisseur gaz"><EditableField prospectId={p.id} field="fournisseur_gaz" value={p.fournisseur_gaz} /></InfoRow>
+          <InfoRow label="PDL"><EditableField prospectId={p.id} field="pdl" value={p.pdl} /></InfoRow>
+          <InfoRow label="PCE"><EditableField prospectId={p.id} field="pce" value={p.pce} /></InfoRow>
+          <InfoRow label="CAR élec"><EditableField prospectId={p.id} field="car_electricite" value={p.car_electricite} type="number" suffix=" MWh" /></InfoRow>
+          <InfoRow label="CAR gaz"><EditableField prospectId={p.id} field="car_gaz" value={p.car_gaz} type="number" suffix=" MWh" /></InfoRow>
+          <InfoRow label="Option tarifaire"><EditableField prospectId={p.id} field="option_tarifaire" value={p.option_tarifaire} /></InfoRow>
+          <InfoRow label="Fin de contrat"><EditableField prospectId={p.id} field="date_fin_contrat" value={p.date_fin_contrat} type="date" /></InfoRow>
         </dl>
       </Panel>
 
       <Panel title="Entreprise" open={false}>
         <dl>
-          <InfoRow label="Raison sociale">{valeur(p.raison_sociale)}</InfoRow>
-          <InfoRow label="SIREN">{valeur(p.siren)}</InfoRow>
-          <InfoRow label="NAF">{valeur(p.naf)}</InfoRow>
-          <InfoRow label="Code postal">{valeur(p.code_postal)}</InfoRow>
-          <InfoRow label="Segment">{valeur(p.segment)}</InfoRow>
-          <InfoRow label="Nombre de sites">{valeur(p.nb_sites)}</InfoRow>
+          <InfoRow label="Raison sociale"><EditableField prospectId={p.id} field="raison_sociale" value={p.raison_sociale} /></InfoRow>
+          <InfoRow label="SIREN"><EditableField prospectId={p.id} field="siren" value={p.siren} /></InfoRow>
+          <InfoRow label="NAF"><EditableField prospectId={p.id} field="naf" value={p.naf} /></InfoRow>
+          <InfoRow label="Code postal"><EditableField prospectId={p.id} field="code_postal" value={p.code_postal} /></InfoRow>
+          <InfoRow label="Segment"><EditableField prospectId={p.id} field="segment" value={p.segment} /></InfoRow>
+          <InfoRow label="Nombre de sites"><EditableField prospectId={p.id} field="nb_sites" value={p.nb_sites} type="number" /></InfoRow>
         </dl>
       </Panel>
 
       {champs.length ? (
         <Panel title="Informations personnalisées" open={false}>
-          <dl>{champs.map((c) => <InfoRow key={c.cle} label={c.libelle}>{valeur(c.value)}</InfoRow>)}</dl>
+          <dl>{champs.map((c) => <InfoRow key={c.cle} label={c.libelle}><span className="text-xs font-medium text-navy-800">{valeur(c.value)}</span></InfoRow>)}</dl>
         </Panel>
       ) : null}
     </div>
