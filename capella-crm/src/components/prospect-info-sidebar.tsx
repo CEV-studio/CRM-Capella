@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BriefcaseBusiness, Building2, Pencil, UserRound, Zap } from "lucide-react";
+import { ProspectStageEditor } from "@/components/prospect-stage-editor";
 import type { Prospect } from "@/lib/domain/database.types";
 
 function valeur(value: string | number | null | undefined): string {
@@ -83,7 +84,7 @@ export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPer
       </Section>
 
       <Section title="Gestion du dossier" icon={BriefcaseBusiness}>
-        <InfoRow label="Étape"><span className="text-xs font-semibold text-navy-900">{valeur(p.stage)}</span></InfoRow>
+        <InfoRow label="Étape"><ProspectStageEditor prospectId={p.id} stage={p.stage}/></InfoRow>
         <InfoRow label="Prochaine action"><EditableField prospectId={p.id} field="next_action" value={p.next_action}/></InfoRow>
         <InfoRow label="Date de relance"><EditableField prospectId={p.id} field="next_action_date" value={p.next_action_date} type="date"/></InfoRow>
         <InfoRow label="Score"><EditableField prospectId={p.id} field="score" value={p.score} type="number" suffix="/5"/></InfoRow>
