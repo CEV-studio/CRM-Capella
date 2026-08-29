@@ -60,7 +60,7 @@ function EditableField({ prospectId, field, value, type = "text", suffix }: Edit
             if (e.key === "Enter") { e.preventDefault(); void save(); }
             if (e.key === "Escape") { setDraft(current); setEditing(false); setError(null); }
           }}
-          className="h-8 w-full rounded-md border border-star-300 bg-white px-2 text-right text-xs font-medium text-navy-800 outline-none ring-star-500/20 focus:ring-2"
+          className="h-8 w-full rounded-md border border-star-300 bg-white px-2 text-right text-xs font-semibold text-navy-800 outline-none ring-star-500/20 focus:ring-2"
         />
         {error ? <div className="mt-1 text-[10px] text-red-700">{error}</div> : null}
       </div>
@@ -71,11 +71,11 @@ function EditableField({ prospectId, field, value, type = "text", suffix }: Edit
     <button
       type="button"
       onClick={() => { setDraft(current); setEditing(true); }}
-      className="group inline-flex max-w-full items-center justify-end gap-1 rounded-md px-1.5 py-1 text-right text-xs font-medium text-navy-800 hover:bg-navy-50"
+      className="group inline-flex max-w-full items-center justify-end gap-1 rounded-md px-1.5 py-1 text-right text-xs font-semibold text-navy-800 transition hover:bg-star-50 hover:text-star-700"
       title="Cliquer pour modifier"
     >
       <span className="min-w-0 break-words">{current ? `${current}${suffix ?? ""}` : "—"}</span>
-      <span className="shrink-0 text-[10px] text-grey-brand opacity-0 transition group-hover:opacity-100">✎</span>
+      <span className="shrink-0 text-[10px] text-star-500 opacity-0 transition group-hover:opacity-100">✎</span>
       {saving ? <span className="text-[10px] text-grey-brand">…</span> : null}
     </button>
   );
@@ -83,8 +83,8 @@ function EditableField({ prospectId, field, value, type = "text", suffix }: Edit
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-center gap-3 border-b border-navy-50 py-2 last:border-0">
-      <dt className="text-xs leading-5 text-grey-brand">{label}</dt>
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-center gap-3 border-b border-navy-100/70 py-2 last:border-0">
+      <dt className="text-xs font-medium leading-5 text-navy-400">{label}</dt>
       <dd className="min-w-0 text-right">{children}</dd>
     </div>
   );
@@ -92,12 +92,12 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 
 function Panel({ title, children, open = true }: { title: string; children: React.ReactNode; open?: boolean }) {
   return (
-    <details open={open} className="group rounded-xl border border-navy-100 bg-white">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-navy-800 marker:hidden">
+    <details open={open} className="group overflow-hidden rounded-xl border border-navy-200 border-l-4 border-l-star-400 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-navy-50 px-4 py-3 text-sm font-bold text-navy-800 marker:hidden transition hover:bg-star-50">
         <span>{title}</span>
-        <span className="text-xs text-grey-brand transition-transform group-open:rotate-180">⌄</span>
+        <span className="text-xs text-star-500 transition-transform group-open:rotate-180">⌄</span>
       </summary>
-      <div className="border-t border-navy-100 px-4 py-1">{children}</div>
+      <div className="border-t border-navy-100 bg-white px-4 py-1">{children}</div>
     </details>
   );
 }
@@ -120,19 +120,22 @@ export function ProspectInfoSidebar({
 
   return (
     <div className="space-y-4">
-      <div className="px-1">
-        <h2 className="text-sm font-semibold text-navy-800">Informations</h2>
-        <p className="text-[11px] text-grey-brand">Clique directement sur une valeur pour la modifier</p>
+      <div className="rounded-xl bg-navy-800 px-4 py-3 text-white shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-star-500" />
+          <h2 className="font-display text-sm font-bold">Informations</h2>
+        </div>
+        <p className="mt-1 text-[11px] text-navy-200">Clique directement sur une valeur pour la modifier</p>
       </div>
 
       <Panel title="Suivi commercial">
         <dl>
-          <InfoRow label="Étape"><span className="text-xs font-medium text-navy-800">{valeur(p.stage)}</span></InfoRow>
+          <InfoRow label="Étape"><span className="text-xs font-semibold text-navy-800">{valeur(p.stage)}</span></InfoRow>
           <InfoRow label="Prochaine action"><EditableField prospectId={p.id} field="next_action" value={p.next_action} /></InfoRow>
           <InfoRow label="Date de relance"><EditableField prospectId={p.id} field="next_action_date" value={p.next_action_date} type="date" /></InfoRow>
           <InfoRow label="Score"><EditableField prospectId={p.id} field="score" value={p.score} type="number" suffix="/5" /></InfoRow>
-          <InfoRow label="Commercial"><span className="text-xs font-medium text-navy-800">{valeur(ownerName)}</span></InfoRow>
-          <InfoRow label="Source"><span className="text-xs font-medium text-navy-800">{valeur(sourceName)}</span></InfoRow>
+          <InfoRow label="Commercial"><span className="text-xs font-semibold text-navy-800">{valeur(ownerName)}</span></InfoRow>
+          <InfoRow label="Source"><span className="text-xs font-semibold text-navy-800">{valeur(sourceName)}</span></InfoRow>
         </dl>
       </Panel>
 
@@ -172,7 +175,7 @@ export function ProspectInfoSidebar({
 
       {champs.length ? (
         <Panel title="Informations personnalisées" open={false}>
-          <dl>{champs.map((c) => <InfoRow key={c.cle} label={c.libelle}><span className="text-xs font-medium text-navy-800">{valeur(c.value)}</span></InfoRow>)}</dl>
+          <dl>{champs.map((c) => <InfoRow key={c.cle} label={c.libelle}><span className="text-xs font-semibold text-navy-800">{valeur(c.value)}</span></InfoRow>)}</dl>
         </Panel>
       ) : null}
     </div>
