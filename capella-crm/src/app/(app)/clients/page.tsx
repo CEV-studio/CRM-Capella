@@ -4,7 +4,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { CLIENT_STAGES, stageColor } from "@/lib/domain/stages";
 
-export const metadata = { title: "Clients — Capella CRM" };
+export const metadata = { title: "Dossiers en cours — Capella CRM" };
 export const dynamic = "force-dynamic";
 
 type Recherche = { vue?: string };
@@ -72,8 +72,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     <main className="w-full px-6 py-8">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold text-navy-800">Clients</h1>
-          <p className="mt-1 text-sm text-grey-brand">Dossiers à partir de Demande ACD, avant passage en cotation. Les plus anciens apparaissent en premier.</p>
+          <h1 className="font-display text-2xl font-bold text-navy-800">Dossiers en cours</h1>
+          <p className="mt-1 text-sm text-grey-brand">Deuxième partie de la prospection : de la demande ACD jusqu’au passage en cotation.</p>
         </div>
         <div className="flex gap-2">
           <div className="inline-flex rounded-lg border border-navy-200 p-0.5">
@@ -98,7 +98,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                     <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-navy-800">{cartes.length}</span>
                   </header>
                   <div className="min-h-24 space-y-2 rounded-b-lg border border-navy-100 bg-navy-50 p-2">
-                    {cartes.length === 0 ? <div className="px-2 py-6 text-center text-xs text-grey-brand">Aucun client</div> : cartes.map((c) => (
+                    {cartes.length === 0 ? <div className="px-2 py-6 text-center text-xs text-grey-brand">Aucun dossier</div> : cartes.map((c) => (
                       <Link key={c.id} href={`/prospection/${c.id}`} className="block rounded-lg border border-navy-100 bg-white p-3 shadow-sm hover:border-star-300">
                         <div className="truncate text-sm font-semibold text-navy-800">{libelle(c)}</div>
                         <div className="mt-1 text-[11px] text-grey-brand">{c.ref ?? ""}</div>
@@ -114,7 +114,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       ) : (
         <div className="overflow-hidden rounded-xl border border-navy-100 bg-white">
           {clients.length === 0 ? (
-            <div className="p-10 text-center text-sm text-grey-brand">Aucun client.</div>
+            <div className="p-10 text-center text-sm text-grey-brand">Aucun dossier en cours.</div>
           ) : (
             <div className="divide-y divide-navy-100">
               {clients.map((c) => (

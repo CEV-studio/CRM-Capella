@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Building2,
   BriefcaseBusiness,
   CalendarDays,
   ChevronRight,
@@ -33,8 +34,9 @@ const NAV: { titre: string; items: NavItem[] }[] = [
     { href: "/", label: "Tableau de bord", icon: LayoutDashboard },
     { href: "/journee", label: "Ma journée", icon: Target },
     { href: "/prospection", label: "Prospection", icon: BarChart3 },
-    { href: "/clients", label: "Clients", icon: Users },
+    { href: "/clients", label: "Dossiers en cours", icon: Users },
     { href: "/conversion", label: "Mes cotations", icon: BriefcaseBusiness },
+    { href: "/mes-clients", label: "Mes clients", icon: Building2 },
     { href: "/commissions", label: "Mes commissions", icon: CircleDollarSign },
     { href: "/agenda", label: "Mon agenda", icon: CalendarDays },
   ] },
