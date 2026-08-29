@@ -14,12 +14,14 @@ const pourcent = new Intl.NumberFormat("fr-FR", {
 });
 
 const dateCourte = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: "Europe/Paris",
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
 });
 
 const dateHeure = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: "Europe/Paris",
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
