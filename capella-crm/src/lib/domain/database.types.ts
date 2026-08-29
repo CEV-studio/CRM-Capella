@@ -16,11 +16,17 @@ export type Prospect = {
   pdl:string|null; pce:string|null; car_electricite:number|null; car_gaz:number|null; option_tarifaire:string|null;
   fournisseur_electricite:string|null; fournisseur_gaz:string|null; date_fin_contrat:string|null; champs_perso:Record<string,string>;
   stage:string; next_action:string|null; next_action_date:string|null; notes:string|null; ko_reason:string|null; score:number|null; last_action_at:string|null;
-  source_id:string|null; assigned_to:string|null; assigned_at:string|null; deleted_at:string|null; acd_downloaded_at:string|null;
+  source_id:string|null; assigned_to:string|null; assigned_at:string|null; entreprise_id:string|null; deleted_at:string|null; acd_downloaded_at:string|null;
   siren_norm:string|null; pdl_norm:string|null; pce_norm:string|null; mobile_norm:string|null;
   legacy_ref:string|null; legacy_sheet:string|null; legacy_stage:string|null; legacy_payload:Record<string,unknown>;
   created_by:string|null; created_at:string; updated_at:string;
 };
+
+export type Entreprise = { id:string; raison_sociale:string; siren:string|null; adresse:string|null; code_postal:string|null; ville:string|null; legacy_prospect_id:string|null; archived_at:string|null; created_at:string; updated_at:string };
+export type CrmContact = { id:string; prenom:string|null; nom:string|null; email:string|null; telephone:string|null; email_norm:string|null; telephone_norm:string|null; archived_at:string|null; created_at:string; updated_at:string };
+export type ContactEntreprise = { id:string; contact_id:string; entreprise_id:string; fonction:string|null; is_primary:boolean; archived_at:string|null; created_at:string; updated_at:string };
+export type ProspectCompteur = { id:string; prospect_id:string; entreprise_id:string|null; type_energie:"electricite"|"gaz"; numero:string; siret:string|null; adresse:string|null; code_postal:string|null; ville:string|null; segment:string|null; date_echeance:string|null; archived_at:string|null; created_at:string; updated_at:string };
+export type ContratEnergie = { id:string; entreprise_id:string; compteur_id:string|null; affaire_id:string|null; contrat_precedent_id:string|null; fournisseur:string; type_energie:"electricite"|"gaz"; reference_contrat:string|null; date_signature:string|null; date_debut:string; date_fin:string; prix:number|null; unite_prix:"EUR/MWh"|"EUR/kWh"|"EUR/mois"|"Autre"|null; details_prix:string|null; consommation_mwh:number|null; statut:"brouillon"|"signe"|"annule"; notes:string|null; correction_motif:string|null; archived_at:string|null; created_by:string|null; created_at:string; updated_at:string };
 
 export type Affaire = {
   id:string; ref:string|null; commercial_id:string; apporteur_id:string|null; prospect_id:string|null; source_id:string|null;
@@ -91,6 +97,11 @@ export interface Database {
     Tables: {
       profiles:Table<Profile>;
       prospects:Table<Prospect,ProspectInsert,ProspectUpdate>;
+      entreprises:Table<Entreprise>;
+      crm_contacts:Table<CrmContact>;
+      contact_entreprises:Table<ContactEntreprise>;
+      prospect_compteurs:Table<ProspectCompteur>;
+      contrats_energie:Table<ContratEnergie>;
       affaires:Table<Affaire,AffaireInsert,AffaireUpdate>;
       apporteurs:Table<Apporteur>;
       sources:Table<Source>;
