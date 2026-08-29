@@ -13,10 +13,10 @@ export default async function EmailPopupPage({ params }: { params: Promise<{ id:
   const supabase = await createClient();
 
   const [{ data: prospect }, { data: templateData }, { data: messageData }, { data: piecesData }, gmailAccount] = await Promise.all([
-    supabase.from("prospects").select("*").eq("id", id).is("deleted_at", null).maybeSingle(),
-    supabase.from("email_templates").select("*").eq("is_active", true).order("sort_order").order("name"),
-    supabase.from("email_messages").select("*").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(100),
-    supabase.from("pieces_jointes").select("*").eq("prospect_id", id).order("created_at"),
+    supabase.from("prospects").select("id, mail, fournisseur_electricite, fournisseur_gaz, prenom, nom, raison_sociale, ref, siren, pdl, pce, date_fin_contrat").eq("id", id).is("deleted_at", null).maybeSingle(),
+    supabase.from("email_templates").select("id, name, subject, body").eq("is_active", true).order("sort_order").order("name"),
+    supabase.from("email_messages").select("id, direction, subject, snippet, sent_at, from_email, to_emails, cc_emails, body_text, gmail_thread_id, header_message_id, attachments").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(100),
+    supabase.from("pieces_jointes").select("id, file_name, type").eq("prospect_id", id).order("created_at"),
     getGmailAccountForProfile(profile.id, "read").catch(() => null),
   ]);
 
