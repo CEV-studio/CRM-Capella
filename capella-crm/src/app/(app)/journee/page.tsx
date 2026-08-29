@@ -88,7 +88,17 @@ export default async function JourneePage() {
       const event = nextByProspect.get(prospect.id) ?? null;
       const result = evaluateDiscipline(prospect, event);
       if (result.bucket === "ignore") return null;
-      return { prospect, event, ...result };
+      const bucket: WorkItem["bucket"] = result.bucket;
+      return {
+        prospect,
+        event,
+        priority: result.priority,
+        bucket,
+        reason: result.reason,
+        detail: result.detail,
+        urgent: result.urgent,
+        anomaly: result.anomaly,
+      };
     })
     .filter((item): item is WorkItem => Boolean(item))
     .sort((a, b) => b.priority - a.priority || label(a.prospect).localeCompare(label(b.prospect), "fr"));
