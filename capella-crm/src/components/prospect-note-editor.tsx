@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 
 type ProspectNote = {
   id: string;
@@ -53,8 +54,8 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
   function resize() {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "40px";
-    el.style.height = `${Math.min(Math.max(el.scrollHeight, 40), 150)}px`;
+    el.style.height = "42px";
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, 42), 140)}px`;
   }
 
   async function ajouter() {
@@ -73,7 +74,7 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
       setNotes((current) => [data.note!, ...current]);
       setBody("");
       requestAnimationFrame(() => {
-        if (textareaRef.current) textareaRef.current.style.height = "40px";
+        if (textareaRef.current) textareaRef.current.style.height = "42px";
         textareaRef.current?.focus();
       });
     } catch (err) {
@@ -131,107 +132,79 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-navy-200 bg-white shadow-sm">
-      <div className="border-b border-navy-100 bg-navy-50 p-3">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-star-500" />
-          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-navy-700">Notes commerciales</span>
-        </div>
-        <div className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={body}
-            onChange={(e) => { setBody(e.target.value); resize(); }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void ajouter();
-              }
-            }}
-            placeholder="Ajouter une note…"
-            className="min-h-10 flex-1 resize-none overflow-y-auto rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm leading-5 text-navy-800 outline-none transition focus:border-star-500 focus:ring-2 focus:ring-star-500/15"
-          />
-          <button
-            type="button"
-            onClick={() => void ajouter()}
-            disabled={saving || !body.trim()}
-            className="inline-flex h-10 shrink-0 items-center rounded-lg bg-star-500 px-4 text-xs font-bold text-white transition hover:bg-star-600 disabled:opacity-40"
-          >
-            {saving ? "Ajout…" : "Ajouter"}
-          </button>
-        </div>
-        <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[10px] text-grey-brand">
-          <span>Entrée pour ajouter · Maj+Entrée pour aller à la ligne</span>
-          {notes.length ? <span className="font-semibold text-navy-500">{notes.length} note{notes.length > 1 ? "s" : ""}</span> : null}
-        </div>
-        {error ? <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p> : null}
+    <div>
+      <div className="flex items-end gap-2 rounded-xl border border-navy-200 bg-white p-2 shadow-sm transition focus-within:border-sky-capella-300 focus-within:ring-2 focus-within:ring-sky-capella-100">
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={body}
+          onChange={(e) => { setBody(e.target.value); resize(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void ajouter();
+            }
+          }}
+          placeholder="Ajouter une note…"
+          className="min-h-[42px] flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 text-sm leading-5 text-navy-900 outline-none placeholder:text-navy-300"
+        />
+        <button
+          type="button"
+          onClick={() => void ajouter()}
+          disabled={saving || !body.trim()}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-star-500 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-star-600 disabled:bg-navy-100 disabled:text-navy-300 disabled:shadow-none"
+        >
+          <Plus size={14}/>{saving ? "Ajout…" : "Ajouter"}
+        </button>
       </div>
+      <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[10px] text-grey-brand">
+        <span>Entrée pour ajouter · Maj+Entrée pour aller à la ligne</span>
+        {notes.length ? <span className="font-semibold text-navy-500">{notes.length} note{notes.length > 1 ? "s" : ""}</span> : null}
+      </div>
+      {error ? <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p> : null}
 
       {loading ? (
-        <div className="px-4 py-5 text-xs text-grey-brand">Chargement des notes…</div>
+        <div className="mt-3 rounded-xl bg-navy-50 px-4 py-4 text-xs text-grey-brand">Chargement des notes…</div>
       ) : notes.length ? (
-        <div className="divide-y divide-navy-100">
+        <div className="relative mt-4 space-y-3 before:absolute before:bottom-4 before:left-[17px] before:top-4 before:w-px before:bg-navy-100">
           {notes.map((note) => (
-            <article key={note.id} className="border-l-2 border-l-transparent px-4 py-3 transition hover:border-l-star-400 hover:bg-star-50/40">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-navy-800 px-2 py-0.5 text-[10px] font-bold text-white">{note.author_name}</span>
-                  <time className="text-[10px] text-grey-brand" dateTime={note.created_at}>{fmtNoteDate(note.created_at)}</time>
-                  {note.updated_at ? <span className="text-[10px] italic text-star-600">modifiée {fmtNoteDate(note.updated_at)}</span> : null}
-                </div>
-                {note.can_edit ? (
-                  <div className="flex items-center gap-2 text-[10px] font-semibold">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingId(note.id);
-                        setEditingBody(note.body);
-                        setError(null);
-                      }}
-                      className="text-navy-600 hover:text-star-600"
-                    >Modifier</button>
-                    <button
-                      type="button"
-                      onClick={() => void supprimer(note.id)}
-                      disabled={busyNoteId === note.id}
-                      className="text-red-600 hover:text-red-800 disabled:opacity-40"
-                    >Supprimer</button>
-                  </div>
-                ) : null}
+            <article key={note.id} className="relative flex gap-3">
+              <div className="relative z-10 mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-star-100 bg-star-50 text-[11px] font-bold text-star-700">
+                {note.author_name.slice(0, 1).toUpperCase()}
               </div>
-
-              {editingId === note.id ? (
-                <div className="mt-2">
-                  <textarea
-                    rows={3}
-                    value={editingBody}
-                    onChange={(e) => setEditingBody(e.target.value)}
-                    className="w-full resize-y rounded-lg border border-star-300 bg-white px-3 py-2 text-sm leading-5 text-navy-800 outline-none focus:ring-2 focus:ring-star-500/15"
-                  />
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void modifier(note.id)}
-                      disabled={busyNoteId === note.id || !editingBody.trim()}
-                      className="inline-flex h-8 items-center rounded-lg bg-star-500 px-3 text-xs font-bold text-white hover:bg-star-600 disabled:opacity-40"
-                    >{busyNoteId === note.id ? "Enregistrement…" : "Enregistrer"}</button>
-                    <button
-                      type="button"
-                      onClick={() => { setEditingId(null); setEditingBody(""); }}
-                      className="inline-flex h-8 items-center rounded-lg border border-navy-200 bg-white px-3 text-xs font-semibold text-navy-700 hover:bg-navy-50"
-                    >Annuler</button>
+              <div className="min-w-0 flex-1 rounded-xl border border-navy-100 bg-white p-3 shadow-sm transition hover:border-sky-capella-200">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-navy-900">{note.author_name}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-grey-brand">
+                      <time dateTime={note.created_at}>{fmtNoteDate(note.created_at)}</time>
+                      {note.updated_at ? <span className="italic text-star-600">modifiée {fmtNoteDate(note.updated_at)}</span> : null}
+                    </div>
                   </div>
+                  {note.can_edit ? (
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={() => { setEditingId(note.id); setEditingBody(note.body); setError(null); }} className="rounded-md p-1.5 text-navy-400 transition hover:bg-sky-capella-50 hover:text-sky-capella-700" aria-label="Modifier la note"><Pencil size={13}/></button>
+                      <button type="button" onClick={() => void supprimer(note.id)} disabled={busyNoteId === note.id} className="rounded-md p-1.5 text-navy-400 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-40" aria-label="Supprimer la note"><Trash2 size={13}/></button>
+                    </div>
+                  ) : null}
                 </div>
-              ) : (
-                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-5 text-navy-800">{note.body}</p>
-              )}
+
+                {editingId === note.id ? (
+                  <div className="mt-2">
+                    <textarea rows={3} value={editingBody} onChange={(e) => setEditingBody(e.target.value)} className="w-full resize-y rounded-lg border border-sky-capella-300 bg-white px-3 py-2 text-sm leading-5 text-navy-800 outline-none focus:ring-2 focus:ring-sky-capella-100" />
+                    <div className="mt-2 flex items-center gap-2">
+                      <button type="button" onClick={() => void modifier(note.id)} disabled={busyNoteId === note.id || !editingBody.trim()} className="inline-flex h-8 items-center gap-1 rounded-lg bg-navy-900 px-3 text-xs font-bold text-white hover:bg-navy-700 disabled:opacity-40"><Check size={13}/>{busyNoteId === note.id ? "Enregistrement…" : "Enregistrer"}</button>
+                      <button type="button" onClick={() => { setEditingId(null); setEditingBody(""); }} className="inline-flex h-8 items-center gap-1 rounded-lg border border-navy-200 bg-white px-3 text-xs font-semibold text-navy-700 hover:bg-navy-50"><X size={13}/>Annuler</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-5 text-navy-800">{note.body}</p>
+                )}
+              </div>
             </article>
           ))}
         </div>
-      ) : (
-        <div className="px-4 py-4 text-xs text-grey-brand">Aucune note pour le moment.</div>
-      )}
-    </section>
+      ) : null}
+    </div>
   );
 }
