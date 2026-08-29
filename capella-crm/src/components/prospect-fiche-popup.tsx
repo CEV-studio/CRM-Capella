@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -12,9 +12,8 @@ export function ProspectFichePopup({ prospectId, prospectLabel, children, classN
   ariaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
-  useEffect(() => setMounted(true), []);
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
