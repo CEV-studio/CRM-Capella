@@ -73,6 +73,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
 }) {
   const { id } = await params;
   const query = await searchParams;
+  const isPopup = query.popup === "1";
   const profil = await requireProfile();
   const estAdmin = profil.role === "admin";
   const supabase = await createClient();
@@ -106,8 +107,8 @@ export default async function FicheProspectPage({ params, searchParams }: {
     getCalendarAccount(profil.id).catch(() => null),
     supabase.from("calendar_events").select("*").eq("prospect_id", id).eq("profile_id", profil.id).gte("end_at", calendarSince).order("start_at", { ascending: true }).limit(20),
     supabase.from("email_messages").select("id, direction, subject, snippet, sent_at, from_email").eq("prospect_id", id).order("sent_at", { ascending: false }).limit(20),
-    supabase.from("prospects").select(navigationSelection).is("deleted_at", null).or(plusRecent).order("created_at", { ascending: true }).order("id", { ascending: true }).limit(1).maybeSingle(),
-    supabase.from("prospects").select(navigationSelection).is("deleted_at", null).or(plusAncien).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
+    isPopup ? Promise.resolve({ data: null }) : supabase.from("prospects").select(navigationSelection).is("deleted_at", null).or(plusRecent).order("created_at", { ascending: true }).order("id", { ascending: true }).limit(1).maybeSingle(),
+    isPopup ? Promise.resolve({ data: null }) : supabase.from("prospects").select(navigationSelection).is("deleted_at", null).or(plusAncien).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const pretATransferer = isTransferable(p.stage);
@@ -128,7 +129,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
 
   return (
     <main className="mx-auto w-full max-w-[1760px] px-4 py-4 lg:px-6 2xl:px-8">
-      {query.popup !== "1" ? <ProspectTopbar /> : null}
+      {!isPopup ? <ProspectTopbar /> : null}
 
       {query.acd === "transmise" ? <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div> : null}
       {query.calendar === "connecte" ? <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Google Calendar connecté à ton compte CRM.</div> : null}
@@ -185,14 +186,14 @@ export default async function FicheProspectPage({ params, searchParams }: {
         </div>
 
         <aside className="space-y-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:pr-1">
-          <div className="flex items-center justify-between gap-3 px-1">
+          {!isPopup ? <div className="flex items-center justify-between gap-3 px-1">
             <div className="inline-flex overflow-hidden rounded-xl border border-navy-200 bg-white shadow-sm">
               {fichePrecedente ? <Link href={`/prospection/${fichePrecedente.id}`} className="inline-flex h-9 w-10 items-center justify-center text-navy-700 hover:bg-sky-capella-50" title="Prospect précédent"><ChevronLeft size={18}/></Link> : <span className="inline-flex h-9 w-10 items-center justify-center text-navy-200"><ChevronLeft size={18}/></span>}
               <span className="w-px bg-navy-100" />
               {ficheSuivante ? <Link href={`/prospection/${ficheSuivante.id}`} className="inline-flex h-9 w-10 items-center justify-center text-navy-700 hover:bg-sky-capella-50" title="Prospect suivant"><ChevronRight size={18}/></Link> : <span className="inline-flex h-9 w-10 items-center justify-center text-navy-200"><ChevronRight size={18}/></span>}
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[10px] font-semibold text-navy-500 shadow-sm ring-1 ring-navy-100"><Clock3 size={12}/>Dernière action {fmtDateHeure(p.last_action_at)}</div>
-          </div>
+          </div> : null}
           <ProspectInfoSidebar prospect={p} ownerName={ownerName} sourceName={sourceName} nextComparatif={nextComparatif} isAdmin={estAdmin} champsPerso={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))} />
         </aside>
       </div>
