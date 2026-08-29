@@ -24,6 +24,18 @@ function presentationLabel(startLocal: string) {
   return `${day}/${month}/${year} à ${time}`;
 }
 
+function nextActionLabel(kind: "rdv" | "rappel", startAt: string) {
+  const formatted = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(startAt)).replace(",", " à");
+  return kind === "rdv" ? `Présentation comparatif — ${formatted}` : `Rappel — ${formatted}`;
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const profile = await requireProfile();
@@ -40,19 +52,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!prospect) return NextResponse.json({ error: "Fiche introuvable." }, { status: 404 });
 
     const account = await getCalendarAccount(profile.id);
-    if (!account) {
-      return NextResponse.json({ error: "Connecte d’abord ton Google Calendar au CRM." }, { status: 400 });
-    }
+    if (!account) return NextResponse.json({ error: "Connecte d’abord ton Google Calendar au CRM." }, { status: 400 });
 
     const input = await request.json() as {
-      kind?: string;
-      title?: string;
-      startLocal?: string;
-      durationMinutes?: number;
-      reminderMinutes?: number;
-      description?: string;
-      location?: string;
-      inviteClient?: boolean;
+      kind?: string; title?: string; startLocal?: string; durationMinutes?: number; reminderMinutes?: number;
+      description?: string; location?: string; inviteClient?: boolean;
     };
 
     const kind = input.kind === "rappel" ? "rappel" : "rdv";
@@ -65,28 +69,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const title = String(input.title || "").trim() || defaultTitle;
     const inviteClient = Boolean(input.inviteClient && prospect.mail && EMAIL_RE.test(prospect.mail));
 
-    if (!START_RE.test(startLocal)) {
-      return NextResponse.json({ error: "Choisis une date et une heure valides." }, { status: 400 });
-    }
-    if (!DURATIONS.has(durationMinutes)) {
-      return NextResponse.json({ error: "Durée invalide." }, { status: 400 });
-    }
-    if (!REMINDERS.has(reminderMinutes)) {
-      return NextResponse.json({ error: "Rappel invalide." }, { status: 400 });
-    }
+    if (!START_RE.test(startLocal)) return NextResponse.json({ error: "Choisis une date et une heure valides." }, { status: 400 });
+    if (!DURATIONS.has(durationMinutes)) return NextResponse.json({ error: "Durée invalide." }, { status: 400 });
+    if (!REMINDERS.has(reminderMinutes)) return NextResponse.json({ error: "Rappel invalide." }, { status: 400 });
 
     const endLocal = addMinutesWallTime(startLocal, durationMinutes);
     const origin = new URL(request.url).origin;
     const userDescription = String(input.description || "").trim();
     const presentation = kind === "rdv" ? `Présentation prévue le ${presentationLabel(startLocal)}` : "";
-    const description = [
-      presentation,
-      userDescription,
-      `Fiche Capella CRM : ${origin}/prospection/${id}`,
-    ].filter(Boolean).join("\n\n");
+    const description = [presentation, userDescription, `Fiche Capella CRM : ${origin}/prospection/${id}`].filter(Boolean).join("\n\n");
 
     let googleEventId: string | null = null;
-
     try {
       const googleEvent = await createGoogleCalendarEvent(account, {
         prospectId: id,
@@ -124,26 +117,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         throw new Error(error?.message || "Enregistrement impossible dans le CRM.");
       }
 
-      const nextAction = kind === "rdv"
-        ? `Présentation comparatif — ${presentationLabel(startLocal)}`
-        : `Rappel — ${presentationLabel(startLocal)}`;
+      const now = new Date().toISOString();
+      const [{ data: nextEvent }, { data: nextComparatif }] = await Promise.all([
+        supabase.from("calendar_events").select("kind, start_at").eq("prospect_id", id).eq("profile_id", profile.id).gte("end_at", now).order("start_at", { ascending: true }).limit(1).maybeSingle(),
+        supabase.from("calendar_events").select("start_at").eq("prospect_id", id).eq("profile_id", profile.id).eq("kind", "rdv").gte("end_at", now).order("start_at", { ascending: true }).limit(1).maybeSingle(),
+      ]);
 
       await supabase.from("prospects").update({
-        last_action_at: new Date().toISOString(),
-        next_action: nextAction,
-        next_action_date: startLocal.slice(0, 10),
+        last_action_at: now,
+        next_action: nextEvent ? nextActionLabel(nextEvent.kind as "rdv" | "rappel", nextEvent.start_at) : null,
+        next_action_date: nextComparatif?.start_at ? nextComparatif.start_at.slice(0, 10) : null,
       }).eq("id", id);
 
       return NextResponse.json({ ok: true, event: stored });
     } catch (error) {
-      return NextResponse.json({
-        error: error instanceof Error ? error.message : "Création impossible.",
-        googleEventId,
-      }, { status: 500 });
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Création impossible.", googleEventId }, { status: 500 });
     }
   } catch (error) {
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : "Création impossible.",
-    }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Création impossible." }, { status: 500 });
   }
 }
