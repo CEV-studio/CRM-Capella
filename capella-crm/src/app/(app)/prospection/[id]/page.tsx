@@ -103,100 +103,106 @@ export default async function FicheProspectPage({ params, searchParams }: {
   return (
     <main className="mx-auto w-full max-w-[1720px] px-4 py-5 2xl:px-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Link href="/prospection" className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700">← Retour à la prospection</Link>
+        <Link href="/prospection" className="text-sm font-semibold text-navy-500 underline decoration-star-400 underline-offset-4 hover:text-star-600">← Retour à la prospection</Link>
         <div className="flex items-center gap-3">
-          <div className="inline-flex overflow-hidden rounded-lg border border-navy-200 bg-white">
-            {fichePrecedente ? <Link href={`/prospection/${fichePrecedente.id}`} className="inline-flex h-9 w-10 items-center justify-center text-xl font-semibold text-navy-700 hover:bg-navy-50" title={`Fiche précédente : ${fichePrecedente.raison_sociale || nomComplet(fichePrecedente.nom, fichePrecedente.prenom)}`}>‹</Link> : <span className="inline-flex h-9 w-10 items-center justify-center text-xl text-navy-200">‹</span>}
+          <div className="inline-flex overflow-hidden rounded-lg border border-navy-200 bg-white shadow-sm">
+            {fichePrecedente ? <Link href={`/prospection/${fichePrecedente.id}`} className="inline-flex h-9 w-10 items-center justify-center text-xl font-semibold text-navy-700 hover:bg-star-50 hover:text-star-600" title={`Fiche précédente : ${fichePrecedente.raison_sociale || nomComplet(fichePrecedente.nom, fichePrecedente.prenom)}`}>‹</Link> : <span className="inline-flex h-9 w-10 items-center justify-center text-xl text-navy-200">‹</span>}
             <span className="w-px bg-navy-100" />
-            {ficheSuivante ? <Link href={`/prospection/${ficheSuivante.id}`} className="inline-flex h-9 w-10 items-center justify-center text-xl font-semibold text-navy-700 hover:bg-navy-50" title={`Fiche suivante : ${ficheSuivante.raison_sociale || nomComplet(ficheSuivante.nom, ficheSuivante.prenom)}`}>›</Link> : <span className="inline-flex h-9 w-10 items-center justify-center text-xl text-navy-200">›</span>}
+            {ficheSuivante ? <Link href={`/prospection/${ficheSuivante.id}`} className="inline-flex h-9 w-10 items-center justify-center text-xl font-semibold text-navy-700 hover:bg-star-50 hover:text-star-600" title={`Fiche suivante : ${ficheSuivante.raison_sociale || nomComplet(ficheSuivante.nom, ficheSuivante.prenom)}`}>›</Link> : <span className="inline-flex h-9 w-10 items-center justify-center text-xl text-navy-200">›</span>}
           </div>
-          <div className="text-xs text-grey-brand">Dernière action {fmtDateHeure(p.last_action_at)}</div>
+          <div className="rounded-full bg-navy-800 px-3 py-1.5 text-[11px] font-semibold text-navy-100">Dernière action {fmtDateHeure(p.last_action_at)}</div>
         </div>
       </div>
 
-      {query.acd === "transmise" ? <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div> : null}
-      {query.calendar === "connecte" ? <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Google Calendar connecté à ton compte CRM.</div> : null}
+      {query.acd === "transmise" ? <div className="mb-4 rounded-lg border-l-4 border-star-500 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div> : null}
+      {query.calendar === "connecte" ? <div className="mb-4 rounded-lg border-l-4 border-star-500 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Google Calendar connecté à ton compte CRM.</div> : null}
       {query.calendar === "erreur" ? <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-800">Connexion Google Calendar impossible : {query.message || "erreur inconnue"}</div> : null}
 
       <div className="grid items-start gap-5 xl:grid-cols-[290px_minmax(0,1fr)_360px]">
         <aside className="space-y-4 xl:sticky xl:top-5">
-          <section className="rounded-xl border border-navy-100 bg-white p-5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-navy-50 font-display text-lg font-bold text-navy-700">{(p.raison_sociale || p.nom || "C").slice(0, 1).toUpperCase()}</div>
-            <h1 className="mt-3 font-display text-xl font-bold leading-tight text-navy-800">{prospectLabel}</h1>
-            <p className="mt-1 text-sm font-medium text-grey-brand">{contactNom(p)}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2"><StageBadge label={p.stage} color={stageColor(p.stage, "prospect")} />{p.ref ? <span className="text-xs tabular text-grey-brand">{p.ref}</span> : null}</div>
+          <section className="overflow-hidden rounded-2xl border border-navy-700 bg-navy-800 shadow-lg shadow-navy-900/10">
+            <div className="h-1.5 bg-star-500" />
+            <div className="p-5">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-star-500 font-display text-lg font-bold text-white shadow-sm">{(p.raison_sociale || p.nom || "C").slice(0, 1).toUpperCase()}</div>
+              <h1 className="mt-3 font-display text-xl font-bold leading-tight text-white">{prospectLabel}</h1>
+              <p className="mt-1 text-sm font-medium text-navy-200">{contactNom(p)}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2"><StageBadge label={p.stage} color={stageColor(p.stage, "prospect")} />{p.ref ? <span className="rounded-full bg-navy-700 px-2 py-1 text-[10px] font-semibold tabular text-navy-100">{p.ref}</span> : null}</div>
 
-            <div className="mt-4 space-y-2 border-t border-navy-100 pt-4 text-sm">
-              {p.mail ? <span className="block truncate text-navy-700" title={p.mail}>{p.mail}</span> : <span className="block text-grey-brand">Email non renseigné</span>}
-              {phone ? <a href={`tel:${phone}`} className="block font-semibold text-navy-800">{phone}</a> : <span className="block text-grey-brand">Téléphone non renseigné</span>}
-            </div>
+              <div className="mt-4 space-y-2 border-t border-navy-600 pt-4 text-sm">
+                {p.mail ? <span className="block truncate text-navy-100" title={p.mail}>{p.mail}</span> : <span className="block text-navy-300">Email non renseigné</span>}
+                {phone ? <a href={`tel:${phone}`} className="block font-bold text-white">{phone}</a> : <span className="block text-navy-300">Téléphone non renseigné</span>}
+              </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              {phone ? <a href={`tel:${phone}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-navy-200 bg-white px-2 text-xs font-semibold text-navy-700 hover:bg-navy-50">📞 Appeler</a> : null}
-              <ProspectToolsModal prospectId={p.id} prospectLabel={prospectLabel} />
-              <CalendarPanel prospectId={p.id} prospectEmail={p.mail} prospectLabel={prospectLabel} connected={Boolean(calendarAccount)} accountEmail={calendarAccount?.email || null} events={calendarEvents} />
-            </div>
+              <div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-white/5 p-2">
+                {phone ? <a href={`tel:${phone}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-star-500 px-2 text-xs font-bold text-white transition hover:bg-star-600">📞 Appeler</a> : null}
+                <ProspectToolsModal prospectId={p.id} prospectLabel={prospectLabel} />
+                <CalendarPanel prospectId={p.id} prospectEmail={p.mail} prospectLabel={prospectLabel} connected={Boolean(calendarAccount)} accountEmail={calendarAccount?.email || null} events={calendarEvents} />
+              </div>
 
-            {prochaineAction ? (
-              <div className={`mt-4 rounded-lg border px-3 py-2.5 ${prochaineAction.kind === "rappel" ? "border-amber-200 bg-amber-50" : "border-sky-200 bg-sky-50"}`}>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-grey-brand">Prochaine action</div>
-                <div className="mt-1 flex items-start gap-2 text-xs font-semibold text-navy-800">
-                  <span aria-hidden>{prochaineAction.kind === "rappel" ? "⏰" : "📅"}</span>
-                  <span>{calendarLabel(prochaineAction)}</span>
+              {prochaineAction ? (
+                <div className={`mt-4 rounded-lg border px-3 py-2.5 ${prochaineAction.kind === "rappel" ? "border-star-400/50 bg-star-500/10" : "border-navy-400 bg-white/10"}`}>
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-navy-300">Prochaine action</div>
+                  <div className="mt-1 flex items-start gap-2 text-xs font-semibold text-white">
+                    <span aria-hidden>{prochaineAction.kind === "rappel" ? "⏰" : "📅"}</span>
+                    <span>{calendarLabel(prochaineAction)}</span>
+                  </div>
                 </div>
-              </div>
-            ) : prochaineActionManuelle ? (
-              <div className="mt-4 rounded-lg border border-navy-100 bg-navy-50/60 px-3 py-2.5">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-grey-brand">Prochaine action</div>
-                <div className="mt-1 text-xs font-semibold text-navy-800">{prochaineActionManuelle}</div>
-              </div>
-            ) : null}
+              ) : prochaineActionManuelle ? (
+                <div className="mt-4 rounded-lg border border-navy-500 bg-white/10 px-3 py-2.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-navy-300">Prochaine action</div>
+                  <div className="mt-1 text-xs font-semibold text-white">{prochaineActionManuelle}</div>
+                </div>
+              ) : null}
 
-            {p.stage === "Demande ACD" ? <div className="mt-2">{estAdmin ? <a href={`/api/acd/${p.id}`} className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Télécharger l’ACD</a> : <form action={`/api/acd/${p.id}/demander`} method="post"><button type="submit" className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Demander l&apos;ACD</button></form>}</div> : null}
+              {p.stage === "Demande ACD" ? <div className="mt-3">{estAdmin ? <a href={`/api/acd/${p.id}`} className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-bold text-white hover:bg-star-600">Télécharger l’ACD</a> : <form action={`/api/acd/${p.id}/demander`} method="post"><button type="submit" className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-bold text-white hover:bg-star-600">Demander l&apos;ACD</button></form>}</div> : null}
+            </div>
           </section>
 
-          {affaireLiee ? <Link href={`/conversion/${affaireLiee.id}`} className="block rounded-xl p-4 text-sm text-navy-800 hover:opacity-90" style={{ backgroundColor: "var(--color-status-signe)" }}><strong>Déjà converti en affaire</strong><span className="mt-1 block text-xs">Voir {affaireLiee.ref} →</span></Link> : pretATransferer ? <section className="rounded-xl p-4 text-sm text-navy-800" style={{ backgroundColor: "var(--color-status-avance)" }}><strong>Prêt à convertir</strong><p className="mt-1 text-xs">La fiche affaire sera pré-remplie.</p><Link href={`/conversion/nouvelle?prospect=${p.id}`} className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-semibold text-white hover:bg-star-600">Convertir en affaire</Link></section> : null}
+          {affaireLiee ? <Link href={`/conversion/${affaireLiee.id}`} className="block rounded-xl border-l-4 border-l-star-500 bg-white p-4 text-sm text-navy-800 shadow-sm hover:bg-star-50"><strong>Déjà converti en affaire</strong><span className="mt-1 block text-xs">Voir {affaireLiee.ref} →</span></Link> : pretATransferer ? <section className="rounded-xl border-l-4 border-l-star-500 bg-white p-4 text-sm text-navy-800 shadow-sm"><strong>Prêt à convertir</strong><p className="mt-1 text-xs text-grey-brand">La fiche affaire sera pré-remplie.</p><Link href={`/conversion/nouvelle?prospect=${p.id}`} className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-lg bg-star-500 px-3 text-xs font-bold text-white hover:bg-star-600">Convertir en affaire</Link></section> : null}
 
           {peutGerer(profil) ? <div className="px-1"><BoutonSupprimer cible="prospect" id={p.id} libelle={prospectLabel} retour="/prospection" /></div> : null}
         </aside>
 
         <section className="min-w-0">
-          <div className="mb-3 flex items-end justify-between gap-3 px-1">
-            <div>
-              <h2 className="font-display text-xl font-bold text-navy-800">Activité & échanges</h2>
-              <p className="text-xs text-grey-brand">Vue rapide de la relation. Les outils complets s’ouvrent dans les fenêtres d’action.</p>
+          <div className="mb-3 flex items-end justify-between gap-3 rounded-xl bg-navy-800 px-4 py-3 text-white shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="mt-1 h-8 w-1 rounded-full bg-star-500" />
+              <div>
+                <h2 className="font-display text-xl font-bold text-white">Activité & échanges</h2>
+                <p className="text-xs text-navy-200">Vue rapide de la relation. Les outils complets s’ouvrent dans les fenêtres d’action.</p>
+              </div>
             </div>
-            <span className="rounded-full bg-navy-50 px-3 py-1 text-xs font-semibold text-navy-700">{activityEmails.length} récent{activityEmails.length > 1 ? "s" : ""}</span>
+            <span className="rounded-full bg-star-500 px-3 py-1 text-xs font-bold text-white">{activityEmails.length} récent{activityEmails.length > 1 ? "s" : ""}</span>
           </div>
 
           <div className="mb-4">
             <ProspectNoteEditor prospectId={p.id} initialNotes={p.notes} />
           </div>
 
-          <div className="rounded-xl border border-navy-100 bg-white">
+          <div className="overflow-hidden rounded-xl border border-navy-200 border-t-4 border-t-star-400 bg-white shadow-sm">
             {activityEmails.length ? (
               <div className="divide-y divide-navy-100">
                 {activityEmails.map((email) => (
-                  <article key={email.id} className="p-4 hover:bg-navy-50/40">
+                  <article key={email.id} className="p-4 transition hover:bg-star-50/40">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${email.direction === "incoming" ? "bg-star-100 text-star-800" : "bg-navy-100 text-navy-700"}`}>
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${email.direction === "incoming" ? "bg-star-100 text-star-800" : "bg-navy-800 text-white"}`}>
                             {email.direction === "incoming" ? "Reçu" : "Envoyé"}
                           </span>
                           <strong className="truncate text-sm text-navy-800">{email.subject || "Sans objet"}</strong>
                         </div>
                         {email.snippet ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-grey-brand">{email.snippet}</p> : null}
                       </div>
-                      <span className="shrink-0 text-[11px] text-grey-brand">{fmtDateHeure(email.sent_at)}</span>
+                      <span className="shrink-0 rounded-full bg-navy-50 px-2 py-1 text-[10px] font-semibold text-navy-500">{fmtDateHeure(email.sent_at)}</span>
                     </div>
                   </article>
                 ))}
               </div>
             ) : (
               <div className="px-5 py-12 text-center">
-                <div className="text-2xl">✉️</div>
-                <p className="mt-2 text-sm font-semibold text-navy-700">Aucun échange enregistré</p>
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-star-50 text-2xl">✉️</div>
+                <p className="mt-3 text-sm font-bold text-navy-700">Aucun échange enregistré</p>
                 <p className="mt-1 text-xs text-grey-brand">Utilise le bouton Email en haut à gauche pour envoyer ou synchroniser les échanges.</p>
               </div>
             )}
