@@ -17,6 +17,7 @@ import {
   Mail,
   MailCheck,
   ShieldCheck,
+  Target,
   Trash2,
   Users,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const peutGererLocal = (profile: Profile) => profile.role === "admin" || profile
 const NAV: { titre: string; items: NavItem[] }[] = [
   { titre: "Commercial", items: [
     { href: "/", label: "Tableau de bord", icon: LayoutDashboard },
+    { href: "/journee", label: "Ma journée", icon: Target },
     { href: "/prospection", label: "Prospection", icon: BarChart3 },
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/conversion", label: "Mes cotations", icon: BriefcaseBusiness },
