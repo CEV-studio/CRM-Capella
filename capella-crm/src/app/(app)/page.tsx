@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader, KpiTile, StageBadge } from "@/components/ui";
@@ -48,8 +49,15 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
   const relancesProspection = prospects.filter((p) => p.next_action_date != null && p.next_action_date >= aujourdhui).length;
   const periode = mois ? `${MOIS[mois - 1]} ${annee}` : `Année ${annee}`;
 
-  return <main className="mx-auto w-full max-w-6xl px-6 py-8">
-    <header className="mb-5"><h1 className="font-display text-2xl font-bold text-navy-800">Bonjour {profil.full_name.split(" ")[0]}</h1><p className="mt-1 text-sm text-grey-brand">{estAdmin ? "Vue d'ensemble de Capella Energy." : "Ton activité. Tu ne vois que tes propres chiffres."}</p></header>
+  return <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+    <header className="crm-page-header mb-5 flex flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-6">
+      <div>
+        <div className="mb-1.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.14em] text-star-600"><Sparkles size={14} /> Cockpit commercial</div>
+        <h1 className="font-display text-2xl font-bold text-navy-800">Bonjour {profil.full_name.split(" ")[0]}</h1>
+        <p className="mt-1 text-sm text-grey-brand">{estAdmin ? "Vue d'ensemble de Capella Energy." : "Ton activité. Tu ne vois que tes propres chiffres."}</p>
+      </div>
+      <div className="hidden h-14 w-14 items-center justify-center rounded-2xl bg-[var(--crm-gradient-navy)] shadow-[var(--crm-shadow-card)] sm:flex"><Sparkles className="text-star-400" size={24} /></div>
+    </header>
 
     <div className="mb-5"><FiltresPeriode chemin="/" annees={annees} commerciaux={estAdmin ? listeProfils.map((p) => ({ value: p.id, label: p.full_name })) : []} apporteurs={estAdmin ? listeApporteurs.map((a) => ({ value: a.id, label: a.name })) : []}/></div>
 
@@ -63,11 +71,11 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
       <KpiTile label="Relances à venir" value={fmtNombre(kpi.relancesAVenir + relancesProspection)} hint={`${kpi.relancesAVenir} en cotation · ${relancesProspection} en prospection`}/>
     </div>
 
-    <Card className="mb-6 overflow-hidden"><CardHeader title={`Commissions validées par mois — ${annee}`} hint="Un dossier est rattaché au mois de sa validation ADV." action={<Link href="/commissions" className="text-sm font-semibold text-star-600 underline underline-offset-2">Détail des commissions →</Link>}/><div className="scroll-slim overflow-x-auto"><table className="w-full min-w-[36rem] border-collapse text-sm"><thead className="bg-navy-800"><tr>{["Mois", "Dossiers validés", "Montant validé", "Commissions"].map((t)=><th key={t} className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-navy-300">{t}</th>)}</tr></thead><tbody>{parMois.map((l)=><tr key={l.mois} className={l.nbSignees>0?"border-b border-navy-100":"border-b border-navy-100 text-navy-300"}><td className="px-4 py-1.5">{MOIS[l.mois-1]}</td><td className="tabular px-4 py-1.5">{l.nbSignees}</td><td className="tabular px-4 py-1.5">{fmtEuros(l.caSigne)}</td><td className="tabular px-4 py-1.5">{fmtEuros(l.commissions)}</td></tr>)}<tr className="bg-navy-800 font-bold text-white"><td className="px-4 py-2">Total</td><td className="tabular px-4 py-2">{totalMois.nb}</td><td className="tabular px-4 py-2">{fmtEuros(totalMois.ca)}</td><td className="tabular px-4 py-2">{fmtEuros(totalMois.com)}</td></tr></tbody></table></div></Card>
+    <Card className="mb-6 overflow-hidden"><CardHeader title={`Commissions validées par mois — ${annee}`} hint="Un dossier est rattaché au mois de sa validation ADV." action={<Link href="/commissions" className="inline-flex items-center gap-1 text-sm font-semibold text-star-600 hover:text-star-700">Détail <ArrowRight size={14}/></Link>}/><div className="scroll-slim overflow-x-auto"><table className="w-full min-w-[36rem] border-collapse text-sm"><thead className="bg-navy-800"><tr>{["Mois", "Dossiers validés", "Montant validé", "Commissions"].map((t)=><th key={t} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-navy-200">{t}</th>)}</tr></thead><tbody>{parMois.map((l)=><tr key={l.mois} className={l.nbSignees>0?"border-b border-navy-100":"border-b border-navy-100 text-navy-300"}><td className="px-4 py-2.5">{MOIS[l.mois-1]}</td><td className="tabular px-4 py-2.5">{l.nbSignees}</td><td className="tabular px-4 py-2.5">{fmtEuros(l.caSigne)}</td><td className="tabular px-4 py-2.5">{fmtEuros(l.commissions)}</td></tr>)}<tr className="bg-navy-800 font-bold text-white"><td className="px-4 py-3">Total</td><td className="tabular px-4 py-3">{totalMois.nb}</td><td className="tabular px-4 py-3">{fmtEuros(totalMois.ca)}</td><td className="tabular px-4 py-3 text-star-300">{fmtEuros(totalMois.com)}</td></tr></tbody></table></div></Card>
 
     <div className="grid gap-6 md:grid-cols-2">
-      <Card><CardHeader title="Cotations par étape" hint={periode}/><ul className="divide-y divide-navy-100">{AFFAIRE_STAGES.map((s)=><li key={s.label} className="flex items-center justify-between px-5 py-2"><StageBadge label={s.label==="Signé"?"Validé ADV":s.label} color={stageColor(s.label,"affaire")}/><span className="tabular text-sm font-semibold text-navy-800">{affairesParEtape.get(s.label)??0}</span></li>)}</ul></Card>
-      <Card><CardHeader title="Prospection par étape" hint="Non filtré par période."/><ul className="divide-y divide-navy-100">{PROSPECT_STAGES.map((s)=><li key={s.label} className="flex items-center justify-between px-5 py-1.5"><StageBadge label={s.label} color={stageColor(s.label,"prospect")}/><span className="tabular text-sm font-semibold text-navy-800">{prospectsParEtape.get(s.label)??0}</span></li>)}</ul></Card>
+      <Card><CardHeader title="Cotations par étape" hint={periode}/><ul className="divide-y divide-navy-100">{AFFAIRE_STAGES.map((s)=><li key={s.label} className="flex items-center justify-between px-5 py-2.5 hover:bg-sky-capella-50/50"><StageBadge label={s.label==="Signé"?"Validé ADV":s.label} color={stageColor(s.label,"affaire")}/><span className="tabular text-sm font-bold text-navy-800">{affairesParEtape.get(s.label)??0}</span></li>)}</ul></Card>
+      <Card><CardHeader title="Prospection par étape" hint="Non filtré par période."/><ul className="divide-y divide-navy-100">{PROSPECT_STAGES.map((s)=><li key={s.label} className="flex items-center justify-between px-5 py-2.5 hover:bg-sky-capella-50/50"><StageBadge label={s.label} color={stageColor(s.label,"prospect")}/><span className="tabular text-sm font-bold text-navy-800">{prospectsParEtape.get(s.label)??0}</span></li>)}</ul></Card>
     </div>
   </main>;
 }
