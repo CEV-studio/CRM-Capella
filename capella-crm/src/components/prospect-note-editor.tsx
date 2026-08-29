@@ -131,8 +131,12 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
   }
 
   return (
-    <section className="rounded-xl border border-navy-100 bg-white">
-      <div className="border-b border-navy-100 p-3">
+    <section className="overflow-hidden rounded-xl border border-navy-200 bg-white shadow-sm">
+      <div className="border-b border-navy-100 bg-navy-50 p-3">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-star-500" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-navy-700">Notes commerciales</span>
+        </div>
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
@@ -152,14 +156,14 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
             type="button"
             onClick={() => void ajouter()}
             disabled={saving || !body.trim()}
-            className="inline-flex h-10 shrink-0 items-center rounded-lg bg-navy-800 px-4 text-xs font-semibold text-white hover:bg-navy-700 disabled:opacity-40"
+            className="inline-flex h-10 shrink-0 items-center rounded-lg bg-star-500 px-4 text-xs font-bold text-white transition hover:bg-star-600 disabled:opacity-40"
           >
             {saving ? "Ajout…" : "Ajouter"}
           </button>
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-3 px-1 text-[10px] text-grey-brand">
           <span>Entrée pour ajouter · Maj+Entrée pour aller à la ligne</span>
-          {notes.length ? <span>{notes.length} note{notes.length > 1 ? "s" : ""}</span> : null}
+          {notes.length ? <span className="font-semibold text-navy-500">{notes.length} note{notes.length > 1 ? "s" : ""}</span> : null}
         </div>
         {error ? <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p> : null}
       </div>
@@ -169,12 +173,12 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
       ) : notes.length ? (
         <div className="divide-y divide-navy-100">
           {notes.map((note) => (
-            <article key={note.id} className="px-4 py-3">
+            <article key={note.id} className="border-l-2 border-l-transparent px-4 py-3 transition hover:border-l-star-400 hover:bg-star-50/40">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold text-navy-700">{note.author_name}</span>
+                  <span className="rounded-full bg-navy-800 px-2 py-0.5 text-[10px] font-bold text-white">{note.author_name}</span>
                   <time className="text-[10px] text-grey-brand" dateTime={note.created_at}>{fmtNoteDate(note.created_at)}</time>
-                  {note.updated_at ? <span className="text-[10px] italic text-grey-brand">modifiée {fmtNoteDate(note.updated_at)}</span> : null}
+                  {note.updated_at ? <span className="text-[10px] italic text-star-600">modifiée {fmtNoteDate(note.updated_at)}</span> : null}
                 </div>
                 {note.can_edit ? (
                   <div className="flex items-center gap-2 text-[10px] font-semibold">
@@ -185,7 +189,7 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
                         setEditingBody(note.body);
                         setError(null);
                       }}
-                      className="text-navy-600 hover:text-navy-900"
+                      className="text-navy-600 hover:text-star-600"
                     >Modifier</button>
                     <button
                       type="button"
@@ -203,19 +207,19 @@ export function ProspectNoteEditor({ prospectId }: { prospectId: string; initial
                     rows={3}
                     value={editingBody}
                     onChange={(e) => setEditingBody(e.target.value)}
-                    className="w-full resize-y rounded-lg border border-navy-200 bg-white px-3 py-2 text-sm leading-5 text-navy-800 outline-none focus:border-star-500 focus:ring-2 focus:ring-star-500/15"
+                    className="w-full resize-y rounded-lg border border-star-300 bg-white px-3 py-2 text-sm leading-5 text-navy-800 outline-none focus:ring-2 focus:ring-star-500/15"
                   />
                   <div className="mt-2 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => void modifier(note.id)}
                       disabled={busyNoteId === note.id || !editingBody.trim()}
-                      className="inline-flex h-8 items-center rounded-lg bg-navy-800 px-3 text-xs font-semibold text-white hover:bg-navy-700 disabled:opacity-40"
+                      className="inline-flex h-8 items-center rounded-lg bg-star-500 px-3 text-xs font-bold text-white hover:bg-star-600 disabled:opacity-40"
                     >{busyNoteId === note.id ? "Enregistrement…" : "Enregistrer"}</button>
                     <button
                       type="button"
                       onClick={() => { setEditingId(null); setEditingBody(""); }}
-                      className="inline-flex h-8 items-center rounded-lg border border-navy-200 px-3 text-xs font-semibold text-navy-700 hover:bg-navy-50"
+                      className="inline-flex h-8 items-center rounded-lg border border-navy-200 bg-white px-3 text-xs font-semibold text-navy-700 hover:bg-navy-50"
                     >Annuler</button>
                   </div>
                 </div>
