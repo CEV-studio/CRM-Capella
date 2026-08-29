@@ -69,7 +69,7 @@ function qualification(score: number | null): { label: string; className: string
 
 export default async function FicheProspectPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ acd?: string; calendar?: string; message?: string }>;
+  searchParams: Promise<{ acd?: string; calendar?: string; message?: string; popup?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -128,7 +128,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
 
   return (
     <main className="mx-auto w-full max-w-[1760px] px-4 py-4 lg:px-6 2xl:px-8">
-      <ProspectTopbar />
+      {query.popup !== "1" ? <ProspectTopbar /> : null}
 
       {query.acd === "transmise" ? <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Demande ACD transmise à l’administrateur.</div> : null}
       {query.calendar === "connecte" ? <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Google Calendar connecté à ton compte CRM.</div> : null}
