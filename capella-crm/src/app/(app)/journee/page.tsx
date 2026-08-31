@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlarmClock, ArrowRight, CalendarDays, CircleAlert, Clock3, Flame, RotateCcw, Target, Zap } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { formatParisDateTime, type DisciplineEvent } from "@/lib/domain/discipline";
+import { evaluateDiscipline, formatParisDateTime, type DisciplineEvent } from "@/lib/domain/discipline";
 import type { Prospect } from "@/lib/domain/database.types";
 import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 type Row = Prospect & { became_client_at?: string | null };
 type WorkItem = {
+  key: string;
   prospect: Row;
   event: DisciplineEvent | null;
   priority: number;
@@ -19,9 +20,15 @@ type WorkItem = {
   detail: string | null;
   urgent: boolean;
   anomaly: boolean;
+  renewalDate?: string | null;
 };
 
-const CLOSED_STAGES = new Set(["KO", "Numéro KO", "Pas intéressé"]);
+type RenewalRow = {
+  id: string;
+  prospect_id: string;
+  date_echeance: string;
+  prospect: Row | Row[] | null;
+};
 
 function label(p: Row) {
   return p.raison_sociale || [p.prenom, p.nom].filter(Boolean).join(" ") || "Prospect sans nom";
@@ -32,17 +39,33 @@ function energySummary(p: Row) {
   if (p.segment) bits.push(p.segment);
   if (p.car_electricite) bits.push(`${p.car_electricite} MWh élec`);
   if (p.car_gaz) bits.push(`${p.car_gaz} MWh gaz`);
-  if (p.date_fin_contrat) bits.push(`DDF ${new Intl.DateTimeFormat("fr-FR").format(new Date(`${p.date_fin_contrat}T12:00:00Z`))}`);
+  if (p.date_fin_contrat) bits.push(`DDF ${formatDate(p.date_fin_contrat)}`);
   return bits.join(" · ");
 }
 
-function parisDateKey(value: Date | string): string {
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value.slice(0, 10)}T12:00:00Z`));
+}
+
+function dateKeyParis(value: Date | string): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Paris",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(typeof value === "string" ? new Date(value) : value);
+}
+
+function datePlusDays(date: Date, days: number): string {
+  const copy = new Date(date);
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy.toISOString().slice(0, 10);
+}
+
+function daysUntil(date: string, today: string) {
+  const a = Date.UTC(...today.split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v) as [number, number, number]);
+  const b = Date.UTC(...date.slice(0, 10).split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v) as [number, number, number]);
+  return Math.round((b - a) / 86_400_000);
 }
 
 function WorkCard({ item, rank }: { item: WorkItem; rank?: number }) {
@@ -55,12 +78,13 @@ function WorkCard({ item, rank }: { item: WorkItem; rank?: number }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <ProspectFichePopup prospectId={p.id} prospectLabel={label(p)} className="truncate text-left font-display text-base font-bold text-navy-900 hover:text-sky-capella-700">{label(p)}</ProspectFichePopup>
-            <span className="rounded-full bg-navy-50 px-2 py-0.5 text-[10px] font-bold text-navy-600">{p.stage}</span>
+            <span className="rounded-full bg-navy-50 px-2 py-0.5 text-[10px] font-bold text-navy-600">{item.renewalDate ? "Renouvellement" : p.stage}</span>
             {item.anomaly ? <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700"><CircleAlert size={11}/>À corriger</span> : null}
           </div>
           <div className={`mt-2 text-sm font-bold ${item.urgent ? "text-star-700" : "text-navy-800"}`}>{item.reason}</div>
           {item.detail ? <div className="mt-1 text-xs leading-5 text-navy-500">{item.detail}</div> : null}
           {item.event ? <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-sky-capella-50 px-2.5 py-1.5 text-[11px] font-semibold text-sky-capella-700">{item.event.kind === "rdv" ? <CalendarDays size={13}/> : <AlarmClock size={13}/>} {formatParisDateTime(item.event.start_at)}</div> : null}
+          {item.renewalDate ? <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-star-50 px-2.5 py-1.5 text-[11px] font-semibold text-star-700"><RotateCcw size={13}/>Échéance contrat · {formatDate(item.renewalDate)}</div> : null}
           {energySummary(p) ? <div className="mt-2 flex items-center gap-1.5 text-[11px] text-grey-brand"><Zap size={12} className="text-star-500"/>{energySummary(p)}</div> : null}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -75,71 +99,95 @@ function WorkCard({ item, rank }: { item: WorkItem; rank?: number }) {
 export default async function JourneePage() {
   const profile = await requireProfile();
   const supabase = await createClient();
-  const today = parisDateKey(new Date());
+  const now = new Date();
+  const today = dateKeyParis(now);
+  const renewalHorizon = datePlusDays(now, 180);
   const prospectColumns = "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, stage, next_action, next_action_date, last_action_at, date_fin_contrat, became_client_at, created_at, updated_at, segment, car_electricite, car_gaz, fournisseur_electricite, fournisseur_gaz, assigned_to";
+
   let prospectsQuery = (supabase as any)
     .from("prospects")
     .select(prospectColumns)
     .is("deleted_at", null)
-    .is("entered_conversion_at", null)
-    .not("next_action_date", "is", null)
-    .lte("next_action_date", today);
-  if (profile.role !== "admin") prospectsQuery = prospectsQuery.eq("assigned_to", profile.id);
-
+    .is("entered_conversion_at", null);
   let eventsQuery = (supabase as any)
     .from("calendar_events")
-    .select(`prospect_id, kind, title, start_at, end_at, prospect:prospects!inner(${prospectColumns})`)
+    .select("prospect_id, kind, title, start_at, end_at")
     .eq("status", "confirmed")
-    .gte("start_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-    .lt("start_at", new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
+    .gte("start_at", new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString())
+    .lt("start_at", new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString())
     .order("start_at", { ascending: true });
-  if (profile.role !== "admin") eventsQuery = eventsQuery.eq("profile_id", profile.id);
+  let renewalQuery = (supabase as any)
+    .from("affaires")
+    .select(`id, prospect_id, date_echeance, prospect:prospects!inner(${prospectColumns})`)
+    .eq("stage", "Signé")
+    .is("deleted_at", null)
+    .not("prospect_id", "is", null)
+    .not("date_echeance", "is", null)
+    .lte("date_echeance", renewalHorizon)
+    .order("date_echeance", { ascending: true });
 
-  const [{ data: prospectData, error }, { data: eventData }] = await Promise.all([prospectsQuery, eventsQuery]);
-  const prospectsById = new Map<string, Row>(((prospectData ?? []) as Row[]).map((prospect) => [prospect.id, prospect]));
-  const events = (eventData ?? []) as Array<DisciplineEvent & { prospect?: Row | Row[] | null }>;
+  if (profile.role !== "admin") {
+    prospectsQuery = prospectsQuery.eq("assigned_to", profile.id);
+    eventsQuery = eventsQuery.eq("profile_id", profile.id);
+    renewalQuery = renewalQuery.eq("commercial_id", profile.id);
+  }
+
+  const [{ data: prospectData, error }, { data: eventData }, { data: renewalData }] = await Promise.all([prospectsQuery, eventsQuery, renewalQuery]);
+  const prospects = (prospectData ?? []) as Row[];
+  const events = (eventData ?? []) as DisciplineEvent[];
   const nextByProspect = new Map<string, DisciplineEvent>();
   for (const event of events) {
-    if (parisDateKey(event.start_at) === today && !nextByProspect.has(event.prospect_id)) {
-      nextByProspect.set(event.prospect_id, event);
-      const linkedProspect = Array.isArray(event.prospect) ? event.prospect[0] : event.prospect;
-      if (linkedProspect) prospectsById.set(linkedProspect.id, linkedProspect);
-    }
+    if (!nextByProspect.has(event.prospect_id)) nextByProspect.set(event.prospect_id, event);
   }
-  const prospects = [...prospectsById.values()];
 
-  const items = prospects
+  const activeItems = prospects
     .map((prospect): WorkItem | null => {
       const event = nextByProspect.get(prospect.id) ?? null;
-      const hasDueAction = Boolean(prospect.next_action_date && prospect.next_action_date <= today);
-      if (CLOSED_STAGES.has(prospect.stage) || (!event && !hasDueAction)) return null;
-
-      const actionIsLate = Boolean(prospect.next_action_date && prospect.next_action_date < today);
-      const eventIsPast = Boolean(event && new Date(event.start_at).getTime() < Date.now());
-      const reason = event
-        ? event.kind === "rdv"
-          ? eventIsPast ? "RDV comparatif passé" : "RDV comparatif aujourd’hui"
-          : eventIsPast ? "Rappel dépassé" : "Rappel aujourd’hui"
-        : actionIsLate ? "Action en retard" : "À faire aujourd’hui";
+      const result = evaluateDiscipline(prospect, event, now);
+      if (result.bucket === "ignore") return null;
       return {
+        key: `prospect-${prospect.id}`,
         prospect,
         event,
-        priority: event ? (event.kind === "rdv" ? 116 : 112) : actionIsLate ? 114 : 108,
-        bucket: "maintenant",
-        reason,
-        detail: event?.title || prospect.next_action,
-        urgent: true,
-        anomaly: actionIsLate || eventIsPast,
+        priority: result.priority,
+        bucket: result.bucket,
+        reason: result.reason,
+        detail: result.detail,
+        urgent: result.urgent,
+        anomaly: result.anomaly,
       };
     })
-    .filter((item): item is WorkItem => Boolean(item))
-    .sort((a, b) => b.priority - a.priority || label(a.prospect).localeCompare(label(b.prospect), "fr"));
+    .filter((item): item is WorkItem => Boolean(item));
 
+  const renewalItems = ((renewalData ?? []) as RenewalRow[])
+    .map((row): WorkItem | null => {
+      const prospect = Array.isArray(row.prospect) ? row.prospect[0] : row.prospect;
+      if (!prospect || !row.date_echeance) return null;
+      const remaining = daysUntil(row.date_echeance, today);
+      const overdue = remaining < 0;
+      const urgent = overdue || remaining <= 60;
+      return {
+        key: `renewal-${row.id}`,
+        prospect,
+        event: null,
+        priority: overdue ? 119 : remaining <= 30 ? 106 : remaining <= 60 ? 98 : 90,
+        bucket: overdue ? "maintenant" : "reactiver",
+        reason: overdue ? "Contrat arrivé à échéance" : remaining === 0 ? "Contrat à renouveler aujourd’hui" : `Renouvellement dans ${remaining} jours`,
+        detail: overdue ? "Client signé à reconquérir immédiatement." : "Ancien client signé : reprendre contact avant l’échéance pour sécuriser le renouvellement.",
+        urgent,
+        anomaly: overdue,
+        renewalDate: row.date_echeance,
+      };
+    })
+    .filter((item): item is WorkItem => Boolean(item));
+
+  const items = [...activeItems, ...renewalItems]
+    .sort((a, b) => b.priority - a.priority || label(a.prospect).localeCompare(label(b.prospect), "fr"));
   const maintenant = items.filter((x) => x.bucket === "maintenant");
   const travail = items.filter((x) => x.bucket === "travail");
   const reactiver = items.filter((x) => x.bucket === "reactiver");
   const anomalies = items.filter((x) => x.anomaly);
-  const top = items[0] ?? null;
+  const top = maintenant[0] ?? travail[0] ?? reactiver[0] ?? null;
 
   return (
     <main className="mx-auto w-full max-w-[1580px] px-4 py-6 lg:px-7 lg:py-8">
@@ -147,38 +195,38 @@ export default async function JourneePage() {
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-star-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-star-700"><Target size={13}/>Cockpit commercial</div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-navy-900">Ma journée</h1>
-          <p className="mt-1 max-w-2xl text-sm text-navy-500">Le CRM trie le travail par urgence commerciale. L’objectif : aucun prospect actif oublié, aucun engagement sans suite.</p>
+          <p className="mt-1 max-w-3xl text-sm text-navy-500">Le CRM analyse les prospects actifs, les rappels, les RDV comparatifs, les dossiers qui stagnent, les DDF futures et les anciens contrats signés à renouveler. La cible : zéro opportunité oubliée.</p>
         </div>
         {top ? <Link href={`/prospection/${top.prospect.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-star-500 px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(232,96,48,.20)] hover:bg-star-600"><Flame size={17}/>Traiter le prospect prioritaire<ArrowRight size={16}/></Link> : null}
       </header>
 
       {error ? <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {error.message}</div> : null}
 
-      {items.length ? <><section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-star-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-star-700">À faire maintenant</span><Flame size={17} className="text-star-500"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{maintenant.length}</div><div className="mt-1 text-xs text-grey-brand">Retards, RDV, rappels et dossiers chauds</div></div>
-        <div className="rounded-2xl border border-navy-100 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-navy-500">À travailler</span><Target size={17} className="text-sky-capella-600"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{travail.length}</div><div className="mt-1 text-xs text-grey-brand">Prospection active à poursuivre</div></div>
-        <div className="rounded-2xl border border-sky-capella-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-sky-capella-700">À réactiver</span><RotateCcw size={17} className="text-sky-capella-600"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{reactiver.length}</div><div className="mt-1 text-xs text-grey-brand">DDF à moins de 6 mois</div></div>
-        <div className={`rounded-2xl border bg-white p-4 shadow-sm ${anomalies.length ? "border-red-200" : "border-green-200"}`}><div className="flex items-center justify-between"><span className={`text-xs font-bold uppercase tracking-wide ${anomalies.length ? "text-red-700" : "text-green-700"}`}>Anomalies</span><CircleAlert size={17} className={anomalies.length ? "text-red-500" : "text-green-500"}/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{anomalies.length}</div><div className="mt-1 text-xs text-grey-brand">La cible opérationnelle est 0</div></div>
+      <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-star-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-star-700">À faire maintenant</span><Flame size={17} className="text-star-500"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{maintenant.length}</div><div className="mt-1 text-xs text-grey-brand">Retards, RDV, relances et renouvellements urgents</div></div>
+        <div className="rounded-2xl border border-navy-100 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-navy-500">À travailler</span><Target size={17} className="text-sky-capella-600"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{travail.length}</div><div className="mt-1 text-xs text-grey-brand">Prospection active classée par priorité</div></div>
+        <div className="rounded-2xl border border-sky-capella-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-sky-capella-700">À réactiver</span><RotateCcw size={17} className="text-sky-capella-600"/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{reactiver.length}</div><div className="mt-1 text-xs text-grey-brand">DDF et contrats signés à moins de 6 mois</div></div>
+        <div className={`rounded-2xl border bg-white p-4 shadow-sm ${anomalies.length ? "border-red-200" : "border-green-200"}`}><div className="flex items-center justify-between"><span className={`text-xs font-bold uppercase tracking-wide ${anomalies.length ? "text-red-700" : "text-green-700"}`}>Anomalies</span><CircleAlert size={17} className={anomalies.length ? "text-red-500" : "text-green-500"}/></div><div className="mt-2 font-display text-3xl font-black text-navy-900">{anomalies.length}</div><div className="mt-1 text-xs text-grey-brand">Dossiers qui peuvent être oubliés · cible 0</div></div>
       </section>
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,.6fr)]">
         <section>
-          <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-lg font-bold text-navy-900">À faire maintenant</h2><p className="text-xs text-grey-brand">Traite cette file de haut en bas.</p></div><span className="rounded-full bg-star-100 px-2.5 py-1 text-xs font-bold text-star-700">{maintenant.length}</span></div>
-          {maintenant.length ? <div className="space-y-3">{maintenant.map((item, i) => <WorkCard key={item.prospect.id} item={item} rank={i + 1}/>)}</div> : <div className="rounded-2xl border border-dashed border-green-200 bg-green-50/50 p-10 text-center"><div className="font-display text-lg font-bold text-green-800">File critique vide</div><p className="mt-1 text-sm text-green-700">Aucun retard ou dossier sans prochaine action détecté.</p></div>}
+          <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-lg font-bold text-navy-900">À faire maintenant</h2><p className="text-xs text-grey-brand">Le commercial traite cette file de haut en bas.</p></div><span className="rounded-full bg-star-100 px-2.5 py-1 text-xs font-bold text-star-700">{maintenant.length}</span></div>
+          {maintenant.length ? <div className="space-y-3">{maintenant.slice(0, 40).map((item, i) => <WorkCard key={item.key} item={item} rank={i + 1}/>)}</div> : <div className="rounded-2xl border border-dashed border-green-200 bg-green-50/50 p-10 text-center"><div className="font-display text-lg font-bold text-green-800">File critique vide</div><p className="mt-1 text-sm text-green-700">Aucun retard, oubli ou renouvellement urgent détecté.</p></div>}
         </section>
 
         <div className="space-y-6">
           <section>
-            <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-lg font-bold text-navy-900">À réactiver</h2><p className="text-xs text-grey-brand">Les contrats futurs reviennent automatiquement dans le radar.</p></div><RotateCcw size={17} className="text-sky-capella-600"/></div>
-            {reactiver.length ? <div className="space-y-3">{reactiver.slice(0, 8).map((item) => <WorkCard key={item.prospect.id} item={item}/>)}</div> : <div className="rounded-2xl border border-dashed border-navy-200 bg-white p-6 text-center text-sm text-grey-brand">Aucune DDF à réactiver dans les 6 prochains mois.</div>}
+            <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-lg font-bold text-navy-900">À réactiver</h2><p className="text-xs text-grey-brand">Les affaires futures reviennent automatiquement dans le radar.</p></div><RotateCcw size={17} className="text-sky-capella-600"/></div>
+            {reactiver.length ? <div className="space-y-3">{reactiver.slice(0, 12).map((item) => <WorkCard key={item.key} item={item}/>)}</div> : <div className="rounded-2xl border border-dashed border-navy-200 bg-white p-6 text-center text-sm text-grey-brand">Aucune DDF ou échéance de contrat à réactiver dans les 6 prochains mois.</div>}
           </section>
 
           <section>
-            <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-lg font-bold text-navy-900">À travailler ensuite</h2><p className="text-xs text-grey-brand">Une fois la file critique terminée.</p></div><Clock3 size={17} className="text-navy-400"/></div>
-            {travail.length ? <div className="space-y-3">{travail.slice(0, 8).map((item) => <WorkCard key={item.prospect.id} item={item}/>)}</div> : <div className="rounded-2xl border border-dashed border-navy-200 bg-white p-6 text-center text-sm text-grey-brand">Aucun dossier actif à reprendre.</div>}
+            <div className="mb-3 flex items-center justify-between"><div><h2 className="font-display text-lg font-bold text-navy-900">À travailler ensuite</h2><p className="text-xs text-grey-brand">Le moteur classe la prospection active par ancienneté et risque d’oubli.</p></div><Clock3 size={17} className="text-navy-400"/></div>
+            {travail.length ? <div className="space-y-3">{travail.slice(0, 12).map((item) => <WorkCard key={item.key} item={item}/>)}</div> : <div className="rounded-2xl border border-dashed border-navy-200 bg-white p-6 text-center text-sm text-grey-brand">Aucun dossier supplémentaire à travailler.</div>}
           </section>
         </div>
-      </div></> : <div className="rounded-2xl border border-dashed border-green-200 bg-green-50/50 p-12 text-center shadow-sm"><div className="font-display text-lg font-bold text-green-800">Votre journée est à jour — aucune action prévue pour le moment.</div></div>}
+      </div>
     </main>
   );
 }
