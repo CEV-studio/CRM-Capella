@@ -9,7 +9,7 @@ import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 export const metadata = { title: "Ma journée — Capella CRM" };
 export const dynamic = "force-dynamic";
 
-type Row = Prospect & { became_client_at?: string | null };
+type Row = Prospect & { became_client_at?: string | null; stage_entered_at?: string | null };
 type WorkItem = {
   key: string;
   prospect: Row;
@@ -34,6 +34,10 @@ function label(p: Row) {
   return p.raison_sociale || [p.prenom, p.nom].filter(Boolean).join(" ") || "Prospect sans nom";
 }
 
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value.slice(0, 10)}T12:00:00Z`));
+}
+
 function energySummary(p: Row) {
   const bits: string[] = [];
   if (p.segment) bits.push(p.segment);
@@ -41,10 +45,6 @@ function energySummary(p: Row) {
   if (p.car_gaz) bits.push(`${p.car_gaz} MWh gaz`);
   if (p.date_fin_contrat) bits.push(`DDF ${formatDate(p.date_fin_contrat)}`);
   return bits.join(" · ");
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${value.slice(0, 10)}T12:00:00Z`));
 }
 
 function dateKeyParis(value: Date | string): string {
@@ -63,9 +63,9 @@ function datePlusDays(date: Date, days: number): string {
 }
 
 function daysUntil(date: string, today: string) {
-  const a = Date.UTC(...today.split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v) as [number, number, number]);
-  const b = Date.UTC(...date.slice(0, 10).split("-").map(Number).map((v, i) => i === 1 ? v - 1 : v) as [number, number, number]);
-  return Math.round((b - a) / 86_400_000);
+  const [ty, tm, td] = today.split("-").map(Number);
+  const [dy, dm, dd] = date.slice(0, 10).split("-").map(Number);
+  return Math.round((Date.UTC(dy, dm - 1, dd) - Date.UTC(ty, tm - 1, td)) / 86_400_000);
 }
 
 function WorkCard({ item, rank }: { item: WorkItem; rank?: number }) {
@@ -100,9 +100,8 @@ export default async function JourneePage() {
   const profile = await requireProfile();
   const supabase = await createClient();
   const now = new Date();
-  const today = dateKeyParis(now);
   const renewalHorizon = datePlusDays(now, 180);
-  const prospectColumns = "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, stage, next_action, next_action_date, last_action_at, date_fin_contrat, became_client_at, created_at, updated_at, segment, car_electricite, car_gaz, fournisseur_electricite, fournisseur_gaz, assigned_to";
+  const prospectColumns = "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, stage, stage_entered_at, next_action, next_action_date, last_action_at, date_fin_contrat, became_client_at, created_at, updated_at, segment, car_electricite, car_gaz, fournisseur_electricite, fournisseur_gaz, assigned_to";
 
   let prospectsQuery = (supabase as any)
     .from("prospects")
@@ -159,22 +158,22 @@ export default async function JourneePage() {
     })
     .filter((item): item is WorkItem => Boolean(item));
 
+  const today = dateKeyParis(now);
   const renewalItems = ((renewalData ?? []) as RenewalRow[])
     .map((row): WorkItem | null => {
       const prospect = Array.isArray(row.prospect) ? row.prospect[0] : row.prospect;
       if (!prospect || !row.date_echeance) return null;
       const remaining = daysUntil(row.date_echeance, today);
       const overdue = remaining < 0;
-      const urgent = overdue || remaining <= 60;
       return {
         key: `renewal-${row.id}`,
         prospect,
         event: null,
-        priority: overdue ? 119 : remaining <= 30 ? 106 : remaining <= 60 ? 98 : 90,
+        priority: overdue ? 121 : remaining <= 30 ? 108 : remaining <= 60 ? 100 : 92,
         bucket: overdue ? "maintenant" : "reactiver",
         reason: overdue ? "Contrat arrivé à échéance" : remaining === 0 ? "Contrat à renouveler aujourd’hui" : `Renouvellement dans ${remaining} jours`,
         detail: overdue ? "Client signé à reconquérir immédiatement." : "Ancien client signé : reprendre contact avant l’échéance pour sécuriser le renouvellement.",
-        urgent,
+        urgent: overdue || remaining <= 60,
         anomaly: overdue,
         renewalDate: row.date_echeance,
       };
@@ -195,7 +194,7 @@ export default async function JourneePage() {
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-star-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-star-700"><Target size={13}/>Cockpit commercial</div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-navy-900">Ma journée</h1>
-          <p className="mt-1 max-w-3xl text-sm text-navy-500">Le CRM analyse les prospects actifs, les rappels, les RDV comparatifs, les dossiers qui stagnent, les DDF futures et les anciens contrats signés à renouveler. La cible : zéro opportunité oubliée.</p>
+          <p className="mt-1 max-w-3xl text-sm text-navy-500">Le CRM analyse les prospects actifs, les rappels, les RDV comparatifs, le temps passé dans chaque étape, les DDF futures et les anciens contrats signés à renouveler. La cible : zéro opportunité oubliée.</p>
         </div>
         {top ? <Link href={`/prospection/${top.prospect.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-star-500 px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(232,96,48,.20)] hover:bg-star-600"><Flame size={17}/>Traiter le prospect prioritaire<ArrowRight size={16}/></Link> : null}
       </header>
