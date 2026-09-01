@@ -30,6 +30,7 @@ export function Filtres({ commerciaux, sources, total, vuesRapides, peutPersonna
       <select className={classeSelect} value={params.get("etape") ?? ""} onChange={e => majParam("etape", e.currentTarget.value)}><option value="">Toutes les étapes</option>{PROSPECTION_STAGES.map(s => <option key={s.label} value={s.label}>{s.label}</option>)}</select>
       {commerciaux.length > 0 ? <select className={classeSelect} value={params.get("commercial") ?? ""} onChange={e => majParam("commercial", e.currentTarget.value)}><option value="">Tous les commerciaux</option><option value="reservoir">— Réservoir (non attribués) —</option>{commerciaux.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}</select> : null}
       <select className={classeSelect} value={params.get("source") ?? ""} onChange={e => majParam("source", e.currentTarget.value)}><option value="">Toutes les sources</option>{sources.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select>
+      <select className={classeSelect} value={params.get("historique") ?? ""} onChange={e => majParam("historique", e.currentTarget.value)}><option value="">Tous les statuts historiques</option>{["PROSPECTION","Rappels","Demande de facture","Demande ACD","KO","Pas intéressé"].map(label => <option key={label} value={label}>{label}</option>)}</select>
     </div>
     <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-navy-100 pt-3 text-sm">
       <span className="mr-1 text-[11px] font-bold uppercase tracking-[.08em] text-grey-brand">Vues rapides</span>
