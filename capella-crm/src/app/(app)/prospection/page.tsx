@@ -18,14 +18,14 @@ export const dynamic = "force-dynamic";
 const PAR_PAGE=50;
 const TRIS={societe:{colonne:"raison_sociale",croissant:true,libelle:"Société"},action:{colonne:"last_action_at",croissant:false,libelle:"Dernière action"},relance:{colonne:"next_action_date",croissant:true,libelle:"Prochaine action"},etape:{colonne:"stage",croissant:true,libelle:"Étape"}} as const;
 type CleTri=keyof typeof TRIS;
-type Recherche={q?:string;etape?:string;categorie?:string;commercial?:string;source?:string;tri?:string;page?:string;vue?:string};
+type Recherche={q?:string;etape?:string;categorie?:string;commercial?:string;source?:string;historique?:string;tri?:string;page?:string;vue?:string};
 
 export default async function ProspectionPage({searchParams}:{searchParams:Promise<Recherche>}){
   const profil=await requireProfile(); const estAdmin=profil.role==="admin"; const filtres=await searchParams; const supabase=await createClient(); const db=supabase as any;
   const cleTri:CleTri=(filtres.tri??"action") in TRIS?(filtres.tri as CleTri)??"action":"action"; const tri=TRIS[cleTri]; const page=Math.max(1,Number(filtres.page??1)||1);
-  let requete=db.from("prospects").select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, notes, last_action_at, assigned_to, source_id, date_fin_contrat",{count:"exact"}).is("deleted_at",null).is("became_client_at",null);
+  let requete=db.from("prospects").select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, notes, last_action_at, assigned_to, source_id, date_fin_contrat, legacy_sheet",{count:"exact"}).is("deleted_at",null).is("became_client_at",null);
   if(filtres.etape) requete=requete.eq("stage",filtres.etape); else if(filtres.categorie){const etapes=PROSPECTION_STAGES.filter(s=>s.category===filtres.categorie).map(s=>s.label);if(etapes.length)requete=requete.in("stage",etapes);}
-  if(estAdmin&&filtres.commercial){if(filtres.commercial==="reservoir")requete=requete.is("assigned_to",null);else requete=requete.eq("assigned_to",filtres.commercial);} if(filtres.source)requete=requete.eq("source_id",filtres.source);
+  if(estAdmin&&filtres.commercial){if(filtres.commercial==="reservoir")requete=requete.is("assigned_to",null);else requete=requete.eq("assigned_to",filtres.commercial);} if(filtres.source)requete=requete.eq("source_id",filtres.source); if(filtres.historique)requete=requete.eq("legacy_sheet",filtres.historique);
   const q=(filtres.q??"").trim(); if(q){const chiffres=normalizeDigits(q);const motifs=[`raison_sociale.ilike.%${q}%`,`nom.ilike.%${q}%`,`prenom.ilike.%${q}%`,`mail.ilike.%${q}%`];if(chiffres)motifs.push(`siren_norm.like.%${chiffres}%`,`mobile_norm.like.%${chiffres}%`,`pdl_norm.like.%${chiffres}%`,`pce_norm.like.%${chiffres}%`);requete=requete.or(motifs.join(","));}
   const debut=(page-1)*PAR_PAGE;
   const [{data,count,error},{data:profils},sources,etapes]=await Promise.all([requete.order(tri.colonne,{ascending:tri.croissant,nullsFirst:false}).range(debut,debut+PAR_PAGE-1),estAdmin?supabase.from("profiles").select("id, full_name").order("full_name"):Promise.resolve({data:[] as Pick<Profile,"id"|"full_name">[]}),chargerSources(),chargerEtapesProspect()]);
