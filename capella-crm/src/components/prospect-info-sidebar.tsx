@@ -100,7 +100,8 @@ export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPer
       <Section title="Gestion du dossier" icon={BriefcaseBusiness}>
         <InfoRow label="Prochaine action"><EditableField prospectId={p.id} field="next_action" value={p.next_action}/></InfoRow>
         <InfoRow label="RDV comparatif">{nextComparatif ? <a href="/agenda" className="text-xs font-bold text-star-600 hover:text-star-700">{fmtRdv(nextComparatif.start_at)}</a> : <a href="/agenda" className="text-xs font-medium text-navy-300 hover:text-sky-capella-700">Non programmé</a>}</InfoRow>
-        <InfoRow label="Score"><EditableField prospectId={p.id} field="score" value={p.score} type="number" suffix="/5"/></InfoRow>
+        <InfoRow label="Score"><EditableField prospectId={p.id} field="score" value={p.score} type="number" suffix="/5"/></InfoRow>\n        <InfoRow label="Score Ellipro"><EditableField prospectId={p.id} field="score_ellipro" value={p.score_ellipro} type="number" suffix="/10"/></InfoRow>
+        <InfoRow label="Score Ellipro"><EditableField prospectId={p.id} field="score_ellipro" value={p.score_ellipro} type="number" suffix="/10"/></InfoRow>
         {isAdmin ? <InfoRow label="Commercial"><span className="text-xs font-semibold text-navy-900">{valeur(ownerName)}</span></InfoRow> : null}
         <InfoRow label="Source"><span className="text-xs font-semibold text-navy-900">{valeur(sourceName)}</span></InfoRow>
         {champs.map((c) => <InfoRow key={c.cle} label={c.libelle}><span className="text-xs font-semibold text-navy-900">{valeur(c.value)}</span></InfoRow>)}
