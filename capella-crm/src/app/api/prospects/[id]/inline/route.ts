@@ -7,10 +7,10 @@ const ALLOWED = new Set([
   "fournisseur_electricite", "fournisseur_gaz", "pdl", "pce",
   "car_electricite", "car_gaz", "option_tarifaire", "date_fin_contrat",
   "raison_sociale", "siren", "naf", "code_postal", "segment", "nb_sites",
-  "next_action", "next_action_date", "score",
+  "next_action", "next_action_date", "score", "score_ellipro", "score_ellipro",
 ]);
 
-const NUMBER_FIELDS = new Set(["car_electricite", "car_gaz", "nb_sites", "score"]);
+const NUMBER_FIELDS = new Set(["car_electricite", "car_gaz", "nb_sites", "score", "score_ellipro"]);
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   await requireProfile();
