@@ -21,6 +21,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const supabase = await createClient();
+  if(stage==="Demande ACD"){
+    const {data:acd}=await (supabase as any).from("acd_requests").select("id").eq("prospect_id",id).in("status",["a_traiter","en_cours","terminee"]).limit(1).maybeSingle();
+    if(!acd) return NextResponse.json({error:"Complète et envoie d’abord la demande d’ACD."},{status:400});
+  }
   const patch: { stage: string; ko_reason?: string | null; last_action_at: string } = {
     stage,
     last_action_at: new Date().toISOString(),
