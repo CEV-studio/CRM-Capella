@@ -39,4 +39,4 @@ export function AcdRequestForm({prospect}:{prospect:{id:string;raison_sociale:st
   </>;
 }
 
-function Field({label,defaultValue,...props}:{label:string;defaultValue?:string|null}&React.InputHTMLAttributes<HTMLInputElement>){return <label className="text-xs font-semibold text-navy-600">{label}<input {...props} defaultValue={defaultValue??""} className="mt-1.5 h-10 w-full rounded-xl border border-navy-200 bg-white px-3 text-sm font-normal text-navy-900 outline-none focus:border-sky-capella-400 focus:ring-2 focus:ring-sky-capella-100"/></label>}
+function Field({label,defaultValue,...props}:{label:string;defaultValue?:string|null}&Omit<React.InputHTMLAttributes<HTMLInputElement>,"defaultValue">){return <label className="text-xs font-semibold text-navy-600">{label}<input {...props} defaultValue={defaultValue??""} className="mt-1.5 h-10 w-full rounded-xl border border-navy-200 bg-white px-3 text-sm font-normal text-navy-900 outline-none focus:border-sky-capella-400 focus:ring-2 focus:ring-sky-capella-100"/></label>}
