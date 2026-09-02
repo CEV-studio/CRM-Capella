@@ -12,7 +12,6 @@ export async function POST(request:Request,{ params }:{ params:Promise<{id:strin
   const supabase = await createClient();
   const { data:prospect } = await supabase.from("prospects").select("id, stage, assigned_to").eq("id",id).is("deleted_at",null).maybeSingle();
   if (!prospect) return NextResponse.json({error:"Prospect introuvable."},{status:404});
-  if (prospect.stage !== "Demande ACD") return NextResponse.json({error:"Place d’abord la fiche à l’étape Demande ACD."},{status:400});
   if (profile.role !== "admin" && prospect.assigned_to !== profile.id) return NextResponse.json({error:"Cette fiche ne t’est pas attribuée."},{status:403});
 
   const siren=clean(body.siren).replace(/\s/g,"");
@@ -37,6 +36,7 @@ export async function POST(request:Request,{ params }:{ params:Promise<{id:strin
   if (error||!acd) return NextResponse.json({error:error?.message||"Création impossible."},{status:400});
   const { error:meterError }=await db.from("acd_request_meters").insert(meters.map((meter)=>({...meter,request_id:acd.id})));
   if (meterError) { await db.from("acd_requests").delete().eq("id",acd.id); return NextResponse.json({error:meterError.message},{status:400}); }
-  await supabase.from("prospects").update({last_action_at:new Date().toISOString()}).eq("id",id);
+  const {error:stageError}=await supabase.from("prospects").update({stage:"Demande ACD",last_action_at:new Date().toISOString()}).eq("id",id);
+  if(stageError){await db.from("acd_requests").delete().eq("id",acd.id);return NextResponse.json({error:stageError.message},{status:400});}
   return NextResponse.json({ok:true,id:acd.id});
 }
