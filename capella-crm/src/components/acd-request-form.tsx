@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Send, Trash2, X } from "lucide-react";
 
 type Meter = { energy_type:"electricite"|"gaz"; identifier:string; contract_expiry:string; address:string; postal_code:string; city:string };
 const emptyMeter=(energy_type:Meter["energy_type"]="electricite"):Meter=>({energy_type,identifier:"",contract_expiry:"",address:"",postal_code:"",city:""});
 
-export function AcdRequestForm({prospect}:{prospect:{id:string;raison_sociale:string|null;siren:string|null;siret:string|null;company_address:string|null;company_postal_code:string|null;company_city:string|null;prenom:string|null;nom:string|null;mail:string|null;telephone:string|null;pdl:string|null;pce:string|null;meters:Array<{type_energie:"electricite"|"gaz";numero:string;date_echeance:string|null;adresse:string|null;code_postal:string|null;ville:string|null}>}}) {
+export function AcdRequestForm({prospect,hiddenTrigger=false}:{prospect:{id:string;raison_sociale:string|null;siren:string|null;siret:string|null;company_address:string|null;company_postal_code:string|null;company_city:string|null;prenom:string|null;nom:string|null;mail:string|null;telephone:string|null;pdl:string|null;pce:string|null;meters:Array<{type_energie:"electricite"|"gaz";numero:string;date_echeance:string|null;adresse:string|null;code_postal:string|null;ville:string|null}>};hiddenTrigger?:boolean}) {
   const savedMeters:Meter[]=prospect.meters.map(m=>({energy_type:m.type_energie,identifier:m.numero,contract_expiry:m.date_echeance??"",address:m.adresse??"",postal_code:m.code_postal??"",city:m.ville??""}));
   const defaults:Meter[]=savedMeters.length?savedMeters:[...(prospect.pdl?[{...emptyMeter("electricite"),identifier:prospect.pdl}]:[]),...(prospect.pce?[{...emptyMeter("gaz"),identifier:prospect.pce}]:[])];
   const [open,setOpen]=useState(false); const [saving,setSaving]=useState(false); const [error,setError]=useState<string|null>(null);
   const [meters,setMeters]=useState<Meter[]>(defaults.length?defaults:[emptyMeter()]);
   const updateMeter=(index:number,patch:Partial<Meter>)=>setMeters(rows=>rows.map((row,i)=>i===index?{...row,...patch}:row));
+  useEffect(()=>{const openForm=()=>setOpen(true);window.addEventListener("open-acd-request",openForm);return()=>window.removeEventListener("open-acd-request",openForm)},[]);
 
   async function submit(event:React.FormEvent<HTMLFormElement>){
     event.preventDefault();setSaving(true);setError(null);const form=new FormData(event.currentTarget);
@@ -22,7 +23,7 @@ export function AcdRequestForm({prospect}:{prospect:{id:string;raison_sociale:st
   }
 
   return <>
-    <button type="button" onClick={()=>setOpen(true)} className="inline-flex h-9 items-center justify-center rounded-xl bg-star-500 px-4 text-xs font-bold text-white hover:bg-star-600"><Send size={14} className="mr-2"/>Créer la demande d&apos;ACD</button>
+    {!hiddenTrigger?<button type="button" onClick={()=>setOpen(true)} className="inline-flex h-9 items-center justify-center rounded-xl bg-star-500 px-4 text-xs font-bold text-white hover:bg-star-600"><Send size={14} className="mr-2"/>Créer la demande d&apos;ACD</button>:null}
     {open?<div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-navy-950/55 p-4 py-8"><div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl">
       <div className="flex items-start justify-between border-b border-navy-100 px-6 py-5"><div><h2 className="font-display text-xl font-bold text-navy-900">Demande d&apos;ACD</h2><p className="mt-1 text-sm text-grey-brand">Informations nécessaires pour Volto et YouSign.</p></div><button type="button" onClick={()=>setOpen(false)} className="rounded-lg p-2 text-navy-400 hover:bg-navy-50"><X size={20}/></button></div>
       <form onSubmit={submit} className="space-y-6 p-6">
