@@ -93,7 +93,8 @@ export default async function JourneePage() {
     .from("prospects")
     .select(prospectColumns)
     .is("deleted_at", null)
-    .is("entered_conversion_at", null);
+    .is("entered_conversion_at", null)
+    .eq("assigned_to", profile.id);
   let eventsQuery = (supabase as any)
     .from("calendar_events")
     .select("prospect_id, kind, title, start_at, end_at")
@@ -101,15 +102,13 @@ export default async function JourneePage() {
     .gte("start_at", new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString())
     .lt("start_at", new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString())
     .order("start_at", { ascending: true });
-  if (profile.role !== "admin") {
-    eventsQuery = eventsQuery.eq("profile_id", profile.id);
-  }
+  eventsQuery = eventsQuery.eq("profile_id", profile.id);
 
   const [{ data: prospectData }, { data: eventData, error }] = await Promise.all([prospectsQuery, eventsQuery]);
   const prospects = (prospectData ?? []) as Row[];
   const prospectsIndex = new Map(prospects.map((prospect) => [prospect.id, prospect]));
   const events = (eventData ?? []) as DisciplineEvent[];
-  const items = events.map((event): WorkItem | null => {
+  const eventItems = events.map((event): WorkItem | null => {
     const prospect = prospectsIndex.get(event.prospect_id);
     if (!prospect) return null;
     const overdue = new Date(event.start_at).getTime() < now.getTime();
@@ -119,6 +118,18 @@ export default async function JourneePage() {
   }).filter((item): item is WorkItem => Boolean(item))
     .sort((a, b) => b.priority - a.priority || label(a.prospect).localeCompare(label(b.prospect), "fr"));
   const today = dateKeyParis(now);
+  const eventProspectIds=new Set(eventItems.map(item=>item.prospect.id));
+  const crmItems=prospects.map((prospect):WorkItem|null=>{
+    if(eventProspectIds.has(prospect.id))return null;
+    const isReminder=prospect.stage==="Rappels";
+    const isComparatif=prospect.stage==="RDV comparatif";
+    if(!isReminder&&!isComparatif)return null;
+    const overdue=Boolean(isReminder&&prospect.next_action_date&&prospect.next_action_date<today);
+    const bucket=overdue?"retards":isComparatif?"comparatifs":"rappels";
+    const scheduled=prospect.next_action_date?`Prévu le ${formatDate(prospect.next_action_date)}`:null;
+    return {key:`crm-${bucket}-${prospect.id}`,prospect,event:null,priority:overdue?3:isComparatif?2:1,bucket,reason:overdue?"Rappel en retard":isComparatif?"Comparatif à présenter":"Rappel à effectuer",detail:[prospect.next_action,scheduled].filter(Boolean).join(" · ")||"À planifier depuis la fiche.",urgent:overdue,anomaly:overdue};
+  }).filter((item):item is WorkItem=>Boolean(item));
+  const items=[...eventItems,...crmItems].sort((a,b)=>b.priority-a.priority||label(a.prospect).localeCompare(label(b.prospect),"fr"));
   const ddfItems = prospects.map((prospect): WorkItem | null => {
     if (!prospect.date_fin_contrat) return null;
     const remaining = daysUntil(prospect.date_fin_contrat, today);
