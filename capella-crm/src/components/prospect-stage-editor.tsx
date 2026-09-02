@@ -1,56 +1,42 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { PROSPECTION_STAGES, stageColor } from "@/lib/domain/stages";
 
 export function ProspectStageEditor({ prospectId, stage }: { prospectId: string; stage: string }) {
-  const pathname = usePathname();
+  const router = useRouter();
   const [draft, setDraft] = useState(stage);
-  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string|null>(null);
   const [koReason, setKoReason] = useState("");
-  const draftRef = useRef(stage);
-  const dirtyRef = useRef(false);
-  const koReasonRef = useRef("");
 
-  function selectStage(next: string) {
+  async function selectStage(next: string) {
+    if (next === "Demande ACD") {
+      window.dispatchEvent(new CustomEvent("open-acd-request"));
+      return;
+    }
+    let reason = "";
     if (next === "KO") {
-      const reason = window.prompt("Pourquoi ce dossier est-il KO ?", koReasonRef.current)?.trim();
+      reason = window.prompt("Pourquoi ce dossier est-il KO ?", koReason)?.trim() ?? "";
       if (!reason) return;
-      koReasonRef.current = reason;
       setKoReason(reason);
     } else {
-      koReasonRef.current = "";
       setKoReason("");
     }
-    draftRef.current = next;
-    dirtyRef.current = next !== stage;
+    const previous=draft;
     setDraft(next);
-    setDirty(next !== stage);
-  }
-
-  function flush() {
-    if (!dirtyRef.current) return;
-    const body = JSON.stringify({ stage: draftRef.current, koReason: koReasonRef.current });
-    dirtyRef.current = false;
-    void fetch(`/api/prospects/${prospectId}/stage`, {
+    setSaving(true);setError(null);
+    const response=await fetch(`/api/prospects/${prospectId}/stage`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body,
-      keepalive: true,
-    }).catch(() => undefined);
+      body:JSON.stringify({ stage: next, koReason: reason }),
+    }).catch(()=>null);
+    const data=await response?.json().catch(()=>({})) as {error?:string}|undefined;
+    if(!response?.ok){setDraft(previous);setError(data?.error||"Enregistrement impossible.");setSaving(false);return;}
+    setSaving(false);router.refresh();
   }
-
-  useEffect(() => {
-    const initialPath = pathname;
-    const onPageHide = () => flush();
-    window.addEventListener("pagehide", onPageHide);
-    return () => {
-      window.removeEventListener("pagehide", onPageHide);
-      if (window.location.pathname !== initialPath) flush();
-    };
-  }, [prospectId, pathname]);
 
   return (
     <div className="inline-flex flex-col items-start gap-1">
@@ -66,7 +52,8 @@ export function ProspectStageEditor({ prospectId, stage }: { prospectId: string;
           {PROSPECTION_STAGES.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}
         </select>
       </label>
-      {dirty ? <span className="text-[9px] font-medium text-star-600">Sera enregistré en quittant la fiche</span> : null}
+      {saving ? <span className="text-[9px] font-medium text-star-600">Enregistrement…</span> : <span className="text-[9px] font-medium text-green-700">Enregistré automatiquement</span>}
+      {error ? <span className="max-w-72 text-[9px] font-medium text-red-600">{error}</span> : null}
       {draft === "KO" && koReason ? <span className="max-w-52 truncate text-[9px] text-navy-400" title={koReason}>{koReason}</span> : null}
     </div>
   );
