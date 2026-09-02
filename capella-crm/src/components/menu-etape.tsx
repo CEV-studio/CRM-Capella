@@ -60,6 +60,11 @@ export function MenuEtape({
           value={etape}
           onChange={(e) => {
             const prochaine = e.currentTarget.value;
+            if (prochaine === "Demande ACD") {
+              e.currentTarget.value = etape;
+              window.dispatchEvent(new CustomEvent("open-acd-request-from-list", { detail: { prospectId: id } }));
+              return;
+            }
             if (prochaine === "KO") {
               const raison = window.prompt("Pourquoi ce dossier est-il KO ?\nLe motif sera visible dans le CRM et côté ADV.", "")?.trim();
               if (!raison) {
