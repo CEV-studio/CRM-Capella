@@ -23,6 +23,7 @@ import { ProspectTopbar } from "@/components/prospect-topbar";
 import { CalendarPanel } from "@/components/calendar-panel";
 import { ProspectToolsModal } from "@/components/prospect-tools-modal";
 import { RelationContractHistory } from "@/components/relation-contract-history";
+import { AcdRequestForm } from "@/components/acd-request-form";
 import { chargerSources, chargerChampsPersonnalises } from "@/lib/referentiels";
 import { getCalendarAccount } from "@/lib/calendar";
 import type { CalendarEvent, ContactEntreprise, ContratEnergie, CrmContact, Entreprise, PieceJointe, Prospect, ProspectCompteur, Profile } from "@/lib/domain/database.types";
@@ -151,6 +152,9 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const contactCounts = new Map<string,number>();
   for (const relation of toutesRelationsContact ?? []) contactCounts.set(relation.contact_id, (contactCounts.get(relation.contact_id) ?? 0) + 1);
   const contactsLies = contactRows.map((row) => ({ ...row, entreprises_count:contactCounts.get(row.contact_id) ?? 1 }));
+  const { data: activeAcdRequest } = p.stage === "Demande ACD"
+    ? await (supabase as any).from("acd_requests").select("id, status, submitted_at").eq("prospect_id", p.id).in("status", ["a_traiter", "en_cours"]).maybeSingle()
+    : { data:null };
 
   return (
     <main className="mx-auto w-full max-w-[1760px] px-4 py-4 lg:px-6 2xl:px-8">
@@ -205,7 +209,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
 
           <RelationContractHistory prospectId={p.id} entreprise={(entrepriseData as Entreprise|null) ?? null} contacts={contactsLies} compteurs={(compteursData ?? []) as ProspectCompteur[]} contrats={(contratsData ?? []) as ContratEnergie[]} />
 
-          {p.stage === "Demande ACD" ? <section className="rounded-xl border border-star-200 bg-star-50 px-4 py-3">{estAdmin ? <a href={`/api/acd/${p.id}`} className="inline-flex h-9 items-center justify-center rounded-xl bg-star-500 px-4 text-xs font-bold text-white hover:bg-star-600">Télécharger l’ACD</a> : <form action={`/api/acd/${p.id}/demander`} method="post"><button type="submit" className="inline-flex h-9 items-center justify-center rounded-xl bg-star-500 px-4 text-xs font-bold text-white hover:bg-star-600">Demander l&apos;ACD</button></form>}</section> : null}
+          {p.stage === "Demande ACD" ? <section className="rounded-xl border border-star-200 bg-star-50 px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-sm font-bold text-navy-900">Demande d&apos;ACD</div><div className="mt-0.5 text-xs text-navy-500">{activeAcdRequest ? `Demande transmise · ${activeAcdRequest.status === "en_cours" ? "en cours de traitement" : "à traiter"}` : "Transmets à l’administrateur toutes les informations nécessaires pour Volto et YouSign."}</div></div>{activeAcdRequest ? <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold text-green-800">✓ Transmise</span> : <AcdRequestForm prospect={{id:p.id,raison_sociale:p.raison_sociale,siren:p.siren,siret:((compteursData??[]) as ProspectCompteur[]).find(c=>c.siret)?.siret??null,prenom:p.prenom,nom:p.nom,mail:p.mail,telephone:p.tel_mobile||p.tel_fixe,pdl:p.pdl,pce:p.pce,meters:((compteursData??[]) as ProspectCompteur[]).map(c=>({type_energie:c.type_energie,numero:c.numero,date_echeance:c.date_echeance,adresse:c.adresse}))}}/>}</div></section> : null}
 
           <ProspectActivity prospectId={p.id} emails={activityEmails} events={calendarEvents} pieces={piecesVisibles} />
 
