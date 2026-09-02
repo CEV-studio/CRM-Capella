@@ -2,41 +2,40 @@ import { NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-/**
- * Le commercial ne génère ni ne télécharge aucun PDF.
- * Le fait que le prospect soit à l'étape « Demande ACD » suffit à le faire
- * apparaître dans la file d'attente administrateur.
- */
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  await requireProfile();
+type MeterInput = { energy_type?:unknown; identifier?:unknown; contract_expiry?:unknown; address?:unknown; postal_code?:unknown; city?:unknown };
+const clean = (value:unknown) => String(value ?? "").trim();
+
+export async function POST(request:Request,{ params }:{ params:Promise<{id:string}> }) {
+  const profile = await requireProfile();
   const { id } = await params;
+  const body = await request.json().catch(() => ({})) as Record<string,unknown> & { meters?:MeterInput[] };
   const supabase = await createClient();
+  const { data:prospect } = await supabase.from("prospects").select("id, stage, assigned_to").eq("id",id).is("deleted_at",null).maybeSingle();
+  if (!prospect) return NextResponse.json({error:"Prospect introuvable."},{status:404});
+  if (prospect.stage !== "Demande ACD") return NextResponse.json({error:"Place d’abord la fiche à l’étape Demande ACD."},{status:400});
+  if (profile.role !== "admin" && prospect.assigned_to !== profile.id) return NextResponse.json({error:"Cette fiche ne t’est pas attribuée."},{status:403});
 
-  const { data: prospect } = await supabase
-    .from("prospects")
-    .select("id, stage")
-    .eq("id", id)
-    .is("deleted_at", null)
-    .maybeSingle();
+  const siren=clean(body.siren).replace(/\s/g,"");
+  const siret=clean(body.siret).replace(/\s/g,"");
+  const required:[string,string][]=[["raison sociale",clean(body.raison_sociale)],["SIREN",siren],["SIRET",siret],["prénom du signataire",clean(body.signatory_first_name)],["nom du signataire",clean(body.signatory_last_name)],["e-mail du signataire",clean(body.signatory_email)],["téléphone du signataire",clean(body.signatory_phone)],["fonction du signataire",clean(body.signatory_role)]];
+  const missing=required.filter(([,value])=>!value).map(([label])=>label);
+  if (missing.length) return NextResponse.json({error:`Champs manquants : ${missing.join(", ")}.`},{status:400});
+  if (!/^\d{9}$/.test(siren)) return NextResponse.json({error:"Le SIREN doit contenir 9 chiffres."},{status:400});
+  if (!/^\d{14}$/.test(siret) || !siret.startsWith(siren)) return NextResponse.json({error:"Le SIRET doit contenir 14 chiffres et commencer par le SIREN."},{status:400});
+  if (!["representant_legal","mandataire"].includes(clean(body.signatory_capacity))) return NextResponse.json({error:"Qualité du signataire invalide."},{status:400});
 
-  if (!prospect) {
-    return new NextResponse("Prospect introuvable", { status: 404 });
-  }
+  const meters=(Array.isArray(body.meters)?body.meters:[]).map((meter,index)=>({ position:index, energy_type:clean(meter.energy_type), identifier:clean(meter.identifier).replace(/\s/g,""), contract_expiry:clean(meter.contract_expiry), address:clean(meter.address)||null, postal_code:clean(meter.postal_code)||null, city:clean(meter.city)||null }));
+  if (!meters.length) return NextResponse.json({error:"Ajoute au moins un PDL ou un PCE."},{status:400});
+  const invalid=meters.find((meter)=>!["electricite","gaz"].includes(meter.energy_type)||!/^\d{14}$/.test(meter.identifier)||!/^\d{4}-\d{2}-\d{2}$/.test(meter.contract_expiry));
+  if (invalid) return NextResponse.json({error:"Chaque compteur doit avoir une énergie, un PDL/PCE de 14 chiffres et une échéance."},{status:400});
 
-  if (prospect.stage !== "Demande ACD") {
-    return new NextResponse(
-      "Le prospect doit être à l'étape Demande ACD",
-      { status: 400 },
-    );
-  }
-
-  // Aucun fichier n'est créé ici : la génération est strictement réservée
-  // à l'admin depuis la page « ACD à traiter ».
-  return NextResponse.redirect(
-    new URL(`/prospection/${id}?acd=transmise`, request.url),
-    303,
-  );
+  const db=supabase as any;
+  const { data:active }=await db.from("acd_requests").select("id").eq("prospect_id",id).in("status",["a_traiter","en_cours"]).maybeSingle();
+  if (active) return NextResponse.json({error:"Une demande d’ACD est déjà en cours pour cette fiche."},{status:409});
+  const { data:acd,error }=await db.from("acd_requests").insert({ prospect_id:id, requested_by:profile.id, raison_sociale:clean(body.raison_sociale), siren, siret, signatory_first_name:clean(body.signatory_first_name), signatory_last_name:clean(body.signatory_last_name), signatory_email:clean(body.signatory_email), signatory_phone:clean(body.signatory_phone), signatory_capacity:clean(body.signatory_capacity), signatory_role:clean(body.signatory_role), notes:clean(body.notes)||null }).select("id").single();
+  if (error||!acd) return NextResponse.json({error:error?.message||"Création impossible."},{status:400});
+  const { error:meterError }=await db.from("acd_request_meters").insert(meters.map((meter)=>({...meter,request_id:acd.id})));
+  if (meterError) { await db.from("acd_requests").delete().eq("id",acd.id); return NextResponse.json({error:meterError.message},{status:400}); }
+  await supabase.from("prospects").update({last_action_at:new Date().toISOString()}).eq("id",id);
+  return NextResponse.json({ok:true,id:acd.id});
 }
