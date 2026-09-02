@@ -155,6 +155,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const { data: activeAcdRequest } = p.stage === "Demande ACD"
     ? await (supabase as any).from("acd_requests").select("id, status, submitted_at").eq("prospect_id", p.id).in("status", ["a_traiter", "en_cours"]).maybeSingle()
     : { data:null };
+  const acdProspect={id:p.id,raison_sociale:p.raison_sociale,siren:p.siren,siret:((compteursData??[]) as ProspectCompteur[]).find(c=>c.siret)?.siret??null,company_address:(entrepriseData as Entreprise|null)?.adresse??null,company_postal_code:(entrepriseData as Entreprise|null)?.code_postal??p.code_postal,company_city:(entrepriseData as Entreprise|null)?.ville??null,prenom:p.prenom,nom:p.nom,mail:p.mail,telephone:p.tel_mobile||p.tel_fixe,pdl:p.pdl,pce:p.pce,meters:((compteursData??[]) as ProspectCompteur[]).map(c=>({type_energie:c.type_energie,numero:c.numero,date_echeance:c.date_echeance,adresse:c.adresse,code_postal:c.code_postal,ville:c.ville}))};
 
   return (
     <main className="mx-auto w-full max-w-[1760px] px-4 py-4 lg:px-6 2xl:px-8">
@@ -173,7 +174,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h1 className="font-display text-2xl font-bold leading-tight text-navy-900 lg:text-[30px]">{prospectLabel}</h1>
-                    <ProspectStageEditor prospectId={p.id} stage={p.stage} />
+                    <ProspectStageEditor prospectId={p.id} stage={p.stage} />{p.stage!=="Demande ACD"?<AcdRequestForm prospect={acdProspect} hiddenTrigger/>:null}
                     {p.segment ? <span className="rounded-full bg-navy-50 px-2.5 py-1 text-[11px] font-semibold text-navy-600">{p.segment}</span> : null}
                     {p.ref ? <span className="text-[11px] font-semibold tabular text-grey-brand">{p.ref}</span> : null}
                   </div>
@@ -209,7 +210,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
 
           <RelationContractHistory prospectId={p.id} entreprise={(entrepriseData as Entreprise|null) ?? null} contacts={contactsLies} compteurs={(compteursData ?? []) as ProspectCompteur[]} contrats={(contratsData ?? []) as ContratEnergie[]} />
 
-          {p.stage === "Demande ACD" ? <section className="rounded-xl border border-star-200 bg-star-50 px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-sm font-bold text-navy-900">Demande d&apos;ACD</div><div className="mt-0.5 text-xs text-navy-500">{activeAcdRequest ? `Demande transmise · ${activeAcdRequest.status === "en_cours" ? "en cours de traitement" : "à traiter"}` : "Transmets à l’administrateur toutes les informations nécessaires pour Volto et YouSign."}</div></div>{activeAcdRequest ? <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold text-green-800">✓ Transmise</span> : <AcdRequestForm prospect={{id:p.id,raison_sociale:p.raison_sociale,siren:p.siren,siret:((compteursData??[]) as ProspectCompteur[]).find(c=>c.siret)?.siret??null,company_address:(entrepriseData as Entreprise|null)?.adresse??null,company_postal_code:(entrepriseData as Entreprise|null)?.code_postal??p.code_postal,company_city:(entrepriseData as Entreprise|null)?.ville??null,prenom:p.prenom,nom:p.nom,mail:p.mail,telephone:p.tel_mobile||p.tel_fixe,pdl:p.pdl,pce:p.pce,meters:((compteursData??[]) as ProspectCompteur[]).map(c=>({type_energie:c.type_energie,numero:c.numero,date_echeance:c.date_echeance,adresse:c.adresse,code_postal:c.code_postal,ville:c.ville}))}}/>}</div></section> : null}
+          {p.stage === "Demande ACD" ? <section className="rounded-xl border border-star-200 bg-star-50 px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-sm font-bold text-navy-900">Demande d&apos;ACD</div><div className="mt-0.5 text-xs text-navy-500">{activeAcdRequest ? `Demande transmise · ${activeAcdRequest.status === "en_cours" ? "en cours de traitement" : "à traiter"}` : "Transmets à l’administrateur toutes les informations nécessaires pour Volto et YouSign."}</div></div>{activeAcdRequest ? <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold text-green-800">✓ Transmise</span> : <AcdRequestForm prospect={acdProspect}/>}</div></section> : null}
 
           <ProspectActivity prospectId={p.id} emails={activityEmails} events={calendarEvents} pieces={piecesVisibles} />
 
