@@ -45,7 +45,7 @@ const NAV: { titre: string; items: NavItem[] }[] = [
   ] },
   { titre: "Admin", items: [
     { href: "/adv", label: "ADV", icon: ShieldCheck, adminOnly: true },
-    { href: "/admin/acd", label: "ACD à traiter", icon: FileCheck2, adminOnly: true },
+    { href: "/admin/acd", label: "Demandes d’ACD", icon: FileCheck2, adminOnly: true },
     { href: "/admin/emails", label: "Emails & templates", icon: MailCheck, adminOnly: true },
     { href: "/admin/boites-email", label: "Boîtes e-mail", icon: Inbox, adminOnly: true },
     { href: "/admin/commerciaux", label: "Commerciaux", icon: Users, adminOnly: true },
