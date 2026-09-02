@@ -5,6 +5,19 @@ import { createClient } from "@/lib/supabase/server";
 type MeterInput = { energy_type?:unknown; identifier?:unknown; contract_expiry?:unknown; address?:unknown; postal_code?:unknown; city?:unknown };
 const clean = (value:unknown) => String(value ?? "").trim();
 
+export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){
+  await requireProfile();
+  const {id}=await params;
+  const supabase=await createClient();const db=supabase as any;
+  const {data:prospect}=await db.from("prospects").select("id,raison_sociale,siren,prenom,nom,mail,tel_mobile,tel_fixe,pdl,pce,code_postal,entreprise_id").eq("id",id).is("deleted_at",null).maybeSingle();
+  if(!prospect)return NextResponse.json({error:"Prospect introuvable."},{status:404});
+  const [{data:company},{data:meters}]=await Promise.all([
+    prospect.entreprise_id?db.from("entreprises").select("adresse,code_postal,ville").eq("id",prospect.entreprise_id).maybeSingle():Promise.resolve({data:null}),
+    prospect.entreprise_id?db.from("prospect_compteurs").select("type_energie,numero,siret,date_echeance,adresse,code_postal,ville").eq("entreprise_id",prospect.entreprise_id).is("archived_at",null).order("created_at"):Promise.resolve({data:[]}),
+  ]);
+  return NextResponse.json({id:prospect.id,raison_sociale:prospect.raison_sociale,siren:prospect.siren,siret:(meters??[]).find((meter:any)=>meter.siret)?.siret??null,company_address:company?.adresse??null,company_postal_code:company?.code_postal??prospect.code_postal,company_city:company?.ville??null,prenom:prospect.prenom,nom:prospect.nom,mail:prospect.mail,telephone:prospect.tel_mobile||prospect.tel_fixe,pdl:prospect.pdl,pce:prospect.pce,meters:(meters??[]).map((meter:any)=>({type_energie:meter.type_energie,numero:meter.numero,date_echeance:meter.date_echeance,adresse:meter.adresse,code_postal:meter.code_postal,ville:meter.ville}))});
+}
+
 export async function POST(request:Request,{ params }:{ params:Promise<{id:string}> }) {
   const profile = await requireProfile();
   const { id } = await params;
