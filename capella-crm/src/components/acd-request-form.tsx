@@ -6,10 +6,12 @@ import { Plus, Send, Trash2, X } from "lucide-react";
 type Meter = { energy_type:"electricite"|"gaz"; identifier:string; contract_expiry:string; address:string; postal_code:string; city:string };
 const emptyMeter=(energy_type:Meter["energy_type"]="electricite"):Meter=>({energy_type,identifier:"",contract_expiry:"",address:"",postal_code:"",city:""});
 
-export function AcdRequestForm({prospect,hiddenTrigger=false}:{prospect:{id:string;raison_sociale:string|null;siren:string|null;siret:string|null;company_address:string|null;company_postal_code:string|null;company_city:string|null;prenom:string|null;nom:string|null;mail:string|null;telephone:string|null;pdl:string|null;pce:string|null;meters:Array<{type_energie:"electricite"|"gaz";numero:string;date_echeance:string|null;adresse:string|null;code_postal:string|null;ville:string|null}>};hiddenTrigger?:boolean}) {
+export type AcdProspectPrefill={id:string;raison_sociale:string|null;siren:string|null;siret:string|null;company_address:string|null;company_postal_code:string|null;company_city:string|null;prenom:string|null;nom:string|null;mail:string|null;telephone:string|null;pdl:string|null;pce:string|null;meters:Array<{type_energie:"electricite"|"gaz";numero:string;date_echeance:string|null;adresse:string|null;code_postal:string|null;ville:string|null}>};
+
+export function AcdRequestForm({prospect,hiddenTrigger=false,openImmediately=false}:{prospect:AcdProspectPrefill;hiddenTrigger?:boolean;openImmediately?:boolean}) {
   const savedMeters:Meter[]=prospect.meters.map(m=>({energy_type:m.type_energie,identifier:m.numero,contract_expiry:m.date_echeance??"",address:m.adresse??"",postal_code:m.code_postal??"",city:m.ville??""}));
   const defaults:Meter[]=savedMeters.length?savedMeters:[...(prospect.pdl?[{...emptyMeter("electricite"),identifier:prospect.pdl}]:[]),...(prospect.pce?[{...emptyMeter("gaz"),identifier:prospect.pce}]:[])];
-  const [open,setOpen]=useState(false); const [saving,setSaving]=useState(false); const [error,setError]=useState<string|null>(null);
+  const [open,setOpen]=useState(openImmediately); const [saving,setSaving]=useState(false); const [error,setError]=useState<string|null>(null);
   const [meters,setMeters]=useState<Meter[]>(defaults.length?defaults:[emptyMeter()]);
   const updateMeter=(index:number,patch:Partial<Meter>)=>setMeters(rows=>rows.map((row,i)=>i===index?{...row,...patch}:row));
   useEffect(()=>{const openForm=()=>setOpen(true);window.addEventListener("open-acd-request",openForm);return()=>window.removeEventListener("open-acd-request",openForm)},[]);
