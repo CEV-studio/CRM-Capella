@@ -28,6 +28,7 @@ export const COLONNES_IMPORT: Colonne[] = [
   { entete: "SIREN", champ: "siren", exemple: "812345678" },
   { entete: "PDL", champ: "pdl", exemple: "01234567890123" },
   { entete: "PCE", champ: "pce", exemple: "" },
+  { entete: "Puissance", champ: "puissance", exemple: "36 kVA" },
   { entete: "CAR Électricité", champ: "car_electricite", exemple: "120", type: "decimal" },
   { entete: "CAR Gaz", champ: "car_gaz", exemple: "", type: "decimal" },
   { entete: "Option tarifaire", champ: "option_tarifaire", exemple: "BTINFCU4" },
