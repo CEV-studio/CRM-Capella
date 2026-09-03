@@ -32,7 +32,7 @@ const TABLES: {
       ["ref", "ID"], ["raison_sociale", "Raison Sociale"], ["nom", "Nom"], ["prenom", "Prénom"],
       ["mail", "Mail"], ["tel_mobile", "Tel Mobile"], ["tel_fixe", "Tel Fixe"],
       ["siren", "SIREN"], ["pdl", "PDL"], ["pce", "PCE"],
-      ["car_electricite", "CAR Électricité"], ["car_gaz", "CAR Gaz"],
+      ["puissance", "Puissance compteur"], ["car_electricite", "CAR Électricité"], ["car_gaz", "CAR Gaz"],
       ["option_tarifaire", "Option tarifaire"], ["code_postal", "Code postal"],
       ["naf", "NAF"], ["nb_sites", "Nb sites"], ["segment", "Segment"],
       ["score", "Score"],
