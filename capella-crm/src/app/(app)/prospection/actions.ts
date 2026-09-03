@@ -122,7 +122,7 @@ export async function enregistrerNotes(_prev: ActionResult | null, formData: For
 const CHAMPS_FICHE = [
   "nom", "prenom", "mail", "tel_mobile", "tel_fixe",
   "raison_sociale", "siren", "naf", "code_postal", "segment",
-  "pdl", "pce", "option_tarifaire",
+  "pdl", "pce", "puissance", "option_tarifaire",
   "fournisseur_electricite", "fournisseur_gaz", "notes", "next_action", "ko_reason",
 ] as const;
 const CHAMPS_DATE = ["date_fin_contrat", "next_action_date"] as const;
