@@ -141,7 +141,7 @@ def prospect_from(sheet,rownum,v):
         "siren":digits(v.get(10)),"segment":clean(v.get(12)),"score":int(float(v.get(13))) if clean(v.get(13)) else None,
         "option_tarifaire":clean(v.get(14)),"code_postal":clean(v.get(15)),"naf":clean(v.get(16)),
         "nb_sites":int(float(v.get(17))) if clean(v.get(17)) else None,"fournisseur_electricite":clean(v.get(18)),
-        "date_fin_contrat":dff,"pdl":clean(v.get(22)),"pce":clean(v.get(23)),
+        "date_fin_contrat":dff,"pdl":clean(v.get(22)),"pce":clean(v.get(23)),"puissance":clean(v.get(11)),
         "_source":clean(v.get(20)) or "Ancien CRM"
     }
 
