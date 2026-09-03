@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const ALLOWED = new Set([
   "prenom", "nom", "mail", "tel_mobile", "tel_fixe",
-  "fournisseur_electricite", "fournisseur_gaz", "pdl", "pce",
+  "fournisseur_electricite", "fournisseur_gaz", "pdl", "pce", "puissance",
   "car_electricite", "car_gaz", "option_tarifaire", "date_fin_contrat",
   "raison_sociale", "siren", "naf", "code_postal", "segment", "nb_sites",
   "next_action", "next_action_date", "score", "score_ellipro", "score_ellipro",
