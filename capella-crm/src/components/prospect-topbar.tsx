@@ -42,7 +42,7 @@ export function ProspectTopbar() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Rechercher un prospect, une entreprise…"
+            placeholder="Rechercher dans toutes les informations…"
             className="h-10 w-full rounded-xl border border-navy-200 bg-white pl-9 pr-14 text-sm text-navy-900 shadow-sm placeholder:text-navy-300 focus:border-sky-capella-500 focus:outline-none focus:ring-2 focus:ring-sky-capella-100"
           />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-navy-100 bg-navy-50 px-1.5 py-0.5 text-[10px] font-semibold text-navy-400">⌘K</span>
