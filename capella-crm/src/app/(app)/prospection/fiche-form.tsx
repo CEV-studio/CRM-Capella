@@ -43,6 +43,7 @@ export function FicheForm({ prospect, sources, commerciaux, estAdmin, champsPers
     <Card><CardHeader title="Énergie" hint="Ce qui sert à construire le comparatif." /><div className="grid gap-4 px-5 py-4 sm:grid-cols-2 lg:grid-cols-3">
       <Field label="PDL (électricité)"><Input name="pdl" defaultValue={prospect?.pdl ?? ""} inputMode="numeric" /></Field>
       <Field label="PCE (gaz)"><Input name="pce" defaultValue={prospect?.pce ?? ""} inputMode="numeric" /></Field>
+      <Field label="Puissance compteur"><Input name="puissance" defaultValue={prospect?.puissance ?? ""} placeholder="36 kVA" /></Field>
       <Field label="CAR Électricité (MWh)"><Input name="car_electricite" defaultValue={prospect?.car_electricite ?? ""} inputMode="decimal" placeholder="120" /></Field>
       <Field label="CAR Gaz (MWh)"><Input name="car_gaz" defaultValue={prospect?.car_gaz ?? ""} inputMode="decimal" placeholder="0" /></Field>
       <Field label="Option tarifaire"><Input name="option_tarifaire" defaultValue={prospect?.option_tarifaire ?? ""} /></Field>
