@@ -92,6 +92,7 @@ export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPer
         <InfoRow label="Fin de contrat"><EditableField prospectId={p.id} field="date_fin_contrat" value={p.date_fin_contrat} type="date"/></InfoRow>
         <InfoRow label="PDL"><EditableField prospectId={p.id} field="pdl" value={p.pdl}/></InfoRow>
         <InfoRow label="PCE"><EditableField prospectId={p.id} field="pce" value={p.pce}/></InfoRow>
+        <InfoRow label="Puissance compteur"><EditableField prospectId={p.id} field="puissance" value={p.puissance}/></InfoRow>
         <InfoRow label="CAR élec"><EditableField prospectId={p.id} field="car_electricite" value={p.car_electricite} type="number" suffix=" MWh"/></InfoRow>
         <InfoRow label="CAR gaz"><EditableField prospectId={p.id} field="car_gaz" value={p.car_gaz} type="number" suffix=" MWh"/></InfoRow>
         <InfoRow label="Option tarifaire"><EditableField prospectId={p.id} field="option_tarifaire" value={p.option_tarifaire}/></InfoRow>
