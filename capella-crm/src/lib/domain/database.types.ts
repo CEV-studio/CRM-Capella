@@ -13,7 +13,7 @@ export type StageRow = { label:string; category:string; color:string; sort_order
 export type Prospect = {
   id:string; ref:string|null; nom:string|null; prenom:string|null; mail:string|null; tel_mobile:string|null; tel_fixe:string|null;
   raison_sociale:string|null; siren:string|null; naf:string|null; code_postal:string|null; nb_sites:number|null; segment:string|null;
-  pdl:string|null; pce:string|null; car_electricite:number|null; car_gaz:number|null; option_tarifaire:string|null;
+  pdl:string|null; pce:string|null; puissance:string|null; car_electricite:number|null; car_gaz:number|null; option_tarifaire:string|null;
   fournisseur_electricite:string|null; fournisseur_gaz:string|null; date_fin_contrat:string|null; champs_perso:Record<string,string>;
   stage:string; next_action:string|null; next_action_date:string|null; notes:string|null; ko_reason:string|null; score:number|null; score_ellipro:number|null; last_action_at:string|null;
   source_id:string|null; assigned_to:string|null; assigned_at:string|null; entreprise_id:string|null; deleted_at:string|null; acd_downloaded_at:string|null;
