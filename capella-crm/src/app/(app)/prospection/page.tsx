@@ -26,7 +26,25 @@ export default async function ProspectionPage({searchParams}:{searchParams:Promi
   let requete=db.from("prospects").select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, notes, last_action_at, assigned_to, source_id, date_fin_contrat, legacy_sheet",{count:"exact"}).is("deleted_at",null).is("became_client_at",null);
   if(filtres.etape) requete=requete.eq("stage",filtres.etape); else if(filtres.categorie){const etapes=PROSPECTION_STAGES.filter(s=>s.category===filtres.categorie).map(s=>s.label);if(etapes.length)requete=requete.in("stage",etapes);}
   if(estAdmin&&filtres.commercial){if(filtres.commercial==="reservoir")requete=requete.is("assigned_to",null);else requete=requete.eq("assigned_to",filtres.commercial);} if(filtres.source)requete=requete.eq("source_id",filtres.source); if(filtres.historique)requete=requete.eq("legacy_sheet",filtres.historique);
-  const q=(filtres.q??"").trim(); if(q){const chiffres=normalizeDigits(q);const motifs=[`raison_sociale.ilike.%${q}%`,`nom.ilike.%${q}%`,`prenom.ilike.%${q}%`,`mail.ilike.%${q}%`];if(chiffres)motifs.push(`siren_norm.like.%${chiffres}%`,`mobile_norm.like.%${chiffres}%`,`pdl_norm.like.%${chiffres}%`,`pce_norm.like.%${chiffres}%`);requete=requete.or(motifs.join(","));}
+  const q=(filtres.q??"").trim(); if(q){
+    // `or()` reçoit la syntaxe PostgREST brute : neutraliser ses séparateurs
+    // évite qu'une recherche contenant une virgule ou des parenthèses casse la requête.
+    const mot=q.replace(/[,%()]/g," ").replace(/\s+/g," ").trim();
+    const chiffres=normalizeDigits(q);
+    const motifs=[
+      "ref","raison_sociale","nom","prenom","mail","tel_mobile","tel_fixe",
+      "siren","naf","code_postal","segment","pdl","pce","puissance",
+      "option_tarifaire","fournisseur_electricite","fournisseur_gaz","stage",
+      "next_action","notes","ko_reason","legacy_sheet","legacy_stage",
+    ].map(champ=>`${champ}.ilike.%${mot}%`);
+    if(chiffres)motifs.push(`siren_norm.like.%${chiffres}%`,`mobile_norm.like.%${chiffres}%`,`pdl_norm.like.%${chiffres}%`,`pce_norm.like.%${chiffres}%`);
+    if(/^\d+(?:[.,]\d+)?$/.test(q)){
+      const nombre=q.replace(",",".");
+      motifs.push(`score.eq.${nombre}`,`score_ellipro.eq.${nombre}`,`nb_sites.eq.${nombre}`,`car_electricite.eq.${nombre}`,`car_gaz.eq.${nombre}`);
+    }
+    if(/^\d{4}-\d{2}-\d{2}$/.test(q))motifs.push(`date_fin_contrat.eq.${q}`,`next_action_date.eq.${q}`);
+    requete=requete.or(motifs.join(","));
+  }
   const debut=(page-1)*PAR_PAGE;
   const [{data,count,error},{data:profils},sources,etapes]=await Promise.all([requete.order(tri.colonne,{ascending:tri.croissant,nullsFirst:false}).range(debut,debut+PAR_PAGE-1),estAdmin?supabase.from("profiles").select("id, full_name").order("full_name"):Promise.resolve({data:[] as Pick<Profile,"id"|"full_name">[]}),chargerSources(),chargerEtapesProspect()]);
   const autorisees=new Set(PROSPECTION_STAGES.map(s=>s.label)); const vuesRapides=etapes.filter(s=>s.quick_filter&&autorisees.has(s.label as any)).map(s=>s.label);
