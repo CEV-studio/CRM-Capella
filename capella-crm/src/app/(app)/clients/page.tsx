@@ -55,17 +55,30 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const etapes = CLIENT_STAGES.filter((s) => s.label !== "Demande de cotation");
   const labels = etapes.map((s) => s.label);
 
-  const resultat: any = await db
-    .from("prospects")
-    .select("id, ref, raison_sociale, nom, prenom, stage, became_client_at")
-    .is("deleted_at", null)
-    .not("became_client_at", "is", null)
-    .is("entered_conversion_at", null)
-    .in("stage", labels)
-    .order("became_client_at", { ascending: true });
+  const [resultat, affairesResultat] = await Promise.all([
+    db
+      .from("prospects")
+      .select("id, ref, raison_sociale, nom, prenom, stage, became_client_at")
+      .is("deleted_at", null)
+      .not("became_client_at", "is", null)
+      .is("entered_conversion_at", null)
+      .in("stage", labels)
+      .order("became_client_at", { ascending: true }),
+    db
+      .from("affaires")
+      .select("prospect_id")
+      .is("deleted_at", null)
+      .not("prospect_id", "is", null),
+  ]);
 
-  const clients = (resultat?.data ?? []) as Row[];
-  const erreur = resultat?.error?.message as string | undefined;
+  // Une affaire déjà suivie par l'ADV ne doit plus réapparaître dans les
+  // dossiers en cours, même si un ancien import n'a pas renseigné
+  // entered_conversion_at sur le prospect.
+  const prospectIdsDansAdv = new Set<string>(
+    (affairesResultat?.data ?? []).map((affaire: { prospect_id: string }) => affaire.prospect_id),
+  );
+  const clients = ((resultat?.data ?? []) as Row[]).filter((client) => !prospectIdsDansAdv.has(client.id));
+  const erreur = (resultat?.error?.message ?? affairesResultat?.error?.message) as string | undefined;
   const kanban = filtres.vue === "kanban";
 
   return (
