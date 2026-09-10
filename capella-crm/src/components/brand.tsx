@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export function CapellaStar({ className }: { className?: string }) {
   return (
     <img
-      src="/capella-avatar.svg"
+      src="/capella-symbol.webp"
       alt=""
       aria-hidden="true"
       className={cn("h-6 w-6 shrink-0 rounded-full object-contain", className)}
@@ -23,7 +23,7 @@ export function Logotype({
   return (
     <div className={cn("w-52", className)}>
       <img
-        src="/capella-logo.svg"
+        src="/capella-logo.webp"
         alt="Capella Energy"
         className="block h-auto w-full object-contain"
       />
