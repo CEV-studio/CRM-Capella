@@ -52,6 +52,7 @@ export default async function NouvelleAffairePage({
         pce_gaz: p.pce,
         fournisseur: p.fournisseur_electricite,
         date_echeance: p.date_fin_contrat,
+        sans_engagement: p.sans_engagement,
         notes: p.notes,
         stage: "Demande de cotation",
       } as Partial<Affaire> & { prospect_id: string; source_id: string | null })

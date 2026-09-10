@@ -59,6 +59,8 @@ function lireFormulaire(formData: FormData) {
   if (stage) patch.stage = stage;
   const apporteur = String(formData.get("apporteur_id") ?? "").trim();
   patch.apporteur_id = apporteur || null;
+  patch.sans_engagement = formData.get("sans_engagement") === "on";
+  if (patch.sans_engagement) patch.date_echeance = null;
   const car = String(formData.get("car_mwh") ?? "").replace(",", ".").trim();
   patch.car_mwh = car ? Number(car) : null;
 
@@ -151,6 +153,7 @@ export async function convertirProspect(_prev: ActionResult | null, formData: Fo
     raison_sociale: raison, siren: p.siren, nom: p.nom, prenom: p.prenom, mail: p.mail,
     telephone: p.tel_mobile ?? p.tel_fixe, pdl_elec: p.pdl, pce_gaz: p.pce,
     fournisseur: p.fournisseur_electricite, date_echeance: p.date_fin_contrat,
+    sans_engagement: p.sans_engagement,
     notes: p.notes, stage: "Demande de cotation", created_by: profil.id,
   }).select("id").single();
   if (error) return { ok: false, message: error.message };

@@ -89,6 +89,7 @@ export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPer
         <InfoRow label="Segment"><EditableField prospectId={p.id} field="segment" value={p.segment}/></InfoRow>
         <InfoRow label="Fournisseur élec"><EditableField prospectId={p.id} field="fournisseur_electricite" value={p.fournisseur_electricite}/></InfoRow>
         <InfoRow label="Fournisseur gaz"><EditableField prospectId={p.id} field="fournisseur_gaz" value={p.fournisseur_gaz}/></InfoRow>
+        <InfoRow label="Engagement"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${p.sans_engagement ? "bg-green-100 text-green-800" : "bg-navy-50 text-navy-600"}`}>{p.sans_engagement ? "Sans engagement" : "Avec engagement"}</span></InfoRow>
         <InfoRow label="Fin de contrat"><EditableField prospectId={p.id} field="date_fin_contrat" value={p.date_fin_contrat} type="date"/></InfoRow>
         <InfoRow label="PDL"><EditableField prospectId={p.id} field="pdl" value={p.pdl}/></InfoRow>
         <InfoRow label="PCE"><EditableField prospectId={p.id} field="pce" value={p.pce}/></InfoRow>

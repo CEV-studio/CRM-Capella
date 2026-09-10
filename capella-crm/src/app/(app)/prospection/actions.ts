@@ -53,6 +53,7 @@ async function creerCotationDepuisProspect(id: string, profilId: string) {
     pce_gaz: p.pce,
     fournisseur: p.fournisseur_electricite ?? p.fournisseur_gaz,
     date_echeance: p.date_fin_contrat,
+    sans_engagement: p.sans_engagement,
     notes: p.notes,
     stage: "Demande de cotation",
     created_by: profilId,
@@ -151,6 +152,8 @@ function lireFormulaire(formData: FormData): ProspectInsert {
   if (stage) patch.stage = stage;
   const source = String(formData.get("source_id") ?? "").trim();
   patch.source_id = source || null;
+  patch.sans_engagement = formData.get("sans_engagement") === "on";
+  if (patch.sans_engagement) patch.date_fin_contrat = null;
   const champsPerso: Record<string, string> = {};
   for (const [nom, valeur] of formData.entries()) {
     if (!nom.startsWith("perso_")) continue;

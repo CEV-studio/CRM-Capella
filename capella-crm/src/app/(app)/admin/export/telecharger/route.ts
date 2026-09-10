@@ -38,7 +38,7 @@ const TABLES: {
       ["score", "Score"],
       ["fournisseur_electricite", "Fournisseur Élec"],
       ["fournisseur_gaz", "Fournisseur Gaz"],
-      ["date_fin_contrat", "Date fin contrat"], ["stage", "Étape"],
+      ["date_fin_contrat", "Date fin contrat"], ["sans_engagement", "Sans engagement"], ["stage", "Étape"],
       ["next_action", "Prochaine action"], ["next_action_date", "Date prochaine action"],
       ["notes", "Notes"], ["last_action_at", "Dernière action"],
       ["_source", "Source"], ["_commercial", "Commercial assigné"],

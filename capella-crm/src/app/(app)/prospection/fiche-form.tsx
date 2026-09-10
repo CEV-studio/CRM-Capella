@@ -50,6 +50,7 @@ export function FicheForm({ prospect, sources, commerciaux, estAdmin, champsPers
       <Field label="Fournisseur Élec"><select name="fournisseur_electricite" defaultValue={prospect?.fournisseur_electricite ?? ""} className={classeSelect}><option value="">—</option>{FOURNISSEURS.map((f)=><option key={f} value={f}>{f}</option>)}</select></Field>
       <Field label="Fournisseur Gaz"><select name="fournisseur_gaz" defaultValue={prospect?.fournisseur_gaz ?? ""} className={classeSelect}><option value="">—</option>{FOURNISSEURS.map((f)=><option key={f} value={f}>{f}</option>)}</select></Field>
       <Field label="Date de fin de contrat" hint="Obligatoire pour l'étape « DFF trop éloigné »."><Input name="date_fin_contrat" type="date" defaultValue={prospect?.date_fin_contrat ?? ""} /></Field>
+      <label className="flex min-h-10 items-center gap-3 rounded-lg border border-navy-200 bg-navy-50/40 px-3 text-sm font-semibold text-navy-800"><input name="sans_engagement" type="checkbox" defaultChecked={prospect?.sans_engagement ?? false} className="h-4 w-4 accent-orange-500"/><span>Contrat sans engagement</span></label>
     </div></Card>
 
     {champsPerso.length > 0 ? <Card><CardHeader title="Champs personnalisés" hint="Les informations propres à ton activité." /><div className="grid gap-4 px-5 py-4 sm:grid-cols-2 lg:grid-cols-3">{champsPerso.map((c)=><Field key={c.cle} label={c.libelle}><Input name={`perso_${c.cle}`} defaultValue={prospect?.champs_perso?.[c.cle] ?? ""} /></Field>)}</div></Card> : null}
