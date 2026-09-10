@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { BriefcaseBusiness, Building2, Pencil, UserRound, Zap } from "lucide-react";
 import type { CalendarEvent, Prospect } from "@/lib/domain/database.types";
 
@@ -56,6 +57,33 @@ function EditableField({ prospectId, field, value, type = "text", suffix }: Edit
   return <button type="button" onClick={() => { setDraft(current); setEditing(true); }} className="group inline-flex max-w-full items-center justify-end gap-1.5 rounded-lg px-1.5 py-1 text-right text-xs font-semibold text-navy-900 transition hover:bg-sky-capella-50 hover:text-sky-capella-700" title="Cliquer pour modifier"><span className={`min-w-0 break-words ${current ? "" : "font-medium text-navy-300"}`}>{current ? `${current}${suffix ?? ""}` : "Non renseigné"}</span><Pencil size={11} className="shrink-0 opacity-0 transition group-hover:opacity-100"/>{saving ? <span className="text-[10px] text-grey-brand">…</span> : null}</button>;
 }
 
+function EditableEngagement({ prospectId, value }: { prospectId: string; value: boolean }) {
+  const router = useRouter();
+  const [current, setCurrent] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function toggle() {
+    if (saving) return;
+    const next = !current;
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/prospects/${prospectId}/inline`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ field: "sans_engagement", value: next }) });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Enregistrement impossible.");
+      setCurrent(next);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Enregistrement impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return <div><button type="button" onClick={() => void toggle()} disabled={saving} className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold transition hover:ring-2 hover:ring-star-300 disabled:opacity-60 ${current ? "bg-green-100 text-green-800" : "bg-navy-50 text-navy-600"}`} title="Cliquer pour changer">{saving ? "Enregistrement…" : current ? "Sans engagement" : "Avec engagement"}</button>{error ? <div className="mt-1 text-[10px] text-red-700">{error}</div> : null}</div>;
+}
+
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.3fr)] items-center gap-3 py-2.5"><dt className="text-xs font-medium leading-5 text-navy-400">{label}</dt><dd className="min-w-0 text-right">{children}</dd></div>;
 }
@@ -89,8 +117,8 @@ export function ProspectInfoSidebar({ prospect, ownerName, sourceName, champsPer
         <InfoRow label="Segment"><EditableField prospectId={p.id} field="segment" value={p.segment}/></InfoRow>
         <InfoRow label="Fournisseur élec"><EditableField prospectId={p.id} field="fournisseur_electricite" value={p.fournisseur_electricite}/></InfoRow>
         <InfoRow label="Fournisseur gaz"><EditableField prospectId={p.id} field="fournisseur_gaz" value={p.fournisseur_gaz}/></InfoRow>
-        <InfoRow label="Engagement"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${p.sans_engagement ? "bg-green-100 text-green-800" : "bg-navy-50 text-navy-600"}`}>{p.sans_engagement ? "Sans engagement" : "Avec engagement"}</span></InfoRow>
-        <InfoRow label="Fin de contrat"><EditableField prospectId={p.id} field="date_fin_contrat" value={p.date_fin_contrat} type="date"/></InfoRow>
+        <InfoRow label="Engagement"><EditableEngagement prospectId={p.id} value={p.sans_engagement}/></InfoRow>
+        <InfoRow label="Fin de contrat"><EditableField key={String(p.sans_engagement)} prospectId={p.id} field="date_fin_contrat" value={p.date_fin_contrat} type="date"/></InfoRow>
         <InfoRow label="PDL"><EditableField prospectId={p.id} field="pdl" value={p.pdl}/></InfoRow>
         <InfoRow label="PCE"><EditableField prospectId={p.id} field="pce" value={p.pce}/></InfoRow>
         <InfoRow label="Puissance compteur"><EditableField prospectId={p.id} field="puissance" value={p.puissance}/></InfoRow>
