@@ -23,7 +23,7 @@ export async function POST(request:Request,{ params }:{ params:Promise<{id:strin
   const { id } = await params;
   const body = await request.json().catch(() => ({})) as Record<string,unknown> & { meters?:MeterInput[] };
   const supabase = await createClient();
-  const { data:prospect } = await supabase.from("prospects").select("id, stage, assigned_to").eq("id",id).is("deleted_at",null).maybeSingle();
+  const { data:prospect } = await supabase.from("prospects").select("id, stage, assigned_to, entreprise_id").eq("id",id).is("deleted_at",null).maybeSingle();
   if (!prospect) return NextResponse.json({error:"Prospect introuvable."},{status:404});
   if (profile.role !== "admin" && prospect.assigned_to !== profile.id) return NextResponse.json({error:"Cette fiche ne t’est pas attribuée."},{status:403});
 
@@ -49,7 +49,52 @@ export async function POST(request:Request,{ params }:{ params:Promise<{id:strin
   if (error||!acd) return NextResponse.json({error:error?.message||"Création impossible."},{status:400});
   const { error:meterError }=await db.from("acd_request_meters").insert(meters.map((meter)=>({...meter,request_id:acd.id})));
   if (meterError) { await db.from("acd_requests").delete().eq("id",acd.id); return NextResponse.json({error:meterError.message},{status:400}); }
-  const {error:stageError}=await supabase.from("prospects").update({stage:"Demande ACD",last_action_at:new Date().toISOString()}).eq("id",id);
-  if(stageError){await db.from("acd_requests").delete().eq("id",acd.id);return NextResponse.json({error:stageError.message},{status:400});}
+
+  const premierPdl=meters.find((meter)=>meter.energy_type==="electricite")?.identifier??null;
+  const premierPce=meters.find((meter)=>meter.energy_type==="gaz")?.identifier??null;
+  const premiereEcheance=[...meters].sort((a,b)=>a.contract_expiry.localeCompare(b.contract_expiry))[0]?.contract_expiry??null;
+  const {error:prospectError}=await supabase.from("prospects").update({
+    raison_sociale:clean(body.raison_sociale),
+    siren,
+    prenom:clean(body.signatory_first_name),
+    nom:clean(body.signatory_last_name),
+    mail:clean(body.signatory_email),
+    tel_mobile:clean(body.signatory_phone),
+    code_postal:clean(body.company_postal_code),
+    ...(premierPdl?{pdl:premierPdl}:{}),
+    ...(premierPce?{pce:premierPce}:{}),
+    date_fin_contrat:premiereEcheance,
+    stage:"Demande ACD",
+    last_action_at:new Date().toISOString(),
+  }).eq("id",id);
+  if(prospectError){await db.from("acd_requests").delete().eq("id",acd.id);return NextResponse.json({error:prospectError.message},{status:400});}
+
+  if(prospect.entreprise_id){
+    const {error:companyError}=await db.from("entreprises").update({
+      raison_sociale:clean(body.raison_sociale),
+      siren,
+      adresse:clean(body.company_address),
+      code_postal:clean(body.company_postal_code),
+      ville:clean(body.company_city),
+    }).eq("id",prospect.entreprise_id);
+    if(companyError)return NextResponse.json({error:`ACD créée, mais la fiche entreprise n’a pas pu être mise à jour : ${companyError.message}`},{status:400});
+  }
+
+  for(const meter of meters){
+    const {data:existing,error:lookupError}=await db.from("prospect_compteurs").select("id").eq("prospect_id",id).eq("type_energie",meter.energy_type).eq("numero",meter.identifier).is("archived_at",null).limit(1).maybeSingle();
+    if(lookupError)return NextResponse.json({error:`ACD créée, mais la recherche du compteur ${meter.identifier} a échoué : ${lookupError.message}`},{status:400});
+    const compteurPatch={
+      entreprise_id:prospect.entreprise_id??null,
+      siret,
+      date_echeance:meter.contract_expiry,
+      adresse:meter.address,
+      code_postal:meter.postal_code,
+      ville:meter.city,
+    };
+    const compteurResult=existing
+      ? await db.from("prospect_compteurs").update(compteurPatch).eq("id",existing.id)
+      : await db.from("prospect_compteurs").insert({prospect_id:id,type_energie:meter.energy_type,numero:meter.identifier,...compteurPatch});
+    if(compteurResult.error)return NextResponse.json({error:`ACD créée, mais le compteur ${meter.identifier} n’a pas pu être enregistré dans la fiche : ${compteurResult.error.message}`},{status:400});
+  }
   return NextResponse.json({ok:true,id:acd.id});
 }
