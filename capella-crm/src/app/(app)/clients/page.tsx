@@ -93,7 +93,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
             <Link href="/clients?vue=liste" className={!kanban ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white" : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700"}>Liste</Link>
             <Link href="/clients?vue=kanban" className={kanban ? "rounded-md bg-navy-800 px-3 py-1.5 text-sm font-semibold text-white" : "rounded-md px-3 py-1.5 text-sm font-semibold text-navy-700"}>Kanban</Link>
           </div>
-          <Link href="/conversion" className="inline-flex h-10 items-center rounded-lg border border-navy-200 bg-white px-4 text-sm font-semibold text-navy-700">Mes cotations</Link>
+          <Link href="/conversion" className="inline-flex h-10 items-center rounded-lg border border-navy-200 bg-white px-4 text-sm font-semibold text-navy-700">Demandes de cotation</Link>
         </div>
       </header>
 

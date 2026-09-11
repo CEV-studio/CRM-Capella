@@ -5,7 +5,7 @@ import { AffaireForm } from "../affaire-form";
 import { chargerApporteurs } from "@/lib/referentiels";
 import type { Affaire, Profile, Prospect } from "@/lib/domain/database.types";
 
-export const metadata = { title: "Nouvelle affaire — Capella CRM" };
+export const metadata = { title: "Nouvelle demande de cotation — Capella CRM" };
 export const dynamic = "force-dynamic";
 
 export default async function NouvelleAffairePage({
@@ -69,7 +69,7 @@ export default async function NouvelleAffairePage({
 
       <header className="mt-3 mb-6">
         <h1 className="font-display text-2xl font-bold text-navy-800">
-          Nouvelle affaire
+          Nouvelle demande de cotation
         </h1>
         <p className="mt-1 text-sm text-grey-brand">
           {p

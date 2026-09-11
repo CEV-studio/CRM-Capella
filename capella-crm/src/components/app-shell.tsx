@@ -35,7 +35,7 @@ const NAV: { titre: string; items: NavItem[] }[] = [
     { href: "/journee", label: "Ma journée", icon: Target },
     { href: "/prospection", label: "Prospection", icon: BarChart3 },
     { href: "/clients", label: "Dossiers en cours", icon: Users },
-    { href: "/conversion", label: "Mes cotations", icon: BriefcaseBusiness },
+    { href: "/conversion", label: "Demandes de cotation", icon: BriefcaseBusiness },
     { href: "/mes-clients", label: "Mes clients", icon: Building2 },
     { href: "/commissions", label: "Mes commissions", icon: CircleDollarSign },
     { href: "/agenda", label: "Mon agenda", icon: CalendarDays },

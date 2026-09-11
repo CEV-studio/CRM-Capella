@@ -8,7 +8,7 @@ import { Carte, type CarteAffaire } from "./carte";
 import { chargerApporteurs } from "@/lib/referentiels";
 import type { Affaire } from "@/lib/domain/database.types";
 
-export const metadata={title:"Cotations — Capella CRM"};
+export const metadata={title:"Demandes de cotation — Capella CRM"};
 export const dynamic="force-dynamic";
 const CARTES_PAR_COLONNE=40;
 const ETAPES_COMMERCIALES=AFFAIRE_STAGES.filter(s=>s.label!=="Signé");
@@ -31,7 +31,7 @@ export default async function ConversionPage(){
  const taux=affaires.length?validesAdv.length/affaires.length:0;
 
  return <main className="w-full px-6 py-8">
-  <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h1 className="font-display text-2xl font-bold text-navy-800">Mes cotations</h1><p className="mt-1 text-sm text-grey-brand">Tu pilotes la cotation jusqu’à sa validation finale. La validation et la commission globale sont réservées à l’ADV.</p></div><Link href="/clients" className="inline-flex h-10 items-center rounded-lg border border-navy-200 bg-white px-4 text-sm font-semibold text-navy-700">← Clients</Link></header>
+  <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h1 className="font-display text-2xl font-bold text-navy-800">Demandes de cotation</h1><p className="mt-1 text-sm text-grey-brand">Retrouve ici les demandes de cotation transmises depuis les dossiers en cours, puis suis-les jusqu’à leur validation finale.</p></div><Link href="/clients" className="inline-flex h-10 items-center rounded-lg border border-navy-200 bg-white px-4 text-sm font-semibold text-navy-700">← Dossiers en cours</Link></header>
   <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><KpiTile label="Validés ADV" value={String(validesAdv.length)}/><KpiTile label="Ma commission validée" value={fmtEuros(maCommission)} hint={`Taux ${(Number(profil.commission_rate)*100).toFixed(0)} %`}/><KpiTile label="En cours" value={String(enCours.length)}/><KpiTile label="Taux de validation" value={`${(taux*100).toFixed(1).replace(".",",")} %`}/></div>
   {error?<p className="text-sm text-red-700">Lecture impossible : {error.message}</p>:null}
   <div className="scroll-slim overflow-x-auto pb-3"><div className="flex min-w-max gap-4">
