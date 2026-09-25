@@ -27,7 +27,9 @@ export async function creerCommercial(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireManage();
+  const actor = await requireManage();
+  const role = formData.get("role") === "apporteur" ? "apporteur" : "commercial";
+  if(role === "apporteur" && actor.role !== "admin")return {ok:false,message:"Seul l’administrateur peut créer un apporteur."};
 
   const nom = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -43,7 +45,7 @@ export async function creerCommercial(
   const admin = createAdminClient();
   const motDePasse = genererMotDePasse();
 
-  const { error } = await admin.auth.admin.createUser({
+  const { data: created, error } = await admin.auth.admin.createUser({
     email,
     password: motDePasse,
     email_confirm: true, // pas d'email de confirmation : Jeremy transmet lui-même
@@ -67,6 +69,10 @@ export async function creerCommercial(
     };
   }
 
+  if(role === "apporteur" && created.user){
+    const {error:roleError}=await admin.from("profiles").update({role:"apporteur",can_export:false,can_view_all:false,can_manage_team:false}).eq("id",created.user.id);
+    if(roleError){await admin.auth.admin.deleteUser(created.user.id);return {ok:false,message:`Création annulée : ${roleError.message}`};}
+  }
   revalidatePath("/admin/commerciaux");
   return {
     ok: true,
@@ -192,4 +198,12 @@ export async function modifierPermissions(
 
   revalidatePath("/admin/commerciaux");
   return { ok: true, message: "Permissions mises à jour." };
+}
+
+export async function modifierRole(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
+ const p=await requireManage();if(p.role!=="admin")return {ok:false,message:"Réservé à l’administrateur."};
+ const id=String(formData.get("id")??"");const role=formData.get("role");
+ if(id===p.id||!['commercial','apporteur'].includes(String(role)))return {ok:false,message:"Modification interdite."};
+ const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'apporteur',can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin");
+ revalidatePath("/admin/commerciaux");return {ok:!error,message:error?.message??"Rôle mis à jour."};
 }

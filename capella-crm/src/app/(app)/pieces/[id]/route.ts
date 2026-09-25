@@ -19,7 +19,7 @@ export async function GET(
     .maybeSingle();
 
   if (!piece) return new NextResponse("Introuvable", { status: 404 });
-  if (piece.type === "ACD" && profile.role !== "admin") {
+  if (piece.type === "ACD" && profile.role !== "admin" && profile.role !== "apporteur") {
     return new NextResponse("Accès réservé à l'administrateur", { status: 403 });
   }
 

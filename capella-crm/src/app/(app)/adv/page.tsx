@@ -23,6 +23,9 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
   supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active",true).order("full_name"),
  ]);
 
+ const [{data:checks,error:checksError},{data:partnerQuotes}]=await Promise.all([supabase.from("affaire_adv_checks").select("affaire_id,verification_calls"),supabase.from("partner_quotes").select("affaire_id,dossier_id")]);
+ const checkMap=new Map((checks??[]).map(c=>[c.affaire_id,c.verification_calls]));
+ const partnerMap=new Map((partnerQuotes??[]).map(c=>[c.affaire_id,c.dossier_id]));
  const affairesAdv=(affaires??[]) as AffaireAdv[];
  const prospectIds=[...new Set(affairesAdv.map(a=>a.prospect_id).filter((id):id is string=>Boolean(id)))];
  const {data:rdvs}=prospectIds.length
@@ -43,7 +46,7 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
 
  const listeProfils=((profils??[]) as Pick<Profile,"id"|"full_name"|"commission_rate">[]);
  const map=new Map(listeProfils.map(p=>[p.id,p]));
- const toutes=affairesAdv.map(a=>{const p=map.get(a.commercial_id);return{id:a.id,ref:a.ref,raison_sociale:a.raison_sociale,stage:a.stage,commission:Number(a.commission??0),date_signature:a.date_signature,ko_reason:a.ko_reason,commercial:p?.full_name??"—",commercialId:a.commercial_id,taux:Number(p?.commission_rate??0),prospectId:a.prospect_id,rdvComparatif:a.prospect_id?rdvMap.get(a.prospect_id)??null:null}});
+ const toutes=affairesAdv.map(a=>{const p=map.get(a.commercial_id);return{verificationAvailable:!checksError,verificationCalls:checkMap.get(a.id)??false,partnerDossierId:partnerMap.get(a.id),id:a.id,ref:a.ref,raison_sociale:a.raison_sociale,stage:a.stage,commission:Number(a.commission??0),date_signature:a.date_signature,ko_reason:a.ko_reason,commercial:p?.full_name??"—",commercialId:a.commercial_id,taux:Number(p?.commission_rate??0),prospectId:a.prospect_id,rdvComparatif:a.prospect_id?rdvMap.get(a.prospect_id)??null:null}});
 
  const q=(filtres.q??"").trim().toLowerCase();
  const statut=filtres.statut??"a_traiter";

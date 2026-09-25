@@ -1,5 +1,6 @@
+import type { Dossier, Quote } from "@/lib/partners/types";
 /** Types manuels de la base Supabase — miroir des migrations. */
-export type Role = "admin" | "commercial";
+export type Role = "admin" | "commercial" | "apporteur";
 export type PaymentStatus = "À payer" | "Payé" | "En attente";
 export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 
@@ -37,7 +38,7 @@ export type Affaire = {
   legacy_ref:string|null; legacy_payload:Record<string,unknown>; created_by:string|null; created_at:string; updated_at:string;
 };
 
-export type PieceJointe = { id:string; type:"ACD"|"Facture"; prospect_id:string|null; affaire_id:string|null; bucket_path:string; file_name:string; mime:string|null; taille:number|null; uploaded_by:string|null; created_at:string };
+export type PieceJointe = { id:string; type:"ACD"|"Facture"|"Contrat"|"Offre"; prospect_id:string|null; affaire_id:string|null; bucket_path:string; file_name:string; mime:string|null; taille:number|null; uploaded_by:string|null; created_at:string };
 export type LeadAssignment = { id:number; prospect_id:string; from_user:string|null; to_user:string|null; assigned_by:string|null; reason:string|null; created_at:string };
 export type FormSubmission = { id:string; source:string; external_id:string; submitted_at:string|null; payload:Record<string,unknown>; affaire_id:string|null; processed_at:string|null; error:string|null; created_at:string };
 export type ImportRun = { id:string; kind:string; source_name:string; mode:"dry-run"|"apply"; status:"started"|"completed"|"failed"; stats:Record<string,unknown>; error:string|null; created_by:string|null; created_at:string; completed_at:string|null };
@@ -81,7 +82,7 @@ export type ProspectInsert = Partial<Writable<Prospect,"id"|"ref"|"siren_norm"|"
 export type ProspectUpdate = ProspectInsert;
 export type AffaireInsert = Partial<Writable<Affaire,"id"|"ref"|"created_at"|"updated_at">> & { raison_sociale:string; commercial_id:string };
 export type AffaireUpdate = Partial<AffaireInsert>;
-export type PieceJointeInsert = Partial<Writable<PieceJointe,"id"|"created_at">> & { type:"ACD"|"Facture"; bucket_path:string; file_name:string };
+export type PieceJointeInsert = Partial<Writable<PieceJointe,"id"|"created_at">> & { type:"ACD"|"Facture"|"Contrat"|"Offre"; bucket_path:string; file_name:string };
 export type EmailAccountInsert = Partial<Writable<EmailAccount,"id"|"created_at"|"updated_at">> & { email:string; refresh_token_enc:string; scope:string };
 export type EmailAccountMemberInsert = Partial<EmailAccountMember> & { email_account_id:string; profile_id:string };
 export type EmailTemplateInsert = Partial<Writable<EmailTemplate,"id"|"created_at"|"updated_at">> & { name:string };
@@ -96,6 +97,11 @@ export interface Database {
   public: {
     Tables: {
       profiles:Table<Profile>;
+      partner_dossiers:Table<Dossier>;
+      partner_quotes:Table<Quote>;
+      partner_messages:Table<{id:string;dossier_id:string;quote_id:string|null;author_id:string;kind:string;body:string;created_at:string}>;
+      crm_notifications:Table<{id:string;recipient_id:string;actor_id:string|null;dossier_id:string|null;title:string;body:string;href:string;read_at:string|null;email_to:string;email_status:string;email_error:string|null;email_attempt_at:string|null;created_at:string}>;
+      affaire_adv_checks:Table<{affaire_id:string;verification_calls:boolean;checked_by:string|null;updated_at:string}>;
       prospects:Table<Prospect,ProspectInsert,ProspectUpdate>;
       entreprises:Table<Entreprise>;
       crm_contacts:Table<CrmContact>;
@@ -123,6 +129,7 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      partner_command:{Args:{p_action:string;p_id:string;p_data?:Record<string,unknown>};Returns:string};
       is_admin:{ Args:Record<never,never>; Returns:boolean };
       is_active_user:{ Args:Record<never,never>; Returns:boolean };
       can_view_all:{ Args:Record<never,never>; Returns:boolean };

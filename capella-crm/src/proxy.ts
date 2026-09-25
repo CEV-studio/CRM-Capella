@@ -57,6 +57,19 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // A partner cannot use the legacy prospecting/commission/API routes.
+  const partnerAllowed = ["/partenaires", "/notifications", "/api/partenaires", "/api/notifications", "/pieces", "/changer-mot-de-passe", "/deconnexion"].some(prefix=>path===prefix||path.startsWith(prefix+"/"));
+  if (userId && !isPublic && !partnerAllowed) {
+    const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",userId).maybeSingle();
+    if(profile?.role === "apporteur") {
+      {
+        if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});
+        const url=request.nextUrl.clone();url.pathname="/partenaires/opportunites";url.search="";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   // Générateur ACD : accessible directement uniquement à l'admin.
   // La route serveur /demander peut l'appeler avec le secret interne,
   // qui n'est jamais envoyé au navigateur du commercial.

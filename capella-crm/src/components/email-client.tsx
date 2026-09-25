@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { EmailMessage } from "@/lib/domain/database.types";
 
 type TemplateLite = { id: string; name: string; subject: string; body: string };
-type PieceLite = { id: string; file_name: string; type: "ACD" | "Facture" };
+type PieceLite = { id: string; file_name: string; type: "ACD" | "Facture" | "Contrat" | "Offre" };
 
 function injecterBalises(text: string, variables: Record<string, string>): string {
   return text.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_match, key: string) => variables[key] ?? "");

@@ -1,0 +1,6 @@
+import Link from 'next/link';
+import {requireProfile} from '@/lib/auth';
+import {createClient} from '@/lib/supabase/server';
+import {fmtDateHeure} from '@/lib/format';
+import {NotificationActions} from '@/components/partner-forms';
+export default async function Page(){const p=await requireProfile();const db=await createClient();const {data,error}=await db.from('crm_notifications').select('*').eq('recipient_id',p.id).order('created_at',{ascending:false}).limit(100);return <main className="mx-auto max-w-4xl space-y-5 px-6 py-8"><h1 className="text-2xl font-bold">Notifications</h1>{p.role==='admin'?<NotificationActions retry/>:null}{error?<p>Notifications indisponibles : vérifiez la migration de base.</p>:null}{(data??[]).map(n=><article key={n.id} className={`space-y-2 rounded-xl border p-4 ${n.read_at?'border-navy-100 bg-white':'border-star-300 bg-star-50'}`}><Link href={n.href} className="font-semibold text-navy-900">{n.title}</Link><p className="text-sm">{n.body}</p><p className="text-xs text-grey-brand">{fmtDateHeure(n.created_at)}</p>{p.role==='admin'?<p className="text-xs">Mail : {n.email_status==='sent'?'envoyé':n.email_status==='failed'?`à relancer — ${n.email_error}`:'en attente'}</p>:null}{!n.read_at?<NotificationActions id={n.id}/>:null}</article>)}{!error&&!data?.length?<p>Aucune notification pour le moment.</p>:null}</main>;}

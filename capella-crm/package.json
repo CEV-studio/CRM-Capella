@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:partners": "node tests/partner-workflow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
@@ -21,6 +22,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

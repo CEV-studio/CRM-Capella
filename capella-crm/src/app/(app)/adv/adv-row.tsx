@@ -9,7 +9,7 @@ import { AFFAIRE_STAGES } from "@/lib/domain/stages";
 import { fmtEuros, fmtDate } from "@/lib/format";
 
 type RdvComparatif={start_at:string;html_link:string|null;title:string};
-type AdvData={id:string;ref:string|null;raison_sociale:string;stage:string;commercial:string;taux:number;commission:number;date_signature:string|null;ko_reason:string|null;prospectId:string|null;rdvComparatif:RdvComparatif|null};
+type AdvData={verificationAvailable?:boolean;verificationCalls?:boolean;partnerDossierId?:string;id:string;ref:string|null;raison_sociale:string;stage:string;commercial:string;taux:number;commission:number;date_signature:string|null;ko_reason:string|null;prospectId:string|null;rdvComparatif:RdvComparatif|null};
 
 function fmtRdv(value:string){return new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",weekday:"short",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(value)).replace(","," à");}
 
@@ -42,10 +42,12 @@ export function AdvRow({a}:{a:AdvData}){
    {valide&&a.date_signature?<div className="mt-3 text-xs text-green-700">Comptabilisé le {fmtDate(a.date_signature)}</div>:a.commission>0?<div className="mt-3 text-xs text-amber-700">Commission renseignée · validation finale à faire</div>:<div className="mt-3 text-xs text-grey-brand">Commission à renseigner</div>}
   </>:null}
 
+  {a.partnerDossierId?<Link href={`/partenaires/dossiers/${a.partnerDossierId}?onglet=cotations`} className="mt-3 inline-block text-sm text-sky-capella-700 underline">Dossier apporteur · dates, compteurs, documents et messages</Link>:null}
   {!ko?<details className="mt-4 border-t border-navy-100 pt-3">
    <summary className="cursor-pointer select-none text-xs font-semibold text-navy-700">Modifier le dossier</summary>
    <form action={action} className="mt-3 space-y-3">
     <input type="hidden" name="id" value={a.id}/>
+    {a.verificationAvailable?<><input type="hidden" name="verification_enabled" value="1"/><label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" name="verification_calls" defaultChecked={a.verificationCalls}/>Appels de vérification</label></>:null}
     <div className="grid gap-3 sm:grid-cols-3">
      <label className="text-xs font-medium text-navy-700">Statut<select name="stage" defaultValue={a.stage} className="mt-1 h-9 w-full rounded-lg border border-navy-200 bg-white px-2 text-xs">{etapesAdv.map(s=><option key={s.label} value={s.label}>{s.label}</option>)}</select></label>
      <label className="text-xs font-medium text-navy-700">Commission globale (€)<input name="commission" type="number" min="0" step="0.01" defaultValue={a.commission||""} className="mt-1 h-9 w-full rounded-lg border border-navy-200 px-2 text-sm"/></label>

@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import { deliverNotifications } from "@/lib/partners/notifications";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -14,7 +15,8 @@ export async function PATCH(request:Request,{params}:{params:Promise<{requestId:
   if(acdError)return NextResponse.json({error:acdError.message},{status:400});
   if(!acd)return NextResponse.json({error:"Demande ACD introuvable."},{status:404});
 
-  if(body.status==="terminee"){
+  const {data:partner}=await supabase.from("partner_dossiers").select("id").eq("acd_request_id",requestId).maybeSingle();
+  if(body.status==="terminee" && !partner){
     const {data:prospect,error:prospectError}=await db.from("prospects").select("*").eq("id",acd.prospect_id).is("deleted_at",null).maybeSingle();
     if(prospectError)return NextResponse.json({error:prospectError.message},{status:400});
     if(!prospect)return NextResponse.json({error:"Prospect associé introuvable."},{status:404});
@@ -53,6 +55,8 @@ export async function PATCH(request:Request,{params}:{params:Promise<{requestId:
   const patch={status:body.status,processed_by:profile.id,processed_at:["terminee","annulee"].includes(body.status||"")?new Date().toISOString():null};
   const {error}=await db.from("acd_requests").update(patch).eq("id",requestId);
   if(error) return NextResponse.json({error:error.message},{status:400});
+  if(partner)await deliverNotifications(profile);
+  revalidatePath("/partenaires","layout");
   revalidatePath("/admin/acd");
   revalidatePath("/adv");
   revalidatePath("/clients");

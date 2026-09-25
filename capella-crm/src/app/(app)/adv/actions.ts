@@ -1,5 +1,6 @@
 "use server";
 
+import { deliverNotifications } from "@/lib/partners/notifications";
 import { revalidatePath } from "next/cache";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -39,6 +40,12 @@ export async function enregistrerAdv(
   const { error } = await (supabase as any).from("affaires").update(patch).eq("id", id);
   if (error) return { ok: false, message: error.message };
 
+  if(formData.get("verification_enabled")==="1"){
+  const {error:checkError}=await supabase.from("affaire_adv_checks").upsert({affaire_id:id,verification_calls:formData.get("verification_calls")==="on",checked_by:profil.id,updated_at:new Date().toISOString()});
+  if(checkError)return {ok:false,message:`Dossier enregistré, vérification non enregistrée : ${checkError.message}`};
+  }
+  await deliverNotifications(profil);
+  revalidatePath("/partenaires","layout");
   revalidatePath("/");
   revalidatePath("/adv");
   revalidatePath("/conversion");

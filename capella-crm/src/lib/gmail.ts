@@ -338,8 +338,8 @@ export async function sendGmailMessage(input: {
   attachments?: GmailAttachment[];
   threadId?: string | null;
   inReplyTo?: string | null;
-}): Promise<{ id: string; threadId?: string }> {
-  const account = await getActiveGmailAccount();
+}, notificationAccount?: GmailAccount): Promise<{ id: string; threadId?: string }> {
+  const account = notificationAccount ?? await getActiveGmailAccount();
   if (!account) throw new Error("Aucune boîte Gmail active n’est configurée pour ce compte CRM.");
 
   const boundary = `capella_${crypto.randomBytes(12).toString("hex")}`;

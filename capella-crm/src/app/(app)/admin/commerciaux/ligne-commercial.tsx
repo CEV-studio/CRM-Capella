@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import {
+  modifierRole,
   basculerActivation,
   modifierPermissions,
   modifierTaux,
@@ -18,6 +19,7 @@ export function LigneCommercial({
   profil: Profile;
   estMoi: boolean;
 }) {
+  const [etatRole,actionRole]=useActionState<ActionResult|null,FormData>(modifierRole,null);
   const [etatTaux, actionTaux, tauxEnCours] = useActionState<ActionResult | null, FormData>(
     modifierTaux,
     null,
@@ -37,10 +39,10 @@ export function LigneCommercial({
   const [copie, setCopie] = useState(false);
   const formPerm = useRef<HTMLFormElement>(null);
 
-  const message = etatPerm ?? etatMdp ?? etatActif ?? etatTaux;
+  const message = etatRole ?? etatPerm ?? etatMdp ?? etatActif ?? etatTaux;
 
   // L'admin fondateur a déjà tous les droits : pas de cases pour lui.
-  const montrerPermissions = profil.role !== "admin" && profil.is_active;
+  const montrerPermissions = profil.role === "commercial" && profil.is_active;
 
   return (
     <li className={profil.is_active ? "" : "bg-navy-50"}>
@@ -75,6 +77,7 @@ export function LigneCommercial({
           <div className="text-xs text-grey-brand">{profil.email}</div>
         </div>
 
+        {profil.role!=="admin"?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="apporteur">Apporteur</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
         <form action={actionTaux} className="flex items-center gap-1.5">
           <input type="hidden" name="id" value={profil.id} />
           <Input
