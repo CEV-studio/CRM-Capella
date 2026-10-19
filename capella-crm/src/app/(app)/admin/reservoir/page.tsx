@@ -17,10 +17,37 @@ export const dynamic = "force-dynamic";
 
 /** Nombre de leads du réservoir affichés ligne à ligne. */
 const APERCU = 200;
+const PUISSANCES_KVA = [3, 6, 9, 12, 15, 18, 24, 30, 36, 42, 48, 60, 72, 90, 120];
 
-export default async function ReservoirPage() {
+export default async function ReservoirPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ kva?: string }>;
+}) {
   await requireAdmin();
   const supabase = await createClient();
+  const params = await searchParams;
+  const kva =
+    params.kva === "inconnue"
+      ? "inconnue"
+      : PUISSANCES_KVA.includes(Number(params.kva))
+        ? (params.kva ?? "")
+        : "";
+
+  let requeteLeads = supabase
+    .from("prospects")
+    .select("*", { count: "exact" })
+    .is("assigned_to", null)
+    .is("deleted_at", null);
+
+  if (kva === "inconnue") {
+    requeteLeads = requeteLeads.or("puissance.is.null,puissance.eq.");
+  } else if (kva) {
+    // Les imports peuvent stocker la puissance en nombre seul ou avec l'unité.
+    requeteLeads = requeteLeads.or(
+      `puissance.eq.${kva},puissance.ilike.${kva} kVA,puissance.ilike.${kva}kVA`,
+    );
+  }
 
   const [
     { data: leadsBruts, count: totalReservoir },
@@ -29,13 +56,7 @@ export default async function ReservoirPage() {
     { data: parSource },
     champsPerso,
   ] = await Promise.all([
-    supabase
-      .from("prospects")
-      .select("*", { count: "exact" })
-      .is("assigned_to", null)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .limit(APERCU),
+    requeteLeads.order("created_at", { ascending: false }).limit(APERCU),
     chargerSources(),
     supabase
       .from("profiles")
@@ -116,11 +137,14 @@ export default async function ReservoirPage() {
           leads={leads}
           commerciaux={commerciaux}
           total={totalReservoir ?? 0}
+          kva={kva}
+          puissancesKva={PUISSANCES_KVA}
         />
 
         {(totalReservoir ?? 0) > APERCU ? (
           <p className="text-xs text-grey-brand">
-            Les {APERCU} leads les plus récents sont affichés ligne à ligne.
+            Les {APERCU} leads les plus récents
+            {kva === "inconnue" ? " sans puissance renseignée " : kva ? ` à ${kva} kVA ` : " "}sont affichés ligne à ligne.
             Pour les autres, utilise l&apos;attribution par lot ci-dessus.
           </p>
         ) : null}

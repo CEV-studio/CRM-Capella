@@ -205,10 +205,14 @@ export function TableauReservoir({
   leads,
   commerciaux,
   total,
+  kva,
+  puissancesKva,
 }: {
   leads: LeadReservoir[];
   commerciaux: Option[];
   total: number;
+  kva: string;
+  puissancesKva: number[];
 }) {
   const [etat, action, enCours] = useActionState<ActionResult | null, FormData>(
     attribuerSelection,
@@ -231,8 +235,23 @@ export function TableauReservoir({
     <Card className="overflow-hidden">
       <CardHeader
         title="Réservoir"
-        hint={`${total} lead(s) en attente d'attribution. Toi seul les vois.`}
+        hint={`${total} lead(s)${kva ? " correspondant au filtre" : ""} en attente d'attribution. Toi seul les vois.`}
       />
+
+      <form method="get" action="/admin/reservoir" className="flex flex-wrap items-end gap-3 border-b border-navy-100 px-5 py-4">
+        <Field label="Filtrer par puissance compteur">
+          <select name="kva" defaultValue={kva} className={`${SELECT} w-56`}>
+            <option value="">Toutes les puissances</option>
+            {puissancesKva.map((puissance) => (
+              <option key={puissance} value={puissance}>{puissance} kVA</option>
+            ))}
+            <option value="inconnue">Puissance non renseignée</option>
+          </select>
+        </Field>
+        <Button type="submit">Filtrer</Button>
+        {kva ? <a href="/admin/reservoir" className="px-2 py-2 text-sm font-medium text-navy-700 underline">Effacer le filtre</a> : null}
+        <span className="text-xs text-grey-brand">La sélection porte sur les leads affichés après filtrage.</span>
+      </form>
 
       <form action={action}>
         <div className="flex flex-wrap items-center gap-3 border-b border-navy-100 px-5 py-3">
