@@ -43,10 +43,21 @@ export default async function ReservoirPage({
   if (kva === "inconnue") {
     requeteLeads = requeteLeads.or("puissance.is.null,puissance.eq.");
   } else if (kva) {
-    // Les imports peuvent stocker la puissance en nombre seul ou avec l'unité.
-    requeteLeads = requeteLeads.or(
-      `puissance.eq.${kva},puissance.ilike.${kva} kVA,puissance.ilike.${kva}kVA`,
-    );
+    // Un prospect peut avoir plusieurs compteurs, stockés sous la forme
+    // « 36 kVA · 18 kVA ». On teste chaque position pour éviter que 6 kVA
+    // ne récupère aussi les fiches en 36 kVA.
+    const motifs = [
+      `puissance.eq.${kva}`,
+      `puissance.ilike.${kva} kVA`,
+      `puissance.ilike.${kva} kVA · %`,
+      `puissance.ilike.% · ${kva} kVA · %`,
+      `puissance.ilike.% · ${kva} kVA`,
+      `puissance.ilike.${kva}kVA`,
+      `puissance.ilike.${kva}kVA · %`,
+      `puissance.ilike.% · ${kva}kVA · %`,
+      `puissance.ilike.% · ${kva}kVA`,
+    ];
+    requeteLeads = requeteLeads.or(motifs.join(","));
   }
 
   const [
