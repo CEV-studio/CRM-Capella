@@ -9,8 +9,8 @@ import type { Profile } from "@/lib/domain/database.types";
 export const metadata={title:"ADV — Capella CRM"};
 export const dynamic="force-dynamic";
 
-type Recherche={q?:string;statut?:string;commercial?:string};
-type AffaireAdv={id:string;ref:string|null;raison_sociale:string;commercial_id:string;prospect_id:string|null;stage:string;commission:number|null;date_signature:string|null;ko_reason:string|null};
+type Recherche={q?:string;statut?:string;commercial?:string;relances?:string};
+type AffaireAdv={id:string;ref:string|null;raison_sociale:string;commercial_id:string;prospect_id:string|null;stage:string;commission:number|null;date_signature:string|null;date_relance:string|null;ko_reason:string|null};
 type RdvAdv={prospect_id:string;start_at:string;html_link:string|null;title:string};
 
 export default async function AdvPage({searchParams}:{searchParams:Promise<Recherche>}){
@@ -19,7 +19,7 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
  const filtres=await searchParams;
  const supabase=await createClient();
  const [{data:affaires,error},{data:profils}]=await Promise.all([
-  supabase.from("affaires").select("id, ref, raison_sociale, commercial_id, prospect_id, stage, commission, date_signature, date_entree, ko_reason").is("deleted_at",null).order("date_entree",{ascending:false}),
+  supabase.from("affaires").select("id, ref, raison_sociale, commercial_id, prospect_id, stage, commission, date_signature, date_relance, date_entree, ko_reason").is("deleted_at",null).order("date_entree",{ascending:false}),
   supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active",true).order("full_name"),
  ]);
 
@@ -46,13 +46,15 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
 
  const listeProfils=((profils??[]) as Pick<Profile,"id"|"full_name"|"commission_rate">[]);
  const map=new Map(listeProfils.map(p=>[p.id,p]));
- const toutes=affairesAdv.map(a=>{const p=map.get(a.commercial_id);return{verificationAvailable:!checksError,verificationCalls:checkMap.get(a.id)??false,partnerDossierId:partnerMap.get(a.id),id:a.id,ref:a.ref,raison_sociale:a.raison_sociale,stage:a.stage,commission:Number(a.commission??0),date_signature:a.date_signature,ko_reason:a.ko_reason,commercial:p?.full_name??"—",commercialId:a.commercial_id,taux:Number(p?.commission_rate??0),prospectId:a.prospect_id,rdvComparatif:a.prospect_id?rdvMap.get(a.prospect_id)??null:null}});
+ const aujourdhui=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+ const toutes=affairesAdv.map(a=>{const p=map.get(a.commercial_id);return{verificationAvailable:!checksError,verificationCalls:checkMap.get(a.id)??false,partnerDossierId:partnerMap.get(a.id),id:a.id,ref:a.ref,raison_sociale:a.raison_sociale,stage:a.stage,commission:Number(a.commission??0),date_signature:a.date_signature,date_relance:a.date_relance,ko_reason:a.ko_reason,commercial:p?.full_name??"—",commercialId:a.commercial_id,taux:Number(p?.commission_rate??0),prospectId:a.prospect_id,rdvComparatif:a.prospect_id?rdvMap.get(a.prospect_id)??null:null,aujourdhui}});
 
  const q=(filtres.q??"").trim().toLowerCase();
  const statut=filtres.statut??"a_traiter";
  const lignes=toutes.filter(a=>{
   if(q&&!`${a.raison_sociale} ${a.ref??""} ${a.commercial} ${a.ko_reason??""}`.toLowerCase().includes(q))return false;
   if(filtres.commercial&&a.commercialId!==filtres.commercial)return false;
+  if(filtres.relances==="retard"&&(!a.date_relance||a.date_relance>=aujourdhui||a.stage==="Signé"||a.stage==="KO"))return false;
   if(statut==="signes"&&a.stage!=="Signé")return false;
   if(statut==="ko"&&a.stage!=="KO")return false;
   if(statut==="a_traiter"&&(a.stage==="Signé"||a.stage==="KO"))return false;
@@ -64,7 +66,7 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
  const commissionsAttente=aTraiter.reduce((s,a)=>s+Number(a.commission||0),0);
  const commissionsValidees=signees.reduce((s,a)=>s+Number(a.commission||0),0);
 
- function url(s:string){const p=new URLSearchParams();if(filtres.q)p.set("q",filtres.q);if(filtres.commercial)p.set("commercial",filtres.commercial);p.set("statut",s);return `/adv?${p.toString()}`;}
+ function url(s:string,retards=filtres.relances==="retard"){const p=new URLSearchParams();if(filtres.q)p.set("q",filtres.q);if(filtres.commercial)p.set("commercial",filtres.commercial);if(retards)p.set("relances","retard");p.set("statut",s);return `/adv?${p.toString()}`;}
  const chip=(key:string,label:string,n:number)=> <Link href={url(key)} className={statut===key?"rounded-full bg-navy-800 px-3 py-1.5 text-xs font-semibold text-white":"rounded-full border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700"}>{label} <span className="ml-1 opacity-70">{n}</span></Link>;
 
  return <main className="w-full px-6 py-8">
@@ -83,6 +85,7 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
     <input type="hidden" name="statut" value={statut}/>
     <input type="search" name="q" defaultValue={filtres.q??""} placeholder="Entreprise, référence, commercial, motif KO…" className="h-9 min-w-64 flex-1 rounded-lg border border-navy-200 px-3 text-sm"/>
     <select name="commercial" defaultValue={filtres.commercial??""} className="h-9 rounded-lg border border-navy-200 bg-white px-3 text-sm"><option value="">Tous les commerciaux</option>{listeProfils.map(p=><option key={p.id} value={p.id}>{p.full_name}</option>)}</select>
+    <select name="relances" defaultValue={filtres.relances??""} className="h-9 rounded-lg border border-navy-200 bg-white px-3 text-sm"><option value="">Toutes les échéances</option><option value="retard">Relances en retard</option></select>
     <button className="h-9 rounded-lg bg-navy-800 px-4 text-sm font-semibold text-white">Filtrer</button>
    </form>
   </section>

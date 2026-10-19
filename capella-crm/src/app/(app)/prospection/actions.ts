@@ -6,7 +6,7 @@ import { requireManage, requireProfile } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
-import type { Prospect, ProspectInsert } from "@/lib/domain/database.types";
+import type { ProspectInsert } from "@/lib/domain/database.types";
 import { PROSPECT_STAGES } from "@/lib/domain/stages";
 
 function messageLisible(brut: string): string {
@@ -29,41 +29,8 @@ export async function modifierVuesRapides(_prev: ActionResult | null, formData: 
   return { ok: true, message: "Vues rapides mises à jour." };
 }
 
-async function creerCotationDepuisProspect(id: string, profilId: string) {
-  const supabase = await createClient();
-  const { data: prospect } = await supabase.from("prospects").select("*").eq("id", id).is("deleted_at", null).maybeSingle();
-  if (!prospect) throw new Error("Client introuvable.");
-  const p = prospect as Prospect;
-
-  const { data: existante } = await supabase.from("affaires").select("id").eq("prospect_id", id).is("deleted_at", null).maybeSingle();
-  if (existante) return existante.id;
-
-  const raisonSociale = p.raison_sociale ?? ([p.prenom, p.nom].filter(Boolean).join(" ") || "(sans nom)");
-  const { data, error } = await supabase.from("affaires").insert({
-    commercial_id: p.assigned_to ?? profilId,
-    prospect_id: p.id,
-    source_id: p.source_id,
-    raison_sociale: raisonSociale,
-    siren: p.siren,
-    nom: p.nom,
-    prenom: p.prenom,
-    mail: p.mail,
-    telephone: p.tel_mobile ?? p.tel_fixe,
-    pdl_elec: p.pdl,
-    pce_gaz: p.pce,
-    fournisseur: p.fournisseur_electricite ?? p.fournisseur_gaz,
-    date_echeance: p.date_fin_contrat,
-    sans_engagement: p.sans_engagement,
-    notes: p.notes,
-    stage: "Demande de cotation",
-    created_by: profilId,
-  }).select("id").single();
-  if (error) throw new Error(error.message);
-  return data.id;
-}
-
 export async function changerEtape(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  const profil = await requireProfile();
+  await requireProfile();
   const id = String(formData.get("id") ?? "");
   const stage = String(formData.get("stage") ?? "");
   const koReason = String(formData.get("ko_reason") ?? "").trim();
@@ -71,19 +38,21 @@ export async function changerEtape(_prev: ActionResult | null, formData: FormDat
   if (stage === "KO" && !koReason) return { ok: false, message: "Explique pourquoi ce dossier est KO." };
 
   const supabase = await createClient();
+  if (stage === "Demande de cotation") {
+    const { data: affaireId, error } = await supabase.rpc("transfer_prospect_to_quote", { p_prospect_id: id });
+    if (error) return { ok: false, message: messageLisible(error.message) };
+    revalidatePath("/prospection");
+    revalidatePath("/clients");
+    revalidatePath("/conversion");
+    revalidatePath("/adv");
+    revalidatePath(`/prospection/${id}`);
+    return { ok: true, message: "Dossier transmis à l’ADV.", affaireId };
+  }
+
   const patch: { stage: string; ko_reason?: string } = { stage };
   if (stage === "KO") patch.ko_reason = koReason;
   const { error } = await supabase.from("prospects").update(patch).eq("id", id);
   if (error) return { ok: false, message: messageLisible(error.message) };
-
-  if (stage === "Demande de cotation") {
-    try {
-      await creerCotationDepuisProspect(id, profil.id);
-      await (supabase as any).from("prospects").update({ entered_conversion_at: new Date().toISOString() }).eq("id", id);
-    } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : "Création de la cotation impossible." };
-    }
-  }
 
   revalidatePath("/prospection");
   revalidatePath("/clients");
@@ -165,22 +134,22 @@ function lireFormulaire(formData: FormData): ProspectInsert {
 }
 
 export async function enregistrerFiche(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  const profil = await requireProfile();
+  await requireProfile();
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, message: "Prospect introuvable." };
   const patch = lireFormulaire(formData);
   if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
   const supabase = await createClient();
+  const transferer = patch.stage === "Demande de cotation";
+  if (transferer) delete patch.stage;
   const { error } = await supabase.from("prospects").update(patch).eq("id", id);
   if (error) return { ok: false, message: messageLisible(error.message) };
 
-  if (patch.stage === "Demande de cotation") {
-    try {
-      await creerCotationDepuisProspect(id, profil.id);
-      await (supabase as any).from("prospects").update({ entered_conversion_at: new Date().toISOString() }).eq("id", id);
-    } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : "Création de la cotation impossible." };
-    }
+  let affaireId: string | undefined;
+  if (transferer) {
+    const { data, error: transferError } = await supabase.rpc("transfer_prospect_to_quote", { p_prospect_id: id });
+    if (transferError) return { ok: false, message: messageLisible(transferError.message) };
+    affaireId = data;
   }
 
   revalidatePath("/prospection");
@@ -188,7 +157,7 @@ export async function enregistrerFiche(_prev: ActionResult | null, formData: For
   revalidatePath("/conversion");
   revalidatePath("/adv");
   revalidatePath(`/prospection/${id}`);
-  return { ok: true, message: "Fiche enregistrée." };
+  return { ok: true, message: transferer ? "Dossier transmis à l’ADV." : "Fiche enregistrée.", affaireId };
 }
 
 export async function creerProspect(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
@@ -198,8 +167,19 @@ export async function creerProspect(_prev: ActionResult | null, formData: FormDa
   if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
   const supabase = await createClient();
   const proprietaire = profil.role === "admin" ? String(formData.get("assigned_to") ?? "").trim() || null : profil.id;
-  const { data, error } = await supabase.from("prospects").insert({ ...patch, assigned_to: proprietaire, created_by: profil.id }).select("id").single();
+  const transfertImmediat = patch.stage === "Demande de cotation";
+  const donneesCreation = transfertImmediat ? { ...patch, stage: "NRP" } : patch;
+  const { data, error } = await supabase.from("prospects").insert({ ...donneesCreation, assigned_to: proprietaire, created_by: profil.id }).select("id").single();
   if (error) return { ok: false, message: messageLisible(error.message) };
+  if (transfertImmediat) {
+    const { data: affaireId, error: transferError } = await supabase.rpc("transfer_prospect_to_quote", { p_prospect_id: data.id });
+    if (transferError) return { ok: false, message: `Prospect créé (${data.id}), mais le transfert vers l’ADV a échoué : ${messageLisible(transferError.message)}` };
+    revalidatePath("/prospection");
+    revalidatePath("/clients");
+    revalidatePath("/conversion");
+    revalidatePath("/adv");
+    redirect(`/conversion/${affaireId}`);
+  }
   revalidatePath("/prospection");
   revalidatePath("/clients");
   redirect(`/prospection/${data.id}`);

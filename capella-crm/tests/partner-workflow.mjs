@@ -17,10 +17,11 @@ for(const file of fs.readdirSync(root+'/supabase/migrations').sort()){
  let sql=fs.readFileSync(root+'/supabase/migrations/'+file,'utf8').replace(/create extension if not exists "pgcrypto";/g,'');
  try{await db.exec(sql);console.log('OK',file);}catch(e){console.error('FAIL',file,e.message);process.exit(1);}
 }
+await db.exec('grant all on all sequences in schema public to authenticated,service_role;');
 
-const admin='10000000-0000-4000-8000-000000000001',a='10000000-0000-4000-8000-000000000002',b='10000000-0000-4000-8000-000000000003';
+const admin='10000000-0000-4000-8000-000000000001',a='10000000-0000-4000-8000-000000000002',b='10000000-0000-4000-8000-000000000003',commercial='10000000-0000-4000-8000-000000000004';
 await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values
-('${admin}','jeremy@capellaenergy.fr','{"full_name":"Admin"}'),('${a}','a@example.org','{"full_name":"Partner A"}'),('${b}','b@example.org','{"full_name":"Partner B"}');
+('${admin}','jeremy@capellaenergy.fr','{"full_name":"Admin"}'),('${a}','a@example.org','{"full_name":"Partner A"}'),('${b}','b@example.org','{"full_name":"Partner B"}'),('${commercial}','commercial@example.org','{"full_name":"Commercial"}');
 update public.profiles set role='admin' where id='${admin}';update public.profiles set role='apporteur' where id in ('${a}','${b}');`);
 async function asUser(id){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role authenticated;`);}
 async function cmd(action,id,data={}){const r=await db.query('select public.partner_command($1,$2,$3::jsonb) as id',[action,id,JSON.stringify(data)]);return r.rows[0].id;}
@@ -67,5 +68,18 @@ assert.equal((await db.query('select * from public.affaire_adv_checks')).rows.le
 const notification=(await db.query('select * from public.crm_notifications limit 1')).rows[0];await cmd('read',notification.id);
 assert.ok((await db.query('select read_at from public.crm_notifications where id=$1',[notification.id])).rows[0].read_at);
 await asUser(admin);await db.query('update public.profiles set is_active=false where id=$1',[a]);await asUser(a);assert.equal((await db.query('select * from public.partner_dossiers')).rows.length,0);await rejects(()=>cmd('message',did,{body:'Test'}),'disabled user');
-console.log('PASS: ACD → quotation → ADV → signed commission, notifications and two-account isolation');
+await asUser(commercial);
+const prospect=(await db.query(`insert into public.prospects(raison_sociale,stage,assigned_to,created_by,pdl,pce) values('Commercial atomic test','RDV comparatif',$1,$1,'12345678901234','12345678901235') returning id`,[commercial])).rows[0];
+const affaireId=(await db.query('select public.transfer_prospect_to_quote($1) as id',[prospect.id])).rows[0].id;
+assert.equal((await db.query('select public.transfer_prospect_to_quote($1) as id',[prospect.id])).rows[0].id,affaireId,'retries reuse the same affaire');
+assert.equal((await db.query('select count(*)::int n from public.affaires where prospect_id=$1',[prospect.id])).rows[0].n,1);
+assert.equal((await db.query('select stage from public.prospects where id=$1',[prospect.id])).rows[0].stage,'Demande de cotation');
+assert.ok((await db.query('select entered_conversion_at from public.prospects where id=$1',[prospect.id])).rows[0].entered_conversion_at);
+await db.exec(`reset role;create function public.fail_quote_test() returns trigger language plpgsql as $$ begin if new.raison_sociale='Rollback test' then raise exception 'forced insert failure'; end if;return new;end $$;create trigger fail_quote_test before insert on public.affaires for each row execute function public.fail_quote_test();`);
+await asUser(commercial);
+const rollbackProspect=(await db.query(`insert into public.prospects(raison_sociale,stage,assigned_to,created_by) values('Rollback test','RDV comparatif',$1,$1) returning id`,[commercial])).rows[0];
+await rejects(()=>db.query('select public.transfer_prospect_to_quote($1)',[rollbackProspect.id]),'failed affair insert rolls back the prospect transition');
+assert.equal((await db.query('select stage from public.prospects where id=$1',[rollbackProspect.id])).rows[0].stage,'RDV comparatif');
+assert.equal((await db.query('select count(*)::int n from public.affaires where prospect_id=$1',[rollbackProspect.id])).rows[0].n,0);
+console.log('PASS: apporteur isolation and ACD → quote → ADV flow; commercial quote transfer is atomic and retry-safe');
 await db.close();

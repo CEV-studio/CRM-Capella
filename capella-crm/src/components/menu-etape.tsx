@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +85,7 @@ export function MenuEtape({
           {etapes.map((s) => <option key={s.label} value={s.label}>{libelleEtape?.(s.label) ?? s.label}</option>)}
         </select>
       </div>
+      {resultat?.ok ? <p role="status" className="mt-1 max-w-64 text-[11px] text-green-700">{resultat.message}{resultat.affaireId ? <> <Link className="font-semibold underline" href={`/conversion/${resultat.affaireId}`}>Ouvrir le dossier →</Link></> : null}</p> : null}
     </form>
   );
 }

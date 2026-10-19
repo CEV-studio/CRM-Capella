@@ -31,6 +31,11 @@ export async function enregistrerAdv(
   }
 
   const patch: Record<string, unknown> = { stage, commission };
+  const dateRelance = String(formData.get("date_relance") ?? "").trim();
+  if (dateRelance && !/^\d{4}-\d{2}-\d{2}$/.test(dateRelance)) {
+    return { ok: false, message: "Date de relance invalide." };
+  }
+  patch.date_relance = dateRelance || null;
   if (stage === "Signé") {
     patch.date_signature = String(formData.get("date_signature") ?? "").trim()
       || new Date().toISOString().slice(0, 10);

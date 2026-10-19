@@ -2,8 +2,9 @@ import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AffaireForm } from "../affaire-form";
+import { TransferProspectForm } from "@/components/transfer-prospect-form";
 import { chargerApporteurs } from "@/lib/referentiels";
-import type { Affaire, Profile, Prospect } from "@/lib/domain/database.types";
+import type { Profile, Prospect } from "@/lib/domain/database.types";
 
 export const metadata = { title: "Nouvelle demande de cotation — Capella CRM" };
 export const dynamic = "force-dynamic";
@@ -34,29 +35,7 @@ export default async function NouvelleAffairePage({
         : Promise.resolve({ data: null }),
     ]);
 
-  // Bascule depuis un prospect : on recopie ce qu'on sait déjà,
-  // le commercial n'a plus qu'à compléter le contrat.
   const p = source as Prospect | null;
-  const prefill = p
-    ? ({
-        prospect_id: p.id,
-        source_id: p.source_id,
-        raison_sociale:
-          p.raison_sociale ?? [p.prenom, p.nom].filter(Boolean).join(" ") ?? "",
-        siren: p.siren,
-        nom: p.nom,
-        prenom: p.prenom,
-        mail: p.mail,
-        telephone: p.tel_mobile ?? p.tel_fixe,
-        pdl_elec: p.pdl,
-        pce_gaz: p.pce,
-        fournisseur: p.fournisseur_electricite,
-        date_echeance: p.date_fin_contrat,
-        sans_engagement: p.sans_engagement,
-        notes: p.notes,
-        stage: "Demande de cotation",
-      } as Partial<Affaire> & { prospect_id: string; source_id: string | null })
-    : undefined;
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
@@ -73,13 +52,12 @@ export default async function NouvelleAffairePage({
         </h1>
         <p className="mt-1 text-sm text-grey-brand">
           {p
-            ? `Pré-remplie depuis le prospect ${p.ref}. Le prospect est conservé : le lien entre les deux reste tracé.`
+            ? `Transmission du prospect ${p.ref} dans le parcours de cotation. Le dossier ADV sera créé avec les informations déjà disponibles.`
             : "Saisie directe, avec les mêmes champs que l'ancien formulaire Google."}
         </p>
       </header>
 
-      <AffaireForm
-        prefill={prefill}
+      {p ? <TransferProspectForm prospectId={p.id} /> : <AffaireForm
         estAdmin={estAdmin}
         apporteurs={apporteurs
           .filter((x) => x.is_active)
@@ -88,7 +66,7 @@ export default async function NouvelleAffairePage({
           value: c.id,
           label: c.full_name,
         }))}
-      />
+      />}
     </main>
   );
 }

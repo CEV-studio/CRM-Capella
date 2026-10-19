@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { creerProspect, enregistrerFiche } from "./actions";
 import type { ActionResult } from "@/lib/action-result";
 import { Button, Card, CardHeader, Field, Input } from "@/components/ui";
@@ -69,6 +70,6 @@ export function FicheForm({ prospect, sources, commerciaux, estAdmin, champsPers
     </div></Card>
 
     {etat && !etat.ok ? <p role="alert" className="rounded-lg px-3 py-2 text-sm text-navy-800" style={{ backgroundColor: "var(--color-status-perdu)" }}>{etat.message}</p> : null}
-    <div className="flex items-center gap-3"><Button type="submit" disabled={enCours}>{enCours ? "Enregistrement…" : enCreation ? "Créer le prospect" : "Enregistrer la fiche"}</Button>{etat?.ok ? <span className="rounded-lg px-3 py-1.5 text-sm text-navy-800" style={{ backgroundColor: "var(--color-status-signe)" }}>{etat.message}</span> : null}</div>
+    <div className="flex flex-wrap items-center gap-3"><Button type="submit" disabled={enCours}>{enCours ? "Enregistrement…" : enCreation ? "Créer le prospect" : "Enregistrer la fiche"}</Button>{etat?.ok ? <span className="rounded-lg px-3 py-1.5 text-sm text-navy-800" style={{ backgroundColor: "var(--color-status-signe)" }}>{etat.message}{etat.affaireId ? <> <Link href={`/conversion/${etat.affaireId}`} className="font-semibold underline">Ouvrir la cotation →</Link></> : null}</span> : null}</div>
   </form>;
 }

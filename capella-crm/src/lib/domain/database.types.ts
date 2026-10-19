@@ -130,6 +130,7 @@ export interface Database {
     Views:Record<never,never>;
     Functions:{
       partner_command:{Args:{p_action:string;p_id:string;p_data?:Record<string,unknown>};Returns:string};
+      transfer_prospect_to_quote:{Args:{p_prospect_id:string};Returns:string};
       is_admin:{ Args:Record<never,never>; Returns:boolean };
       is_active_user:{ Args:Record<never,never>; Returns:boolean };
       can_view_all:{ Args:Record<never,never>; Returns:boolean };

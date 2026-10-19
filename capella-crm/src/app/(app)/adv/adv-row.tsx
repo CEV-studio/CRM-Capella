@@ -9,7 +9,7 @@ import { AFFAIRE_STAGES } from "@/lib/domain/stages";
 import { fmtEuros, fmtDate } from "@/lib/format";
 
 type RdvComparatif={start_at:string;html_link:string|null;title:string};
-type AdvData={verificationAvailable?:boolean;verificationCalls?:boolean;partnerDossierId?:string;id:string;ref:string|null;raison_sociale:string;stage:string;commercial:string;taux:number;commission:number;date_signature:string|null;ko_reason:string|null;prospectId:string|null;rdvComparatif:RdvComparatif|null};
+type AdvData={verificationAvailable?:boolean;verificationCalls?:boolean;partnerDossierId?:string;id:string;ref:string|null;raison_sociale:string;stage:string;commercial:string;taux:number;commission:number;date_signature:string|null;date_relance:string|null;ko_reason:string|null;prospectId:string|null;rdvComparatif:RdvComparatif|null;aujourdhui:string};
 
 function fmtRdv(value:string){return new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",weekday:"short",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(value)).replace(","," à");}
 
@@ -32,6 +32,8 @@ export function AdvRow({a}:{a:AdvData}){
    {a.prospectId?<Link href={`/prospection/${a.prospectId}`} className="shrink-0 text-[10px] font-bold text-sky-capella-700 hover:text-star-600">Voir fiche</Link>:null}
   </div>:null}
 
+  {a.date_relance&&a.stage!=="Signé"&&a.stage!=="KO"?<p className={`mt-3 rounded-lg px-3 py-2 text-xs ${a.date_relance<a.aujourdhui?"bg-red-50 font-semibold text-red-800":"bg-navy-50 text-navy-700"}`}>Relance {a.date_relance<a.aujourdhui?"en retard · ":"prévue le "}{fmtDate(a.date_relance)}</p>:null}
+
   {ko?<div className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3"><div className="text-[10px] font-semibold uppercase tracking-wide text-red-700">Motif KO — commercial</div><p className="mt-1 text-sm text-red-900">{a.ko_reason||"Aucun motif renseigné sur cet ancien dossier."}</p></div>:null}
 
   {!ko?<>
@@ -52,6 +54,7 @@ export function AdvRow({a}:{a:AdvData}){
      <label className="text-xs font-medium text-navy-700">Statut<select name="stage" defaultValue={a.stage} className="mt-1 h-9 w-full rounded-lg border border-navy-200 bg-white px-2 text-xs">{etapesAdv.map(s=><option key={s.label} value={s.label}>{s.label}</option>)}</select></label>
      <label className="text-xs font-medium text-navy-700">Commission globale (€)<input name="commission" type="number" min="0" step="0.01" defaultValue={a.commission||""} className="mt-1 h-9 w-full rounded-lg border border-navy-200 px-2 text-sm"/></label>
      <label className="text-xs font-medium text-navy-700">Date de signature<input name="date_signature" type="date" defaultValue={a.date_signature??""} className="mt-1 h-9 w-full rounded-lg border border-navy-200 px-2 text-xs"/></label>
+     <label className="text-xs font-medium text-navy-700">Prochaine relance<input name="date_relance" type="date" defaultValue={a.date_relance??""} className="mt-1 h-9 w-full rounded-lg border border-navy-200 px-2 text-xs"/></label>
     </div>
     <div className="flex flex-wrap items-center gap-2">
      <button name="intention" value="enregistrer" disabled={enCours} className="h-9 rounded-lg border border-navy-200 bg-white px-3 text-xs font-semibold text-navy-800">{enCours?"…":"Enregistrer"}</button>

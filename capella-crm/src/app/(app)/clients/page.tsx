@@ -3,6 +3,7 @@ import { Clock3 } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { CLIENT_STAGES, stageColor } from "@/lib/domain/stages";
+import { fmtDate } from "@/lib/format";
 
 export const metadata = { title: "Dossiers en cours — Capella CRM" };
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ type Row = {
   prenom: string | null;
   stage: string;
   became_client_at: string | null;
+  next_action: string | null;
+  next_action_date: string | null;
 };
 
 function libelle(c: Row) {
@@ -46,6 +49,17 @@ function ACDMeta({ value, compact = false }: { value: string | null; compact?: b
   return <div className={`mt-2 flex items-start gap-1.5 ${compact ? "text-[10px]" : "text-xs"} text-star-700`}><Clock3 size={compact ? 11 : 13} className="mt-0.5 shrink-0"/><span><strong>Demande ACD</strong> · {date}<span className="ml-1 font-semibold">({age})</span></span></div>;
 }
 
+function ActionMeta({ action, date, compact = false }: { action: string | null; date: string | null; compact?: boolean }) {
+  if (!action && !date) return <div className={`mt-2 ${compact ? "text-[10px]" : "text-xs"} text-grey-brand`}>Aucune prochaine action programmée</div>;
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const overdue = Boolean(date && date < today);
+  const dueToday = date === today;
+  const label = overdue ? `En retard depuis le ${fmtDate(date)}` : dueToday ? "À faire aujourd’hui" : date ? `Prévu le ${fmtDate(date)}` : "À planifier";
+  return <div className={`mt-2 ${compact ? "text-[10px]" : "text-xs"} ${overdue ? "font-semibold text-red-700" : dueToday ? "font-semibold text-star-700" : "text-navy-600"}`}>
+    <span>{label}</span>{action ? <span className="ml-1">· {action}</span> : null}
+  </div>;
+}
+
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<Recherche> }) {
   await requireProfile();
   const filtres = await searchParams;
@@ -58,7 +72,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const [resultat, affairesResultat] = await Promise.all([
     db
       .from("prospects")
-      .select("id, ref, raison_sociale, nom, prenom, stage, became_client_at")
+      .select("id, ref, raison_sociale, nom, prenom, stage, became_client_at, next_action, next_action_date")
       .is("deleted_at", null)
       .not("became_client_at", "is", null)
       .is("entered_conversion_at", null)
@@ -116,6 +130,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                         <div className="truncate text-sm font-semibold text-navy-800">{libelle(c)}</div>
                         <div className="mt-1 text-[11px] text-grey-brand">{c.ref ?? ""}</div>
                         <ACDMeta value={c.became_client_at} compact />
+                        <ActionMeta action={c.next_action} date={c.next_action_date} compact />
                       </Link>
                     ))}
                   </div>
@@ -136,6 +151,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                     <div className="font-semibold text-navy-800">{libelle(c)}</div>
                     <div className="text-xs text-grey-brand">{c.ref ?? ""}</div>
                     <ACDMeta value={c.became_client_at} />
+                    <ActionMeta action={c.next_action} date={c.next_action_date} />
                   </div>
                   <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-navy-800" style={{ backgroundColor: stageColor(c.stage, "prospect") }}>{c.stage}</span>
                 </Link>

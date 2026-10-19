@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/lib/action-result";
-import type { AffaireInsert, Prospect } from "@/lib/domain/database.types";
+import type { AffaireInsert } from "@/lib/domain/database.types";
 
 export async function changerEtapeAffaire(
   _prev: ActionResult | null,
@@ -137,28 +137,16 @@ export async function creerAffaire(_prev: ActionResult | null, formData: FormDat
 }
 
 export async function convertirProspect(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
-  const profil = await requireProfile();
+  await requireProfile();
   const prospectId = String(formData.get("prospect_id") ?? "").trim();
   if (!prospectId) return { ok: false, message: "Prospect introuvable." };
   const supabase = await createClient();
-  const { data: prospect } = await supabase.from("prospects").select("*").eq("id", prospectId).maybeSingle();
-  if (!prospect) return { ok: false, message: "Prospect introuvable." };
-  const p = prospect as Prospect;
-  const { data: dejaLa } = await supabase.from("affaires").select("id").eq("prospect_id", prospectId).maybeSingle();
-  if (dejaLa) redirect(`/conversion/${dejaLa.id}`);
-
-  const raison = p.raison_sociale ?? ([p.prenom, p.nom].filter(Boolean).join(" ") || "(sans nom)");
-  const { data, error } = await supabase.from("affaires").insert({
-    commercial_id: p.assigned_to ?? profil.id, prospect_id: p.id, source_id: p.source_id,
-    raison_sociale: raison, siren: p.siren, nom: p.nom, prenom: p.prenom, mail: p.mail,
-    telephone: p.tel_mobile ?? p.tel_fixe, pdl_elec: p.pdl, pce_gaz: p.pce,
-    fournisseur: p.fournisseur_electricite, date_echeance: p.date_fin_contrat,
-    sans_engagement: p.sans_engagement,
-    notes: p.notes, stage: "Demande de cotation", created_by: profil.id,
-  }).select("id").single();
+  const { data: affaireId, error } = await supabase.rpc("transfer_prospect_to_quote", { p_prospect_id: prospectId });
   if (error) return { ok: false, message: error.message };
 
   revalidatePath("/conversion");
   revalidatePath("/prospection");
-  redirect(`/conversion/${data.id}`);
+  revalidatePath("/clients");
+  revalidatePath("/adv");
+  redirect(`/conversion/${affaireId}`);
 }
