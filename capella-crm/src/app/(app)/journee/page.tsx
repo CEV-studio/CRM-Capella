@@ -55,6 +55,15 @@ function dayDifference(from: string, to: string) {
   return Math.round((b - a) / 86_400_000);
 }
 
+function dateAfterMonths(date: string, months: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const monthIndex = year * 12 + month - 1 + months;
+  const targetYear = Math.floor(monthIndex / 12);
+  const targetMonth = monthIndex % 12;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  return `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}-${String(Math.min(day, lastDay)).padStart(2, "0")}`;
+}
+
 function WorkCard({ item, rank }: { item: WorkItem; rank?: number }) {
   const p = item.prospect;
   const phone = p.tel_mobile || p.tel_fixe;
@@ -114,26 +123,30 @@ export default async function JourneePage() {
 
   const [{ data: prospectData }, { data: reminderEventData, error: reminderError }, { data: comparisonEventData, error: comparisonError }] = await Promise.all([prospectsQuery, reminderEventsQuery, comparisonEventsQuery]);
   const prospects = (prospectData ?? []) as Row[];
-  const enterpriseIds = [...new Set(prospects.map((prospect) => prospect.entreprise_id).filter((id): id is string => Boolean(id)))];
-  const { data: meterData, error: meterError } = enterpriseIds.length
-    ? await (supabase as any).from("prospect_compteurs").select("entreprise_id,type_energie,numero,date_echeance").in("entreprise_id", enterpriseIds).is("archived_at", null).not("date_echeance", "is", null)
-    : { data: [], error: null };
+  const prospectIds = prospects.map((prospect) => prospect.id);
+  const meterChunks = Array.from({ length: Math.ceil(prospectIds.length / 200) }, (_, index) => prospectIds.slice(index * 200, (index + 1) * 200));
+  const meterResults = meterChunks.length
+    ? await Promise.all(meterChunks.map((ids) => (supabase as any).from("prospect_compteurs").select("prospect_id,type_energie,numero,date_echeance").in("prospect_id", ids).is("archived_at", null).not("date_echeance", "is", null)))
+    : [];
+  const meterData = meterResults.flatMap((result) => result.data ?? []);
+  const meterError = meterResults.find((result) => result.error)?.error ?? null;
   const today = dateKeyParis(now);
+  const alertHorizon = dateAfterMonths(today, 18);
   const expiryItems: ExpiryItem[] = [];
   const prospectsWithMeterExpiry = new Set<string>();
-  for (const meter of (meterData ?? []) as Array<{entreprise_id:string;type_energie:"electricite"|"gaz";numero:string;date_echeance:string|null}>) {
+  const prospectsById = new Map(prospects.map((prospect) => [prospect.id, prospect]));
+  for (const meter of (meterData ?? []) as Array<{prospect_id:string;type_energie:"electricite"|"gaz";numero:string;date_echeance:string|null}>) {
     if (!meter.date_echeance) continue;
     const days = dayDifference(today, meter.date_echeance);
-    const relatedProspects = prospects.filter((item) => item.entreprise_id === meter.entreprise_id);
-    for (const prospect of relatedProspects) {
-      prospectsWithMeterExpiry.add(prospect.id);
-      if (days <= 90) expiryItems.push({ prospect, date: meter.date_echeance, meter: `${meter.type_energie === "gaz" ? "PCE" : "PDL"} ${meter.numero}`, days });
-    }
+    const prospect = prospectsById.get(meter.prospect_id);
+    if (!prospect) continue;
+    prospectsWithMeterExpiry.add(prospect.id);
+    if (meter.date_echeance <= alertHorizon) expiryItems.push({ prospect, date: meter.date_echeance, meter: `${meter.type_energie === "gaz" ? "PCE" : "PDL"} ${meter.numero}`, days });
   }
   for (const prospect of prospects) {
     if (prospectsWithMeterExpiry.has(prospect.id) || !prospect.date_fin_contrat) continue;
     const days = dayDifference(today, prospect.date_fin_contrat);
-    if (days <= 90) expiryItems.push({ prospect, date: prospect.date_fin_contrat, meter: null, days });
+    if (prospect.date_fin_contrat <= alertHorizon) expiryItems.push({ prospect, date: prospect.date_fin_contrat, meter: null, days });
   }
   expiryItems.sort((a, b) => a.days - b.days || label(a.prospect).localeCompare(label(b.prospect), "fr"));
   const prospectsIndex = new Map(prospects.map((prospect) => [prospect.id, prospect]));
@@ -183,15 +196,15 @@ export default async function JourneePage() {
 
       <section className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm sm:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div><h2 className="font-display text-lg font-bold text-navy-900">Échéances à anticiper</h2><p className="mt-0.5 text-xs text-navy-500">Contrats arrivant à échéance dans les 90 jours et échéances dépassées.</p></div>
+          <div><h2 className="font-display text-lg font-bold text-navy-900">Échéances à anticiper</h2><p className="mt-0.5 text-xs text-navy-500">Alertes dès 18 mois avant l’échéance, avec les dates dépassées à rattraper.</p></div>
           <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{expiryItems.length} échéance{expiryItems.length > 1 ? "s" : ""}</span>
         </div>
         {expiryItems.length ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{expiryItems.slice(0, 30).map((item, index) => <article key={`${item.prospect.id}-${item.meter ?? "contrat"}-${item.date}-${index}`} className="flex items-center gap-3 rounded-xl border border-amber-100 bg-white p-3">
           <div className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl text-[10px] font-bold leading-tight ${item.days < 0 ? "bg-red-100 text-red-700" : item.days <= 30 ? "bg-orange-100 text-orange-800" : "bg-amber-100 text-amber-800"}`}><span className="text-base">{item.days < 0 ? Math.abs(item.days) : item.days}</span><span>{item.days < 0 ? "j retard" : "jours"}</span></div>
           <div className="min-w-0 flex-1"><ProspectFichePopup prospectId={item.prospect.id} prospectLabel={label(item.prospect)} className="block truncate text-sm font-bold text-navy-900 hover:text-sky-capella-700">{label(item.prospect)}</ProspectFichePopup><div className="mt-0.5 truncate text-xs text-navy-500">{item.meter ? `${item.meter} · ` : "Contrat · "}{formatDate(item.date)}</div></div>
           <ProspectFichePopup prospectId={item.prospect.id} prospectLabel={label(item.prospect)} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-navy-200 text-navy-600 hover:bg-sky-capella-50" ariaLabel="Ouvrir le dossier"><ArrowRight size={15}/></ProspectFichePopup>
-        </article>)}</div> : <div className="rounded-xl border border-dashed border-amber-200 bg-white/70 p-5 text-center text-sm text-grey-brand">Aucune échéance dans les 90 prochains jours.</div>}
-        {expiryItems.length > 30 ? <p className="mt-3 text-xs text-navy-500">30 premières échéances affichées. Consulte les dossiers concernés dans la prospection.</p> : null}
+        </article>)}</div> : <div className="rounded-xl border border-dashed border-amber-200 bg-white/70 p-5 text-center text-sm text-grey-brand">Aucune échéance à anticiper dans les 18 prochains mois.</div>}
+        <Link href="/echeances" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-sky-capella-700 hover:text-sky-capella-900">Voir toutes les échéances <ArrowRight size={13}/></Link>
       </section>
 
       <section className="mb-6 grid gap-3 sm:grid-cols-2">
