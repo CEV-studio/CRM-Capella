@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { NotificationBell } from "@/components/notification-bell";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   BarChart3,
   Building2,
@@ -23,6 +24,7 @@ import {
   Target,
   Trash2,
   Users,
+  ChevronDown,
 } from "lucide-react";
 import { Logotype } from "@/components/brand";
 import type { Profile } from "@/lib/domain/database.types";
@@ -37,16 +39,22 @@ const PARTNER_NAV: { titre: string; items: NavItem[] }[] = [{titre:"Espace appor
  {href:"/partenaires/portefeuille",label:"Portefeuille clients",icon:Building2},
 ]}];
 const NAV: { titre: string; items: NavItem[] }[] = [
-  { titre: "Commercial", items: [
+  { titre: "Vue d’ensemble", items: [
     { href: "/", label: "Tableau de bord", icon: LayoutDashboard },
+  ] },
+  { titre: "Suivi commercial", items: [
     { href: "/journee", label: "Ma journée", icon: Target },
     { href: "/echeances", label: "Échéances", icon: Hourglass },
+    { href: "/agenda", label: "Mon agenda", icon: CalendarDays },
+  ] },
+  { titre: "Prospection & dossiers", items: [
     { href: "/prospection", label: "Prospection", icon: BarChart3 },
     { href: "/clients", label: "Dossiers en cours", icon: Users },
     { href: "/conversion", label: "Demandes de cotation", icon: BriefcaseBusiness },
+  ] },
+  { titre: "Clients & commissions", items: [
     { href: "/mes-clients", label: "Mes clients", icon: Building2 },
     { href: "/commissions", label: "Mes commissions", icon: CircleDollarSign },
-    { href: "/agenda", label: "Mon agenda", icon: CalendarDays },
   ] },
   { titre: "Réglages", items: [
     { href: "/email", label: "Mon email", icon: Mail },
@@ -71,6 +79,7 @@ function actif(pathname: string, href: string) {
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const pathname = usePathname();
   const gere = peutGererLocal(profile);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const visible = (i: NavItem) => (!i.adminOnly || profile.role === "admin") && (!i.needs || i.needs(profile));
   const navigation = profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? [...PARTNER_NAV,...NAV] : NAV;
   const sections = navigation.filter(s => s.items.some(visible));
@@ -86,8 +95,10 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
         <nav className="scroll-slim flex-1 space-y-6 overflow-y-auto px-3 py-5">
           {sections.map(section => (
             <div key={section.titre}>
-              <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{section.titre}</div>
-              <ul className="space-y-1">
+              <button type="button" onClick={() => setOpenSections(current => ({ ...current, [section.titre]: !(current[section.titre] ?? section.items.some(item => actif(pathname, item.href))) }))} aria-expanded={openSections[section.titre] ?? section.items.some(item => actif(pathname, item.href))} className="flex w-full items-center justify-between px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 hover:text-white">
+                <span>{section.titre}</span><ChevronDown size={13} className={`transition-transform ${openSections[section.titre] ?? section.items.some(item => actif(pathname, item.href)) ? "rotate-180" : ""}`} aria-hidden />
+              </button>
+              {(openSections[section.titre] ?? section.items.some(item => actif(pathname, item.href))) ? <ul className="space-y-1">
                 {section.items.filter(visible).map(item => {
                   const isActive = actif(pathname, item.href);
                   const Icon = item.icon;
@@ -102,7 +113,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
                     </li>
                   );
                 })}
-              </ul>
+              </ul> : null}
             </div>
           ))}
         </nav>
