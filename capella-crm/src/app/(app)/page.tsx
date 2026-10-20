@@ -8,7 +8,7 @@ import { fmtEuros, fmtNombre, fmtPourcent, MOIS } from "@/lib/format";
 import { anneesDisponibles, calculerIndicateurs, commissionsParMois, filtrerAffaires } from "@/lib/domain/commissions";
 import { FiltresPeriode } from "./filtres-periode";
 import { chargerApporteurs } from "@/lib/referentiels";
-import type { Affaire, Profile, Prospect } from "@/lib/domain/database.types";
+import type { Affaire, Apporteur, Profile, Prospect } from "@/lib/domain/database.types";
 import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 
 export const metadata = { title: "Tableau de bord — Capella CRM" };
@@ -36,13 +36,17 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
   const filtres = await searchParams;
   const supabase = await createClient();
   const semaine = bornesSemaine();
+  const profilsQuery = estAdmin
+    ? supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active", true).order("full_name")
+    : Promise.resolve({ data: [profil] as Pick<Profile, "id" | "full_name" | "commission_rate">[] });
+  const apporteursQuery = estAdmin ? chargerApporteurs() : Promise.resolve([] as Apporteur[]);
 
   const [{ data: affairesBrutes }, { data: summary, error: summaryError }, { data: profils }, { data: evenementsBruts }, apporteurs] = await Promise.all([
     supabase.from("affaires").select("commercial_id, apporteur_id, stage, date_signature, date_relance, commission, raison_sociale").is("deleted_at", null),
     supabase.rpc("crm_prospect_summary"),
-    supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active", true).order("full_name"),
+    profilsQuery,
     estAdmin ? supabase.from("calendar_events").select("id, prospect_id, profile_id, title, start_at, end_at").eq("kind", "rdv").eq("status", "confirmed").gte("start_at", `${semaine.debut}T00:00:00Z`).lt("start_at", `${semaine.fin}T23:59:59Z`).order("start_at") : Promise.resolve({ data: [] as EvenementSemaine[] }),
-    chargerApporteurs(),
+    apporteursQuery,
   ]);
 
   const toutesAffaires = (affairesBrutes ?? []) as Affaire[];
