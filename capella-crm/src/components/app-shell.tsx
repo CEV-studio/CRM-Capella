@@ -56,6 +56,9 @@ const NAV: { titre: string; items: NavItem[] }[] = [
     { href: "/mes-clients", label: "Mes clients", icon: Building2 },
     { href: "/commissions", label: "Mes commissions", icon: CircleDollarSign },
   ] },
+  { titre: "Belgique", items: [
+    { href: "/belgique", label: "Production & facturation", icon: CircleDollarSign, adminOnly: true },
+  ] },
   { titre: "Réglages", items: [
     { href: "/email", label: "Mon email", icon: Mail },
   ] },

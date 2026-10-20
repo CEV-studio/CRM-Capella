@@ -1,3 +1,4 @@
+import type { Contract, Statement, Invoice, ImportRun as BelgiumImportRun } from "@/lib/belgium/domain";
 import type { Dossier, Quote } from "@/lib/partners/types";
 /** Types manuels de la base Supabase — miroir des migrations. */
 export type Role = "admin" | "commercial" | "apporteur";
@@ -110,6 +111,11 @@ export type ProspectSummary = {
 export interface Database {
   public: {
     Tables: {
+      be_contract_history:Table<{id:number;contract_key:string;import_id:string;before_data:Record<string,unknown>|null;after_data:Record<string,unknown>;created_at:string}>;
+      be_contracts:Table<{key:string;supplier:string;mega_id:string;ean:string;agent:string;centre:string;status:string;status_class:string;report_date:string;data:Contract;import_id:string}>;
+      be_statement_lines:Table<{id:string;supplier:string;period:string;contract_key:string;gross_cents:number;centre_cents:number;data:Statement;import_id:string}>;
+      be_imports:Table<BelgiumImportRun>;
+      be_invoices:Table<Invoice>;
       profiles:Table<Profile>;
       partner_dossiers:Table<Dossier>;
       partner_quotes:Table<Quote>;
@@ -143,6 +149,8 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      be_import:{Args:{p_kind:string;p_source:string;p_date:string;p_fingerprint:string;p_rows:unknown[]};Returns:{id:string;added:number;changed:number;unchanged:number}};
+      be_create_invoice:{Args:{p_centre:string;p_period:string;p_reference:string};Returns:string};
       crm_deadlines_page:{Args:{p_period?:string;p_query?:string;p_page?:number};Returns:DeadlinePage};
       crm_prospect_summary:{Args:Record<never,never>;Returns:ProspectSummary};
       crm_reservoir_counts:{Args:Record<never,never>;Returns:Array<{source_id:string|null;total:number}>};

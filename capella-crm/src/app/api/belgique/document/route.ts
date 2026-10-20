@@ -1,0 +1,10 @@
+import { PDFDocument,StandardFonts,rgb } from 'pdf-lib';
+import { requireAdmin } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
+import { euros } from '@/lib/belgium/domain';
+export async function GET(request:Request){await requireAdmin();const id=new URL(request.url).searchParams.get('id');if(!id)return new Response('Pièce requise',{status:400});const db=await createClient();const {data:i,error}=await db.from('be_invoices').select('*').eq('id',id).single();if(error||!i)return new Response('Pièce introuvable',{status:404});const pdf=await PDFDocument.create();const font=await pdf.embedFont(StandardFonts.Helvetica);const bold=await pdf.embedFont(StandardFonts.HelveticaBold);let page=pdf.addPage([842,595]),y=550;
+ const safe=(s:string)=>s.replace(/[^\x20-\x7e\xa0-\xff€]/g,' ').replace(/\s+/g,' ');
+ function line(s:string,size=10,strong=false){if(y<45){page=pdf.addPage([842,595]);y=550;}page.drawText(safe(s),{x:35,y,size,font:strong?bold:font,color:rgb(.06,.11,.18)});y-=size+8;}
+ line('CAPELLA ENERGY',18,true);line('Appel à facturation - '+i.centre,15,true);line('Référence : '+i.reference+' | Fournisseur : '+i.supplier+' | Période : '+i.period.slice(0,7));line('Montant à facturer à Capella : '+euros(i.amount_cents),14,true);line('Règlement dès réception des commissions du fournisseur.');line('Ce document détaille le montant dû au centre. Il ne remplace pas sa facture fiscale.');y-=10;
+ for(const row of i.lines){line(`${String(row.client??'').slice(0,70)} | Agent : ${String(row.agent??'').slice(0,30)}`,10,true);line(`EAN : ${row.ean} | ${row.key} | Part centre : ${euros(Number(row.centre_cents))}`);line(`Statut lors de l'appel fournisseur : ${row.status??''}`,9);y-=5;}
+ line('TOTAL À FACTURER : '+euros(i.amount_cents),13,true);const bytes=await pdf.save();return new Response(Buffer.from(bytes),{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="appel-${i.centre}-${i.period.slice(0,7)}.pdf"`,'Cache-Control':'no-store'}});}

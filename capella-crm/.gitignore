@@ -42,3 +42,6 @@ next-env.d.ts
 
 # ...sauf le modèle sans secrets, utile à la mise en route.
 !.env.local.example
+
+# Supabase CLI local cache
+/supabase/.temp/
