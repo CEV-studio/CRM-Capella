@@ -63,14 +63,8 @@ const NAV: { titre: string; items: NavItem[] }[] = [
     { href: "/email", label: "Mon email", icon: Mail },
   ] },
   { titre: "Admin", items: [
-    { href: "/adv", label: "ADV", icon: ShieldCheck, adminOnly: true },
-    { href: "/admin/acd", label: "Demandes d’ACD", icon: FileCheck2, adminOnly: true },
-    { href: "/admin/emails", label: "Emails & templates", icon: MailCheck, adminOnly: true },
-    { href: "/admin/boites-email", label: "Boîtes e-mail", icon: Inbox, adminOnly: true },
-    { href: "/admin/commerciaux", label: "Équipe & apporteurs", icon: Users, adminOnly: true },
-    { href: "/admin/reservoir", label: "Réservoir & attribution", icon: Database, adminOnly: true },
+    { href: "/admin", label: "Espace admin", icon: ShieldCheck, adminOnly: true },
     { href: "/admin/export", label: "Export", icon: FileDown, needs: p => peutGererLocal(p) || p.can_export },
-    { href: "/admin/corbeille", label: "Corbeille", icon: Trash2, adminOnly: true },
   ] },
 ];
 
