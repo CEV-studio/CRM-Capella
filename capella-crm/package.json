@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:partners": "node tests/partner-workflow.mjs",
-    "test:belgium": "node tests/belgium-workflow.mjs"
+    "test:belgium": "node tests/belgium-workflow.mjs && node tests/belgium-dashboard.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

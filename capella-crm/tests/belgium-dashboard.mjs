@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import ts from 'typescript';
+const compile=(file,require=()=>{})=>{const mod={exports:{}};new Function('module','exports','require',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(mod,mod.exports,require);return mod.exports;};
+const domain=compile('src/lib/belgium/domain.ts');const {dashboardModel,inScope}=compile('src/lib/belgium/dashboard.ts',()=>domain);
+const base={key:'a',status_class:'Effectif',registered_date:'2026-09-20',period:'2026-10-01',gross_cents:6500,centre_cents:3000,clawback_end:'2027-01-01'};
+const rows=[base,{...base,key:'b',status_class:'Annulé',registered_date:'2026-10-01'},{...base,key:'c',status_class:'Résilié',registered_date:'2025-10-01'},{...base,key:'d',status_class:'Salle d’attente',registered_date:'2026-10-02'},{...base,key:'e',status_class:'En attente',registered_date:null},{...base,key:'f',status_class:'Incomplet',registered_date:'2026-10-05'}];
+let m=dashboardModel(rows,[],{view:'month',year:2026,month:10},'2026-10-20');
+assert.equal(m.cohort.length,3);assert.equal(m.counts.find(s=>s.key==='Effectif').count,0);assert.equal(m.counts.find(s=>s.key==='Annulé').count,1);assert.equal(m.counts.find(s=>s.key==='Salle d’attente').count,1);assert.equal(m.counts.find(s=>s.key==='Autres').count,1);assert.equal(m.gross,6500,'financial period stays distinct from registration cohort');assert.equal(m.commissioned,1);assert.equal(m.months.length,12);assert.equal(m.months[8].total,1);assert.equal(m.months[9].total,3);assert.equal(m.months[0].total,0);
+m=dashboardModel(rows,[],{view:'year',year:2026,month:1},'2026-10-20');assert.equal(m.cohort.length,4);assert.equal(m.counts.reduce((n,s)=>n+s.count,0),m.cohort.length);
+m=dashboardModel(rows,[],{view:'global',year:2026,month:1},'2026-10-20');assert.equal(m.cohort.length,6);assert.equal(m.undated,1);assert.equal(m.counts.reduce((n,s)=>n+s.count,0),6);
+m=dashboardModel(rows,[{key:'a',period:'2026-09-01',gross_cents:7500,centre_cents:3500}],{view:'month',year:2026,month:10},'2026-10-20');assert.equal(m.gross,0,'official period overrides forecast');
+assert.equal(inScope(null,{view:'global',year:2026,month:1}),true);assert.equal(inScope(null,{view:'year',year:2026,month:1}),false);
+console.log('PASS: global/year/month cohorts, all statuses sum correctly, missing dates, 12 monthly buckets, commission periods distinct from registrations.');

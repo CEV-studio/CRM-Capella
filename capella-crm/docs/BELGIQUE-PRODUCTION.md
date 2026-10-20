@@ -39,3 +39,11 @@ Dans **Facturation**, sélectionner le centre, la période et une référence un
 - `npm run build` et `npx tsc --noEmit`.
 
 La migration crée cinq tables `be_*` et deux fonctions RPC en mode SECURITY INVOKER. Elle ne modifie aucune donnée du courtage français.
+
+## Tableau de bord graphique
+
+Les vues Global / Année / Mois filtrent les cartes et le graphique de statuts par **date d’inscription**. Il s’agit du statut actuel de cette cohorte, pas d’un historique des transitions. Les cartes ouvrent le registre avec les mêmes filtres. Le repère annuel représente les douze mois de l’année sélectionnée, y compris les mois sans inscriptions.
+
+Le bandeau financier utilise séparément la **période de commissionnement**, confirmée par l’appel officiel ou provisoire à défaut. Les contrats inscrits en septembre mais commissionnés en octobre sont donc dans les statuts de septembre et les montants d’octobre. Ces deux bases sont indiquées explicitement.
+
+Les liens Sheets sont regroupés dans « Mes sauvegardes Google Sheets », réservé comme tout le module à l’administrateur. Le changement ne modifie ni les fichiers, ni leur partage, ni leur synchronisation.
