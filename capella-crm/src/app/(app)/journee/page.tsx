@@ -21,6 +21,7 @@ type WorkItem = {
   urgent: boolean;
   anomaly: boolean;
 };
+type ExpiryItem = { prospect: Row; date: string; meter: string | null; days: number };
 
 function label(p: Row) {
   return p.raison_sociale || [p.prenom, p.nom].filter(Boolean).join(" ") || "Prospect sans nom";
@@ -46,6 +47,12 @@ function dateKeyParis(value: Date | string): string {
     month: "2-digit",
     day: "2-digit",
   }).format(typeof value === "string" ? new Date(value) : value);
+}
+
+function dayDifference(from: string, to: string) {
+  const a = new Date(`${from.slice(0, 10)}T12:00:00Z`).getTime();
+  const b = new Date(`${to.slice(0, 10)}T12:00:00Z`).getTime();
+  return Math.round((b - a) / 86_400_000);
 }
 
 function WorkCard({ item, rank }: { item: WorkItem; rank?: number }) {
@@ -79,7 +86,7 @@ export default async function JourneePage() {
   const profile = await requireProfile();
   const supabase = await createClient();
   const now = new Date();
-  const prospectColumns = "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, stage, stage_entered_at, next_action, next_action_date, last_action_at, date_fin_contrat, became_client_at, created_at, updated_at, segment, car_electricite, car_gaz, fournisseur_electricite, fournisseur_gaz, assigned_to";
+  const prospectColumns = "id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, stage, stage_entered_at, next_action, next_action_date, last_action_at, date_fin_contrat, became_client_at, created_at, updated_at, segment, car_electricite, car_gaz, fournisseur_electricite, fournisseur_gaz, assigned_to, entreprise_id";
 
   const prospectsQuery = (supabase as any)
     .from("prospects")
@@ -107,10 +114,31 @@ export default async function JourneePage() {
 
   const [{ data: prospectData }, { data: reminderEventData, error: reminderError }, { data: comparisonEventData, error: comparisonError }] = await Promise.all([prospectsQuery, reminderEventsQuery, comparisonEventsQuery]);
   const prospects = (prospectData ?? []) as Row[];
+  const enterpriseIds = [...new Set(prospects.map((prospect) => prospect.entreprise_id).filter((id): id is string => Boolean(id)))];
+  const { data: meterData, error: meterError } = enterpriseIds.length
+    ? await (supabase as any).from("prospect_compteurs").select("entreprise_id,type_energie,numero,date_echeance").in("entreprise_id", enterpriseIds).is("archived_at", null).not("date_echeance", "is", null)
+    : { data: [], error: null };
+  const today = dateKeyParis(now);
+  const expiryItems: ExpiryItem[] = [];
+  const prospectsWithMeterExpiry = new Set<string>();
+  for (const meter of (meterData ?? []) as Array<{entreprise_id:string;type_energie:"electricite"|"gaz";numero:string;date_echeance:string|null}>) {
+    if (!meter.date_echeance) continue;
+    const days = dayDifference(today, meter.date_echeance);
+    const relatedProspects = prospects.filter((item) => item.entreprise_id === meter.entreprise_id);
+    for (const prospect of relatedProspects) {
+      prospectsWithMeterExpiry.add(prospect.id);
+      if (days <= 90) expiryItems.push({ prospect, date: meter.date_echeance, meter: `${meter.type_energie === "gaz" ? "PCE" : "PDL"} ${meter.numero}`, days });
+    }
+  }
+  for (const prospect of prospects) {
+    if (prospectsWithMeterExpiry.has(prospect.id) || !prospect.date_fin_contrat) continue;
+    const days = dayDifference(today, prospect.date_fin_contrat);
+    if (days <= 90) expiryItems.push({ prospect, date: prospect.date_fin_contrat, meter: null, days });
+  }
+  expiryItems.sort((a, b) => a.days - b.days || label(a.prospect).localeCompare(label(b.prospect), "fr"));
   const prospectsIndex = new Map(prospects.map((prospect) => [prospect.id, prospect]));
   const events = ([...(reminderEventData ?? []), ...(comparisonEventData ?? [])]) as DisciplineEvent[];
   const error = reminderError ?? comparisonError;
-  const today = dateKeyParis(now);
   const eventItems = events.map((event): WorkItem | null => {
     const prospect = prospectsIndex.get(event.prospect_id);
     if (!prospect) return null;
@@ -151,7 +179,20 @@ export default async function JourneePage() {
         {top ? <Link href={`/prospection/${top.prospect.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-star-500 px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(232,96,48,.20)] hover:bg-star-600"><Flame size={17}/>Traiter le prospect prioritaire<ArrowRight size={16}/></Link> : null}
       </header>
 
-      {error ? <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {error.message}</div> : null}
+      {error || meterError ? <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Lecture impossible : {(error ?? meterError)?.message}</div> : null}
+
+      <section className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm sm:p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div><h2 className="font-display text-lg font-bold text-navy-900">Échéances à anticiper</h2><p className="mt-0.5 text-xs text-navy-500">Contrats arrivant à échéance dans les 90 jours et échéances dépassées.</p></div>
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{expiryItems.length} échéance{expiryItems.length > 1 ? "s" : ""}</span>
+        </div>
+        {expiryItems.length ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{expiryItems.slice(0, 30).map((item, index) => <article key={`${item.prospect.id}-${item.meter ?? "contrat"}-${item.date}-${index}`} className="flex items-center gap-3 rounded-xl border border-amber-100 bg-white p-3">
+          <div className={`flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl text-[10px] font-bold leading-tight ${item.days < 0 ? "bg-red-100 text-red-700" : item.days <= 30 ? "bg-orange-100 text-orange-800" : "bg-amber-100 text-amber-800"}`}><span className="text-base">{item.days < 0 ? Math.abs(item.days) : item.days}</span><span>{item.days < 0 ? "j retard" : "jours"}</span></div>
+          <div className="min-w-0 flex-1"><ProspectFichePopup prospectId={item.prospect.id} prospectLabel={label(item.prospect)} className="block truncate text-sm font-bold text-navy-900 hover:text-sky-capella-700">{label(item.prospect)}</ProspectFichePopup><div className="mt-0.5 truncate text-xs text-navy-500">{item.meter ? `${item.meter} · ` : "Contrat · "}{formatDate(item.date)}</div></div>
+          <ProspectFichePopup prospectId={item.prospect.id} prospectLabel={label(item.prospect)} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-navy-200 text-navy-600 hover:bg-sky-capella-50" ariaLabel="Ouvrir le dossier"><ArrowRight size={15}/></ProspectFichePopup>
+        </article>)}</div> : <div className="rounded-xl border border-dashed border-amber-200 bg-white/70 p-5 text-center text-sm text-grey-brand">Aucune échéance dans les 90 prochains jours.</div>}
+        {expiryItems.length > 30 ? <p className="mt-3 text-xs text-navy-500">30 premières échéances affichées. Consulte les dossiers concernés dans la prospection.</p> : null}
+      </section>
 
       <section className="mb-6 grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-red-200 bg-white p-4 shadow-sm"><span className="text-xs font-bold uppercase tracking-wide text-red-700">Rappels en retard</span><div className="mt-2 font-display text-3xl font-black text-navy-900">{retards.length}</div></div>
