@@ -1,69 +1,15 @@
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, CalendarClock, Search } from "lucide-react";
-import { requireProfile, voitTout } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { DeadlinePage } from "@/lib/domain/database.types";
 
 export const metadata = { title: "Échéances — Capella CRM" };
 export const dynamic = "force-dynamic";
 
-type ProspectRow = {
-  id: string;
-  ref: string | null;
-  raison_sociale: string | null;
-  nom: string | null;
-  prenom: string | null;
-  mail: string | null;
-  tel_mobile: string | null;
-  tel_fixe: string | null;
-  stage: string;
-  date_fin_contrat: string | null;
-  fournisseur_electricite: string | null;
-  fournisseur_gaz: string | null;
-  segment: string | null;
-  assigned_to: string | null;
-};
-type MeterRow = {
-  id: string;
-  prospect_id: string;
-  type_energie: "electricite" | "gaz";
-  numero: string;
-  segment: string | null;
-  date_echeance: string;
-};
-type Deadline = {
-  key: string;
-  prospect: ProspectRow;
-  date: string;
-  kind: string;
-  identifier: string | null;
-  supplier: string | null;
-};
+type ProspectRow = DeadlinePage["rows"][number]["prospect"];
 type Period = "toutes" | "retard" | "0_12" | "12_18" | "18_plus";
 type SearchParams = Promise<{ q?: string; periode?: string; page?: string }>;
-type QueryBuilder = {
-  select(columns: string): QueryBuilder;
-  is(column: string, value: unknown): QueryBuilder;
-  not(column: string, operator: string, value: unknown): QueryBuilder;
-  eq(column: string, value: unknown): QueryBuilder;
-  in(column: string, values: string[]): QueryBuilder;
-  range(from: number, to: number): Promise<{ data: unknown[] | null; error: { message: string } | null }>;
-};
-type DynamicClient = { from(table: string): QueryBuilder };
-
-const PAGE_SIZE = 50;
-const selectProspect = "id,ref,raison_sociale,nom,prenom,mail,tel_mobile,tel_fixe,stage,date_fin_contrat,fournisseur_electricite,fournisseur_gaz,segment,assigned_to";
-
-function fetchAll<T>(query: () => QueryBuilder): Promise<T[]> {
-  return (async () => {
-    const rows: T[] = [];
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await query().range(from, from + 999);
-      if (error) throw new Error(error.message);
-      rows.push(...((data ?? []) as T[]));
-      if (!data || data.length < 1000) return rows;
-    }
-  })();
-}
 
 function companyName(prospect: ProspectRow) {
   return prospect.raison_sociale || [prospect.prenom, prospect.nom].filter(Boolean).join(" ") || "Dossier sans nom";
@@ -74,28 +20,8 @@ function formatDate(value: string) {
     .format(new Date(`${value.slice(0, 10)}T12:00:00Z`));
 }
 
-function parisToday() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-}
-
-function addMonths(date: string, months: number) {
-  const [year, month, day] = date.split("-").map(Number);
-  const monthIndex = year * 12 + month - 1 + months;
-  const targetYear = Math.floor(monthIndex / 12);
-  const targetMonth = monthIndex % 12;
-  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
-  return `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}-${String(Math.min(day, lastDay)).padStart(2, "0")}`;
-}
-
 function daysUntil(today: string, date: string) {
   return Math.round((new Date(`${date.slice(0, 10)}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86_400_000);
-}
-
-function periodFor(date: string, today: string, oneYear: string, eighteenMonths: string): Exclude<Period, "toutes"> {
-  if (date < today) return "retard";
-  if (date <= oneYear) return "0_12";
-  if (date <= eighteenMonths) return "12_18";
-  return "18_plus";
 }
 
 function periodLabel(date: string, today: string, eighteenMonths: string) {
@@ -114,82 +40,16 @@ function hrefFor(period: Period, q: string, page = 1) {
 }
 
 export default async function EcheancesPage({ searchParams }: { searchParams: SearchParams }) {
-  const profile = await requireProfile();
+  await requireProfile();
   const supabase = await createClient();
-  const db = supabase as unknown as DynamicClient;
   const params = await searchParams;
   const period: Period = ["toutes", "retard", "0_12", "12_18", "18_plus"].includes(params.periode ?? "") ? (params.periode as Period) : "toutes";
   const q = (params.q ?? "").trim().slice(0, 120);
-  const page = Math.max(1, Number(params.page ?? 1) || 1);
-  const allVisible = voitTout(profile);
-  const today = parisToday();
-  const oneYear = addMonths(today, 12);
-  const eighteenMonths = addMonths(today, 18);
-
-  const scopedProspects = () => {
-    let query = db.from("prospects").select(selectProspect).is("deleted_at", null);
-    if (!allVisible) query = query.eq("assigned_to", profile.id);
-    return query;
-  };
-  const [contracts, meterRows] = await Promise.all([
-    fetchAll<ProspectRow>(() => scopedProspects().not("date_fin_contrat", "is", null)),
-    fetchAll<MeterRow>(() => db.from("prospect_compteurs").select("id,prospect_id,type_energie,numero,segment,date_echeance").is("archived_at", null).not("date_echeance", "is", null)),
-  ]).catch((error) => {
-    throw new Error(`Impossible de charger les échéances : ${error instanceof Error ? error.message : "erreur inconnue"}`);
-  });
-
-  const visibleMeterProspectIds = [...new Set(meterRows.map((meter) => meter.prospect_id))];
-  const meterProspects: ProspectRow[] = [];
-  for (let offset = 0; offset < visibleMeterProspectIds.length; offset += 200) {
-    const ids = visibleMeterProspectIds.slice(offset, offset + 200);
-    meterProspects.push(...await fetchAll<ProspectRow>(() => scopedProspects().in("id", ids)));
-  }
-  const prospectsById = new Map([...contracts, ...meterProspects].map((prospect) => [prospect.id, prospect]));
-  const validMeters = meterRows.filter((meter) => prospectsById.has(meter.prospect_id));
-  const prospectsWithMeterDeadline = new Set(validMeters.map((meter) => meter.prospect_id));
-
-  const deadlines: Deadline[] = validMeters.map((meter) => {
-    const prospect = prospectsById.get(meter.prospect_id)!;
-    const isGas = meter.type_energie === "gaz";
-    return {
-      key: `meter-${meter.id}`,
-      prospect,
-      date: meter.date_echeance,
-      kind: isGas ? "Gaz" : `Électricité${meter.segment ? ` · ${meter.segment}` : ""}`,
-      identifier: `${isGas ? "PCE" : "PDL"} ${meter.numero}`,
-      supplier: isGas ? prospect.fournisseur_gaz : prospect.fournisseur_electricite,
-    };
-  });
-  for (const prospect of contracts) {
-    if (!prospect.date_fin_contrat || prospectsWithMeterDeadline.has(prospect.id)) continue;
-    deadlines.push({
-      key: `contract-${prospect.id}`,
-      prospect,
-      date: prospect.date_fin_contrat,
-      kind: "Contrat",
-      identifier: null,
-      supplier: [prospect.fournisseur_electricite, prospect.fournisseur_gaz].filter(Boolean).join(" / ") || null,
-    });
-  }
-
-  const searchable = deadlines.filter((item) => {
-    if (!q) return true;
-    const haystack = [companyName(item.prospect), item.prospect.prenom, item.prospect.nom, item.prospect.mail, item.prospect.tel_mobile, item.prospect.tel_fixe, item.prospect.stage, item.identifier, item.supplier].filter(Boolean).join(" ").toLocaleLowerCase("fr-FR");
-    return haystack.includes(q.toLocaleLowerCase("fr-FR"));
-  });
-  const matching = searchable.filter((item) => period === "toutes" || periodFor(item.date, today, oneYear, eighteenMonths) === period)
-    .sort((a, b) => a.date.localeCompare(b.date) || companyName(a.prospect).localeCompare(companyName(b.prospect), "fr"));
-  const counts = {
-    toutes: searchable.length,
-    retard: searchable.filter((item) => item.date < today).length,
-    alerte: searchable.filter((item) => item.date >= today && item.date <= eighteenMonths).length,
-    zeroDouze: searchable.filter((item) => item.date >= today && item.date <= oneYear).length,
-    douzeDixHuit: searchable.filter((item) => item.date > oneYear && item.date <= eighteenMonths).length,
-    plusTard: searchable.filter((item) => item.date > eighteenMonths).length,
-  };
-  const totalPages = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageRows = matching.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const requestedPage = Number(params.page ?? 1);
+  const page = Number.isSafeInteger(requestedPage) ? Math.max(1, Math.min(requestedPage, 2147483647)) : 1;
+  const { data, error } = await supabase.rpc("crm_deadlines_page", { p_period: period, p_query: q, p_page: page });
+  if (error || !data) throw new Error(`Impossible de charger les échéances : ${error?.message ?? "réponse vide"}`);
+  const { counts, total, totalPages, page: currentPage, rows: pageRows, today, eighteenMonths } = data;
   const filters: Array<{ value: Period; label: string; count: number }> = [
     { value: "toutes", label: "Toutes les échéances", count: counts.toutes },
     { value: "retard", label: "Dépassées", count: counts.retard },
@@ -227,7 +87,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
       <section className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-100 px-4 py-3">
           <div><h2 className="font-display text-base font-bold text-navy-900">Dossiers à suivre</h2><p className="text-xs text-navy-500">Triés par date d’échéance, de la plus proche à la plus lointaine.</p></div>
-          <span className="rounded-full bg-navy-50 px-3 py-1 text-xs font-bold text-navy-700">{matching.length} résultat{matching.length > 1 ? "s" : ""}</span>
+          <span className="rounded-full bg-navy-50 px-3 py-1 text-xs font-bold text-navy-700">{total} résultat{total > 1 ? "s" : ""}</span>
         </div>
         {pageRows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[950px] border-collapse text-left text-sm">
           <thead><tr className="bg-navy-50/70 text-[10px] font-bold uppercase tracking-wide text-navy-500"><th className="px-4 py-3">Échéance</th><th className="px-4 py-3">Entreprise / dossier</th><th className="px-4 py-3">Compteur</th><th className="px-4 py-3">Fournisseur</th><th className="px-4 py-3">Étape</th><th className="px-4 py-3"><span className="sr-only">Ouvrir</span></th></tr></thead>

@@ -16,8 +16,6 @@ export const dynamic = "force-dynamic";
 type Recherche = { annee?: string; mois?: string; commercial?: string; apporteur?: string };
 type EvenementSemaine = { id:string; prospect_id:string; profile_id:string; title:string; start_at:string; end_at:string };
 
-const ETAPES_CLOTUREES = new Set(["KO", "Numéro KO", "Pas intéressé", "DDF trop éloignée"]);
-
 function dateParis(value: Date | string) {
   return new Intl.DateTimeFormat("en-CA", { timeZone:"Europe/Paris", year:"numeric", month:"2-digit", day:"2-digit" }).format(typeof value === "string" ? new Date(value) : value);
 }
@@ -39,9 +37,9 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
   const supabase = await createClient();
   const semaine = bornesSemaine();
 
-  const [{ data: affairesBrutes }, { data: prospectsBruts }, { data: profils }, { data: evenementsBruts }, apporteurs] = await Promise.all([
+  const [{ data: affairesBrutes }, { data: summary, error: summaryError }, { data: profils }, { data: evenementsBruts }, apporteurs] = await Promise.all([
     supabase.from("affaires").select("commercial_id, apporteur_id, stage, date_signature, date_relance, commission, raison_sociale").is("deleted_at", null),
-    supabase.from("prospects").select("id, raison_sociale, nom, prenom, stage, next_action_date, assigned_to").is("deleted_at", null),
+    supabase.rpc("crm_prospect_summary"),
     supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active", true).order("full_name"),
     estAdmin ? supabase.from("calendar_events").select("id, prospect_id, profile_id, title, start_at, end_at").eq("kind", "rdv").eq("status", "confirmed").gte("start_at", `${semaine.debut}T00:00:00Z`).lt("start_at", `${semaine.fin}T23:59:59Z`).order("start_at") : Promise.resolve({ data: [] as EvenementSemaine[] }),
     chargerApporteurs(),
@@ -62,23 +60,31 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
 
   const affairesParEtape = new Map<string, number>();
   for (const a of affaires) affairesParEtape.set(a.stage, (affairesParEtape.get(a.stage) ?? 0) + 1);
-  const prospects = (prospectsBruts ?? []) as Pick<Prospect, "id" | "raison_sociale" | "nom" | "prenom" | "stage" | "next_action_date" | "assigned_to">[];
-  const prospectsParEtape = new Map<string, number>();
-  for (const p of prospects) prospectsParEtape.set(p.stage, (prospectsParEtape.get(p.stage) ?? 0) + 1);
-  const aujourdhui = new Date().toISOString().slice(0, 10);
-  const relancesProspection = prospects.filter((p) => p.next_action_date != null && p.next_action_date >= aujourdhui).length;
+  if (summaryError || !summary) throw new Error(`Impossible de charger les indicateurs : ${summaryError?.message ?? "réponse vide"}`);
+  const prospectsParEtape = new Map(summary.stages.map(s => [s.stage, s.total]));
+  const owners = new Map(summary.owners.map(s => [s.assigned_to, s]));
+  const relancesProspection = summary.upcoming;
   const periode = mois ? `${MOIS[mois - 1]} ${annee}` : `Année ${annee}`;
   const evenementsSemaine = ((evenementsBruts ?? []) as EvenementSemaine[]).filter((e) => { const d=dateParis(e.start_at); return d>=semaine.debut&&d<semaine.fin; });
-  const prospectsIndex = new Map(prospects.map((p) => [p.id, p]));
+  // Only hydrate the names of companies actually shown in the week's appointments.
+  const prospectIds = [...new Set(evenementsSemaine.map(e => e.prospect_id))];
+  const batches: string[][] = [];
+  for (let i = 0; i < prospectIds.length; i += 200) batches.push(prospectIds.slice(i, i + 200));
+  const results = await Promise.all(batches.map(ids => supabase.from("prospects").select("id,raison_sociale,nom,prenom").is("deleted_at",null).in("id", ids)));
+  const prospectsIndex = new Map<string, Pick<Prospect, "id" | "raison_sociale" | "nom" | "prenom">>();
+  for (const result of results) {
+    if (result.error) throw new Error(`Impossible de charger les rendez-vous : ${result.error.message}`);
+    for (const prospect of result.data ?? []) prospectsIndex.set(prospect.id, prospect);
+  }
   const managerRows = listeProfils.map((commercial) => {
-    const portefeuille = prospects.filter((p) => p.assigned_to === commercial.id);
+    const portefeuille = owners.get(commercial.id);
     const dossiers = affaires.filter((a) => a.commercial_id === commercial.id);
     const valides = dossiers.filter((a) => a.stage === "Signé");
     return {
       id:commercial.id,
       nom:commercial.full_name,
-      actifs:portefeuille.filter((p) => !ETAPES_CLOTUREES.has(p.stage)).length,
-      retards:portefeuille.filter((p) => p.next_action_date && p.next_action_date < aujourdhui && !ETAPES_CLOTUREES.has(p.stage)).length,
+      actifs:portefeuille?.actifs ?? 0,
+      retards:portefeuille?.retards ?? 0,
       rdv:evenementsSemaine.filter((e) => e.profile_id === commercial.id).length,
       enCours:dossiers.filter((a) => !["Signé", "KO"].includes(a.stage)).length,
       valides:valides.length,

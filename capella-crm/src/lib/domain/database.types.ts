@@ -93,6 +93,20 @@ export type CalendarEventInsert = Partial<Writable<CalendarEvent,"id"|"created_a
 
 type Table<Row, Insert = Partial<Row>, Update = Partial<Row>> = { Row:Row; Insert:Insert; Update:Update; Relationships:[] };
 
+export type DeadlinePage = {
+  counts: { toutes: number; retard: number; alerte: number; zeroDouze: number; douzeDixHuit: number; plusTard: number };
+  total: number; page: number; totalPages: number; today: string; eighteenMonths: string;
+  rows: Array<{
+    key: string; date: string; kind: string; identifier: string | null; supplier: string | null;
+    prospect: Pick<Prospect, "id" | "ref" | "raison_sociale" | "nom" | "prenom" | "stage">;
+  }>;
+};
+export type ProspectSummary = {
+  stages: Array<{ stage: string; total: number }>;
+  owners: Array<{ assigned_to: string; actifs: number; retards: number }>;
+  upcoming: number;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -129,6 +143,9 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      crm_deadlines_page:{Args:{p_period?:string;p_query?:string;p_page?:number};Returns:DeadlinePage};
+      crm_prospect_summary:{Args:Record<never,never>;Returns:ProspectSummary};
+      crm_reservoir_counts:{Args:Record<never,never>;Returns:Array<{source_id:string|null;total:number}>};
       partner_command:{Args:{p_action:string;p_id:string;p_data?:Record<string,unknown>};Returns:string};
       transfer_prospect_to_quote:{Args:{p_prospect_id:string};Returns:string};
       is_admin:{ Args:Record<never,never>; Returns:boolean };

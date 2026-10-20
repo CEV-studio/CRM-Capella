@@ -16,7 +16,7 @@ import { nomComplet } from "@/lib/domain/noms";
 import type { Prospect } from "@/lib/domain/database.types";
 
 type Option = { value: string; label: string };
-export type LeadReservoir = Prospect & { source?: string | null };
+export type LeadReservoir = Pick<Prospect, "id" | "ref" | "raison_sociale" | "nom" | "prenom" | "tel_mobile" | "siren" | "source_id" | "created_at"> & { source?: string | null };
 
 const SELECT =
   "h-10 w-full rounded-lg border border-navy-200 bg-white px-3 text-sm focus:border-star-500 focus:outline-none focus:ring-2 focus:ring-star-500/20";
