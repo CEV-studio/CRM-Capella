@@ -69,5 +69,15 @@ export function retained(c:Contract,statements:Statement[]){const s=statements.f
 export function summarize(contracts:Contract[],statements:Statement[],period:string|null,today:string){
  const selected=contracts.filter(c=>!period||retained(c,statements).period===period);const active=selected.filter(c=>c.status_class==='Effectif');
  const sums=active.reduce((a,c)=>{const v=retained(c,statements);a.gross+=v.gross_cents;a.centre+=v.centre_cents;return a;},{gross:0,centre:0});
- return {...sums,capella:sums.gross-sums.centre,active:active.length,clawback:active.filter(c=>!!c.clawback_end&&c.clawback_end>today).length,unknownDates:active.filter(c=>!c.effect_date||!c.clawback_end).length,waiting:selected.filter(c=>c.status_class==='En attente').length,room:selected.filter(c=>c.status_class==='Salle d’attente').length,cancelled:selected.filter(c=>c.status_class==='Annulé').length,terminated:selected.filter(c=>c.status_class==='Résilié').length};
+ return {...sums,capella:sums.gross-sums.centre,active:active.length,atRisk:active.filter(c=>!!c.clawback_end&&c.clawback_end>today).length,unknownDates:active.filter(c=>!c.effect_date||!c.clawback_end).length,waiting:selected.filter(c=>c.status_class==='En attente').length,room:selected.filter(c=>c.status_class==='Salle d’attente').length,cancelled:selected.filter(c=>c.status_class==='Annulé').length,terminated:selected.filter(c=>c.status_class==='Résilié').length};
 }
+
+export type CycleTracking = {
+ contract_key:string;effect_date:string|null;termination_date:string|null;completed_at:string|null;
+ bonus_invoiced_at:string|null;bonus_paid_at:string|null;
+ centre_recovered_cents:number;mega_recovered_cents:number;notes:string;updated_at:string;
+};
+export type SupplierBilling = {
+ supplier:string;period:string;call_received_at:string|null;invoiced:boolean;invoiced_at:string|null;
+ invoice_reference:string|null;received_cents:number;received_at:string|null;notes:string;updated_at:string;
+};

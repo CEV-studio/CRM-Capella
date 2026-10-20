@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run test:belgium:finance && next build",
     "start": "next start",
     "lint": "eslint",
     "test:partners": "node tests/partner-workflow.mjs",
-    "test:belgium": "node tests/belgium-workflow.mjs && node tests/belgium-dashboard.mjs"
+    "test:belgium": "node tests/belgium-workflow.mjs && node tests/belgium-dashboard.mjs && node tests/belgium-finance.mjs",
+    "test:belgium:finance": "node tests/belgium-finance.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

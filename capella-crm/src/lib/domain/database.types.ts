@@ -1,3 +1,4 @@
+import type { CycleTracking, SupplierBilling } from '@/lib/belgium/domain';
 import type { Contract, Statement, Invoice, ImportRun as BelgiumImportRun } from "@/lib/belgium/domain";
 import type { Dossier, Quote } from "@/lib/partners/types";
 /** Types manuels de la base Supabase — miroir des migrations. */
@@ -112,6 +113,8 @@ export interface Database {
   public: {
     Tables: {
       be_contract_history:Table<{id:number;contract_key:string;import_id:string;before_data:Record<string,unknown>|null;after_data:Record<string,unknown>;created_at:string}>;
+      be_cycle_tracking:Table<CycleTracking>;
+      be_supplier_billing:Table<SupplierBilling>;
       be_contracts:Table<{key:string;supplier:string;mega_id:string;ean:string;agent:string;centre:string;status:string;status_class:string;report_date:string;data:Contract;import_id:string}>;
       be_statement_lines:Table<{id:string;supplier:string;period:string;contract_key:string;gross_cents:number;centre_cents:number;data:Statement;import_id:string}>;
       be_imports:Table<BelgiumImportRun>;
