@@ -11,6 +11,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   Database,
+  Hourglass,
   FileCheck2,
   FileDown,
   Inbox,
@@ -39,6 +40,7 @@ const NAV: { titre: string; items: NavItem[] }[] = [
   { titre: "Commercial", items: [
     { href: "/", label: "Tableau de bord", icon: LayoutDashboard },
     { href: "/journee", label: "Ma journée", icon: Target },
+    { href: "/echeances", label: "Échéances", icon: Hourglass },
     { href: "/prospection", label: "Prospection", icon: BarChart3 },
     { href: "/clients", label: "Dossiers en cours", icon: Users },
     { href: "/conversion", label: "Demandes de cotation", icon: BriefcaseBusiness },
