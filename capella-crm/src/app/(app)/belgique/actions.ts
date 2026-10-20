@@ -20,6 +20,8 @@ export async function saveCycle(form:FormData){
  for(const d of [row.effect_date,row.termination_date,row.completed_at,row.bonus_invoiced_at,row.bonus_paid_at])if(d&&(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>today))return {error:'Dates confirmées invalides ou futures'};
  if(row.termination_date&&row.effect_date&&row.termination_date<row.effect_date)return {error:'La résiliation précède la prise d’effet'};
  const cycle=contractCycle(contract,statements,row,today);
+ // Conserver la preuve d’acquisition lors de la facturation : une résiliation ultérieure ne doit pas effacer le bonus déjà acquis.
+ if((row.bonus_invoiced_at||row.bonus_paid_at)&&!row.completed_at&&['due','invoiced','paid'].includes(cycle.bonusState))row.completed_at=cycle.end;
  if((row.bonus_invoiced_at||row.bonus_paid_at)&&cycle.bonusState==='none'||(row.bonus_invoiced_at||row.bonus_paid_at)&&cycle.bonusState==='potential')return {error:'Le cycle de trois mois doit être confirmé avant de facturer le bonus'};
  if(row.centre_recovered_cents>(cycle.centreDue??0)||row.mega_recovered_cents>(cycle.megaDue??0))return {error:'La récupération dépasse la reprise calculée ou les dates de reprise ne sont pas confirmées'};
  const {error}=await db.from('be_cycle_tracking').upsert(row);if(error)return {error:error.message};
