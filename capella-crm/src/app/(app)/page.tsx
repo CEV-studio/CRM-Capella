@@ -10,6 +10,7 @@ import { FiltresPeriode } from "./filtres-periode";
 import { chargerApporteurs } from "@/lib/referentiels";
 import type { Affaire, Apporteur, Profile, Prospect } from "@/lib/domain/database.types";
 import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
+import { AdminHome } from "@/components/admin-home";
 
 export const metadata = { title: "Tableau de bord — Capella CRM" };
 export const dynamic = "force-dynamic";
@@ -67,6 +68,32 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
   if (summaryError || !summary) throw new Error(`Impossible de charger les indicateurs : ${summaryError?.message ?? "réponse vide"}`);
   const prospectsParEtape = new Map(summary.stages.map(s => [s.stage, s.total]));
   const owners = new Map(summary.owners.map(s => [s.assigned_to, s]));
+
+  if (estAdmin) {
+    const globalStats = calculerIndicateurs(toutesAffaires, tauxCommercial, tauxApporteur);
+    const anneeGlobale = Number(dateParis(new Date()).slice(0, 4));
+    const moisGlobal = commissionsParMois(toutesAffaires, anneeGlobale, tauxCommercial);
+    const totalProspectsGlobal = summary.stages.reduce((total, stage) => total + stage.total, 0);
+    const prospectsGlobalParEtape = PROSPECT_STAGES.map((stage) => ({
+      stage: stage.label,
+      total: summary.stages.find((row) => row.stage === stage.label)?.total ?? 0,
+    }));
+    const affairesGlobalParEtape = AFFAIRE_STAGES.map((stage) => ({
+      stage: stage.label,
+      total: toutesAffaires.filter((affaire) => affaire.stage === stage.label).length,
+    }));
+
+    return <AdminHome
+      prenom={profil.full_name.split(" ")[0]}
+      annee={anneeGlobale}
+      prospectsTotal={totalProspectsGlobal}
+      affairesEnCours={globalStats.nbEnCours}
+      tauxConversion={globalStats.tauxConversion}
+      mois={moisGlobal}
+      prospectsParEtape={prospectsGlobalParEtape}
+      affairesParEtape={affairesGlobalParEtape}
+    />;
+  }
   const relancesProspection = summary.upcoming;
   const periode = mois ? `${MOIS[mois - 1]} ${annee}` : `Année ${annee}`;
   const evenementsSemaine = ((evenementsBruts ?? []) as EvenementSemaine[]).filter((e) => { const d=dateParis(e.start_at); return d>=semaine.debut&&d<semaine.fin; });
