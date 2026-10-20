@@ -23,7 +23,6 @@ type AdminHomeProps = {
   prenom: string;
   annee: number;
   prospectsTotal: number;
-  affairesTotal: number;
   affairesEnCours: number;
   tauxConversion: number;
   mois: MoisStats[];
@@ -142,7 +141,7 @@ export function AdminHome(props: AdminHomeProps) {
           const Icon = category.icon;
           return (
             <Card key={category.titre} className="flex min-h-64 flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl {category.accent}">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${category.accent}`}>
                 <Icon size={23} strokeWidth={1.8} />
               </div>
               <h2 className="mt-4 font-display text-lg font-bold text-navy-800">{category.titre}</h2>
