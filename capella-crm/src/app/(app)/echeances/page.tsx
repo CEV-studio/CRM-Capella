@@ -38,7 +38,7 @@ type Deadline = {
   identifier: string | null;
   supplier: string | null;
 };
-type Period = "toutes" | "a_traiter" | "retard" | "0_12" | "12_18" | "18_plus";
+type Period = "toutes" | "retard" | "0_12" | "12_18" | "18_plus";
 type SearchParams = Promise<{ q?: string; periode?: string; page?: string }>;
 type QueryBuilder = {
   select(columns: string): QueryBuilder;
@@ -118,7 +118,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
   const supabase = await createClient();
   const db = supabase as unknown as DynamicClient;
   const params = await searchParams;
-  const period: Period = ["toutes", "a_traiter", "retard", "0_12", "12_18", "18_plus"].includes(params.periode ?? "") ? (params.periode as Period) : "toutes";
+  const period: Period = ["toutes", "retard", "0_12", "12_18", "18_plus"].includes(params.periode ?? "") ? (params.periode as Period) : "toutes";
   const q = (params.q ?? "").trim().slice(0, 120);
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const allVisible = voitTout(profile);
@@ -177,9 +177,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
     const haystack = [companyName(item.prospect), item.prospect.prenom, item.prospect.nom, item.prospect.mail, item.prospect.tel_mobile, item.prospect.tel_fixe, item.prospect.stage, item.identifier, item.supplier].filter(Boolean).join(" ").toLocaleLowerCase("fr-FR");
     return haystack.includes(q.toLocaleLowerCase("fr-FR"));
   });
-  const matching = searchable.filter((item) => period === "toutes"
-      || (period === "a_traiter" && item.date <= eighteenMonths)
-      || (period !== "a_traiter" && periodFor(item.date, today, oneYear, eighteenMonths) === period))
+  const matching = searchable.filter((item) => period === "toutes" || periodFor(item.date, today, oneYear, eighteenMonths) === period)
     .sort((a, b) => a.date.localeCompare(b.date) || companyName(a.prospect).localeCompare(companyName(b.prospect), "fr"));
   const counts = {
     toutes: searchable.length,
@@ -192,12 +190,12 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
   const totalPages = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageRows = matching.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const parentPeriod: Period = period === "18_plus" ? "18_plus" : ["a_traiter", "retard", "0_12", "12_18"].includes(period) ? "a_traiter" : "toutes";
-  const subFilters: Array<{ value: Period; label: string; count: number }> = [
-    { value: "a_traiter", label: "Toutes à traiter", count: counts.retard + counts.alerte },
-    { value: "retard", label: "En retard", count: counts.retard },
+  const filters: Array<{ value: Period; label: string; count: number }> = [
+    { value: "toutes", label: "Toutes les échéances", count: counts.toutes },
+    { value: "retard", label: "Dépassées", count: counts.retard },
     { value: "0_12", label: "Dans les 12 mois", count: counts.zeroDouze },
     { value: "12_18", label: "Dans 12 à 18 mois", count: counts.douzeDixHuit },
+    { value: "18_plus", label: "Au-delà de 18 mois", count: counts.plusTard },
   ];
 
   return (
@@ -222,17 +220,8 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
         <div className="rounded-2xl border border-sky-capella-200 bg-sky-capella-50/50 p-4 shadow-sm"><span className="text-xs font-bold uppercase tracking-wide text-sky-capella-700">Au-delà de 18 mois</span><div className="mt-2 font-display text-3xl font-black text-navy-900">{counts.plusTard}</div></div>
       </section>
 
-      <nav aria-label="Filtrer les échéances" className="mb-4 space-y-2">
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {[
-            { value: "toutes" as Period, label: "Toutes les échéances", count: counts.toutes },
-            { value: "a_traiter" as Period, label: "À traiter · jusqu’à 18 mois", count: counts.retard + counts.alerte },
-            { value: "18_plus" as Period, label: "Plus tard", count: counts.plusTard },
-          ].map((filter) => <Link key={filter.value} href={hrefFor(filter.value, q)} aria-current={parentPeriod === filter.value ? "page" : undefined} className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${parentPeriod === filter.value ? "border-navy-900 bg-navy-900 text-white" : "border-navy-200 bg-white text-navy-700 hover:bg-navy-50"}`}><span>{filter.label}</span><span className={`rounded-full px-1.5 py-0.5 tabular ${parentPeriod === filter.value ? "bg-white/15" : "bg-navy-50"}`}>{filter.count}</span></Link>)}
-        </div>
-        {parentPeriod === "a_traiter" ? <div className="flex flex-wrap gap-2 border-l-2 border-amber-200 pl-3">
-          {subFilters.map((filter) => <Link key={filter.value} href={hrefFor(filter.value, q)} aria-current={period === filter.value ? "page" : undefined} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition ${period === filter.value ? "border-amber-700 bg-amber-50 text-amber-900" : "border-navy-100 bg-white text-navy-600 hover:bg-navy-50"}`}><span>{filter.label}</span><span className="rounded-full bg-navy-50 px-1.5 py-0.5 tabular">{filter.count}</span></Link>)}
-        </div> : null}
+      <nav aria-label="Filtrer les échéances" className="mb-4 flex gap-2 overflow-x-auto pb-1">
+        {filters.map((filter) => <Link key={filter.value} href={hrefFor(filter.value, q)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${period === filter.value ? "border-navy-900 bg-navy-900 text-white" : "border-navy-200 bg-white text-navy-700 hover:bg-navy-50"}`}><span>{filter.label}</span><span className={`rounded-full px-1.5 py-0.5 tabular ${period === filter.value ? "bg-white/15" : "bg-navy-50"}`}>{filter.count}</span></Link>)}
       </nav>
 
       <section className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-sm">
