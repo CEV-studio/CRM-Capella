@@ -30,7 +30,17 @@ def digits(v): return re.sub(r"\D", "", str(v or "")) or None
 
 def clean(v):
     s=str(v or "").strip()
-    return s or None
+    if not s or s.upper() in {
+        "#NULL!", "#DIV/0!", "#VALUE!", "#REF!", "#NAME?", "#NUM!",
+        "#N/A", "#GETTING_DATA", "#SPILL!", "#CALC!", "#ERROR!",
+    }:
+        return None
+    return s
+
+
+def has_prospect_identity(values):
+    """Ignore formula-only rows that contain no prospect name or company."""
+    return bool(clean(values.get(2)) or clean(values.get(9)))
 
 
 def excel_date(v):
@@ -175,7 +185,7 @@ def main():
     for sheet in PROSPECT_SHEETS:
         if sheet not in x.sheets: anomalies.append(f"feuille absente: {sheet}"); continue
         for rownum,v in list(x.rows(sheet))[1:]:
-            if not any(clean(z) for z in v.values()): continue
+            if not has_prospect_identity(v): continue
             p=prospect_from(sheet,rownum,v); prospects.append(p); counts[sheet]+=1
     report={"mode":"apply" if args.apply else "dry-run","prospects":len(prospects),"par_feuille":dict(counts),"affaires":0,"anomalies":anomalies}
 

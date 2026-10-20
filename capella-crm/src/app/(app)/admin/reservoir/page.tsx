@@ -17,6 +17,8 @@ export const dynamic = "force-dynamic";
 
 /** Nombre de leads du réservoir affichés ligne à ligne. */
 const APERCU = 200;
+/** Une puissance filtrée réduit assez le jeu pour afficher le lot complet courant. */
+const APERCU_FILTRE = 1000;
 const PUISSANCES_KVA = [3, 6, 9, 12, 15, 18, 24, 30, 36, 42, 48, 60, 72, 90, 120];
 
 export default async function ReservoirPage({
@@ -67,7 +69,9 @@ export default async function ReservoirPage({
     { data: parSource },
     champsPerso,
   ] = await Promise.all([
-    requeteLeads.order("created_at", { ascending: false }).limit(APERCU),
+    requeteLeads
+      .order("created_at", { ascending: false })
+      .limit(kva ? APERCU_FILTRE : APERCU),
     chargerSources(),
     supabase
       .from("profiles")
@@ -152,9 +156,9 @@ export default async function ReservoirPage({
           puissancesKva={PUISSANCES_KVA}
         />
 
-        {(totalReservoir ?? 0) > APERCU ? (
+        {(totalReservoir ?? 0) > (kva ? APERCU_FILTRE : APERCU) ? (
           <p className="text-xs text-grey-brand">
-            Les {APERCU} leads les plus récents
+            Les {kva ? APERCU_FILTRE : APERCU} leads les plus récents
             {kva === "inconnue" ? " sans puissance renseignée " : kva ? ` à ${kva} kVA ` : " "}sont affichés ligne à ligne.
             Pour les autres, utilise l&apos;attribution par lot ci-dessus.
           </p>
