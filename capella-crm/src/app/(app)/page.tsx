@@ -107,6 +107,7 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
       megaEffectifsMois={megaEffectifsMois}
       dossiersFranceEnCours={dossiersFranceEnCours}
       caFranceMois={caFranceMois}
+      moisCourant={moisCourant}
       mois={franceParMois.map((france, index) => ({ mois: index + 1, france, belgique: caBelgiqueParMois[index] }))}
     />;
   }
