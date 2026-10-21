@@ -68,7 +68,8 @@ const ADMIN_NAV = [
   section("Prospection", "/prospection", Search, [
     { href: "/prospection", label: "Prospection", icon: Search },
   ]),
-  section("ADV", "/admin/acd", FileCheck2, [
+  section("ADV", "/adv", FileCheck2, [
+    { href: "/adv", label: "Dossiers ADV", icon: FileCheck2 },
     { href: "/admin/acd", label: "Demandes d’ACD", icon: BriefcaseBusiness },
   ]),
   section("Comptabilité / KPI", "/commissions", CircleDollarSign, [
