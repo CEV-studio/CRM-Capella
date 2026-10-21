@@ -6,8 +6,8 @@ export function Card({ className, children }: { className?: string; children: Re
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-card)] border border-navy-100 bg-white shadow-[var(--crm-shadow-sm)]",
-        "transition-shadow duration-200",
+        "rounded-xl border border-navy-100 bg-white",
+        "transition-colors duration-150",
         className,
       )}
     >
@@ -95,13 +95,9 @@ export function StageBadge({ label, color, className }: { label: string; color: 
 /** Tuile KPI : plus de profondeur, sans surcharger de couleur. */
 export function KpiTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <Card className="group relative overflow-hidden px-5 py-4 hover:shadow-[var(--crm-shadow-card)]">
-      <span className="absolute inset-x-0 top-0 h-1 bg-sky-capella-600" aria-hidden />
-      <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-grey-brand">{label}</div>
-      <div className="tabular mt-2 font-display text-2xl font-bold text-navy-800">
-        {value}
-      </div>
-      <div className="mt-2 h-0.5 w-8 rounded-full bg-star-500 transition-all duration-200 group-hover:w-14" aria-hidden />
+    <Card className="px-5 py-4">
+      <div className="text-sm font-medium text-grey-brand">{label}</div>
+      <div className="tabular mt-3 font-display text-2xl font-semibold text-navy-900">{value}</div>
       {hint ? <div className="mt-2 text-xs text-grey-brand">{hint}</div> : null}
     </Card>
   );
