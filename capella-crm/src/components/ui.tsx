@@ -96,7 +96,7 @@ export function StageBadge({ label, color, className }: { label: string; color: 
 export function KpiTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <Card className="group relative overflow-hidden px-5 py-4 hover:shadow-[var(--crm-shadow-card)]">
-      <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-navy-800 via-sky-capella-500 to-star-500 opacity-85" aria-hidden />
+      <span className="absolute inset-x-0 top-0 h-1 bg-sky-capella-600" aria-hidden />
       <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-grey-brand">{label}</div>
       <div className="tabular mt-2 font-display text-2xl font-bold text-navy-800">
         {value}
