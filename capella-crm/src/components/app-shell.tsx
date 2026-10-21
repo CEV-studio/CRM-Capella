@@ -23,6 +23,7 @@ const PARTNER_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
   section("Apport d’affaire", "/partenaires/opportunites", Building2, [
     { href: "/partenaires/opportunites", label: "Opportunités", icon: Target },
+    { href: "/suivi-acd", label: "Suivi des demandes d’ACD", icon: FileCheck2 },
     { href: "/partenaires/cotations", label: "Cotations", icon: BriefcaseBusiness },
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
@@ -35,10 +36,11 @@ const COMMERCIAL_NAV = [
     { href: "/agenda", label: "Agenda", icon: CalendarDays },
     { href: "/clients", label: "Dossiers en cours", icon: BriefcaseBusiness },
     { href: "/mes-clients", label: "Mes clients", icon: Building2 },
+    { href: "/conversion", label: "Demandes de cotation", icon: FileCheck2 },
+    { href: "/suivi-acd", label: "Suivi des demandes d’ACD", icon: FileCheck2 },
   ]),
   section("Prospection", "/prospection", Search, [
     { href: "/prospection", label: "Prospection", icon: Search },
-    { href: "/conversion", label: "Demandes de cotation", icon: FileCheck2 },
   ]),
   section("Comptabilité / KPI", "/commissions", CircleDollarSign, [
     { href: "/commissions", label: "Mes commissions", icon: CircleDollarSign },
@@ -50,12 +52,13 @@ const COMMERCIAL_NAV = [
 const ADMIN_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
   section("Suivi commercial", "/clients", Users, [
-    { href: "/admin/commerciaux", label: "Commerciaux", icon: Users },
     { href: "/clients", label: "Dossiers en cours", icon: BriefcaseBusiness },
-    { href: "/mes-clients", label: "Clients", icon: Building2 },
+    { href: "/mes-clients", label: "Mes clients", icon: Building2 },
     { href: "/journee", label: "Suivi de la journée", icon: Target },
     { href: "/echeances", label: "Échéances", icon: Hourglass },
     { href: "/agenda", label: "Agenda", icon: CalendarDays },
+    { href: "/conversion", label: "Demandes de cotation", icon: FileCheck2 },
+    { href: "/suivi-acd", label: "Suivi des demandes d’ACD", icon: FileCheck2 },
   ]),
   section("Apport d’affaire", "/partenaires/opportunites", Building2, [
     { href: "/partenaires/opportunites", label: "Opportunités", icon: Target },
@@ -64,10 +67,8 @@ const ADMIN_NAV = [
   ]),
   section("Prospection", "/prospection", Search, [
     { href: "/prospection", label: "Prospection", icon: Search },
-    { href: "/conversion", label: "Demandes de cotation", icon: FileCheck2 },
   ]),
-  section("ADV", "/adv", FileCheck2, [
-    { href: "/adv", label: "Dossiers ADV", icon: FileCheck2 },
+  section("ADV", "/admin/acd", FileCheck2, [
     { href: "/admin/acd", label: "Demandes d’ACD", icon: BriefcaseBusiness },
   ]),
   section("Comptabilité / KPI", "/commissions", CircleDollarSign, [
