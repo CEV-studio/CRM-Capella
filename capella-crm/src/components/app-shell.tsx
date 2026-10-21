@@ -21,9 +21,6 @@ const section = (titre: string, href: string, icon: IconType, items: NavItem[]):
 const dashboard = { href: "/", label: "Tableau de bord", icon: LayoutDashboard };
 const PARTNER_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
-  section("Opportunités", "/partenaires/opportunites", Target, [
-    { href: "/partenaires/opportunites", label: "Opportunités", icon: Target },
-  ]),
   section("Suivi des demandes d’ACD", "/suivi-acd", FileCheck2, [
     { href: "/suivi-acd", label: "Suivi des demandes d’ACD", icon: FileCheck2 },
   ]),
