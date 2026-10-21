@@ -12,16 +12,13 @@ const statusLabel: Record<string, string> = {
 };
 const statusStyle: Record<string, string> = {
   a_traiter: "bg-amber-50 text-amber-800",
-  en_cours: "bg-sky-capella-50 text-sky-capella-800",
+  en_cours: "bg-sky-capella-50 text-sky-capella-700",
   terminee: "bg-emerald-50 text-emerald-800",
   annulee: "bg-navy-100 text-navy-600",
 };
 
 export default async function SuiviAcdPage() {
-  const profile = await requireProfile();
-  if (profile.role === "admin") {
-    // Les administrateurs suivent le traitement depuis l’espace ADV.
-  }
+  await requireProfile();
   const supabase = await createClient();
   // La RLS limite ces lignes aux demandes créées par l’utilisateur ou à ses dossiers attribués.
   const { data, error } = await (supabase as any)
