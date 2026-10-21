@@ -59,8 +59,8 @@
   --crm-shadow-sm: none;
   --crm-shadow-card: none;
   --crm-shadow-hover: none;
-  --crm-gradient-navy: linear-gradient(180deg, #081A31 0%, #0D2848 100%);
-  --crm-gradient-accent: linear-gradient(135deg, #0D1B2E 0%, #183B62 72%, #6D3A2B 100%);
+  --crm-gradient-navy: #0D1B2E;
+  --crm-gradient-accent: #24679E;
 }
 
 body {
@@ -105,8 +105,8 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
   overflow: hidden;
   border: 1px solid rgba(198, 210, 226, .82);
   border-radius: 1rem;
-  background: linear-gradient(135deg, #fff 0%, #F7FAFE 70%, #FFF8F4 100%);
-  box-shadow: var(--crm-shadow-sm);
+  background: #fff;
+  box-shadow: none;
 }
 .crm-page-header::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--color-star-500); }
 .crm-table-shell { overflow: hidden; border: 1px solid var(--crm-border); border-radius: var(--radius-card); background: white; box-shadow: none; }
@@ -119,3 +119,17 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell main button:not([aria-label*="Replier"]):not([aria-label*="Déplier"]):not([aria-label="Se déconnecter"]) { box-shadow: none; }
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]), .crm-shell main select, .crm-shell main textarea { border-radius: .625rem; }
 .crm-shell .rounded-2xl, .crm-shell .rounded-xl { --tw-shadow: 0 0 #0000; }
+
+/* Align legacy utility colors with the Capella flat palette. */
+.crm-shell .text-neutral-900 { color: var(--color-navy-900) !important; }
+.crm-shell .text-neutral-800 { color: var(--color-navy-800) !important; }
+.crm-shell .text-neutral-700 { color: var(--color-navy-700) !important; }
+.crm-shell .text-neutral-600 { color: var(--color-navy-600) !important; }
+.crm-shell .text-neutral-500 { color: var(--color-grey-brand) !important; }
+.crm-shell .text-neutral-400 { color: var(--color-navy-400) !important; }
+.crm-shell .border-neutral-200 { border-color: var(--color-navy-100) !important; }
+.crm-shell .border-neutral-300 { border-color: var(--color-navy-200) !important; }
+.crm-shell .bg-neutral-100 { background-color: var(--color-navy-50) !important; }
+.crm-shell .bg-neutral-200 { background-color: var(--color-sky-capella-100) !important; }
+.crm-shell main [class*="shadow"] { box-shadow: none !important; }
+.crm-shell main .bg-gradient-to-r { background-image: none !important; }
