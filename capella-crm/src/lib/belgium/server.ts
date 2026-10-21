@@ -9,3 +9,29 @@ export async function loadBelgium(){
  const [raw,lines,invoices,imports,tracking,billing]=await Promise.all([all<{data:Contract}>('be_contracts','key'),all<{data:Statement}>('be_statement_lines','id'),all<Invoice>('be_invoices','created_at'),all<ImportRun>('be_imports','created_at'),all<CycleTracking>('be_cycle_tracking','contract_key'),all<SupplierBilling>('be_supplier_billing','period')]);
  return {contracts:raw.map(r=>r.data),statements:lines.map(r=>r.data),invoices,imports:imports.reverse(),tracking,billing};
 }
+
+/** Load only the MEGA energy rows needed by the cross-activity admin dashboard. */
+export async function loadBelgiumDashboardMetrics() {
+ await requireAdmin();
+ const db=await createClient();
+ async function all<T>(table:'be_contracts'|'be_statement_lines',columns:string,order:string){
+  const out:T[]=[];
+  for(let offset=0;;offset+=1000){
+   const {data,error}=await db.from(table).select(columns).order(order).range(offset,offset+999);
+   if(error)throw new Error(`Belgique : ${error.message}`);
+   out.push(...data as T[]);
+   if(data.length<1000)break;
+  }
+  return out;
+ }
+ type ContractRow={data:Contract};
+ type StatementRow={supplier:string;period:string;contract_key:string;gross_cents:number;centre_cents:number};
+ const [contractRows,statementRows]=await Promise.all([
+  all<ContractRow>('be_contracts','data','key'),
+  all<StatementRow>('be_statement_lines','supplier,period,contract_key,gross_cents,centre_cents','id'),
+ ]);
+ return {
+  contracts:contractRows.map(row=>row.data),
+  statements:statementRows.map(row=>({key:row.contract_key,supplier:row.supplier,period:row.period,gross_cents:row.gross_cents,centre_cents:row.centre_cents,status:''} satisfies Statement)),
+ };
+}
