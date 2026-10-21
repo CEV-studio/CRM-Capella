@@ -1,188 +1,135 @@
 import Link from "next/link";
 import {
-  ArrowRight,
-  BarChart3,
-  Building2,
-  BriefcaseBusiness,
-  CircleDollarSign,
-  Database,
-  FileCheck2,
-  Inbox,
-  MailCheck,
-  ShieldCheck,
-  Trash2,
-  Users,
-  Wallet,
+  ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, Calculator,
+  CheckCircle2, ClipboardList, Euro, FileCheck2, Landmark, Mail,
+  Search, ShieldCheck, Users, Wallet,
 } from "lucide-react";
-import { Card, KpiTile } from "@/components/ui";
-import { fmtEuros, fmtNombre, fmtPourcent, MOIS } from "@/lib/format";
+import { fmtEuros, fmtNombre, MOIS } from "@/lib/format";
 
-type MoisStats = { mois: number; nbSignees: number; caSigne: number };
-type EtapeStats = { stage: string; total: number };
+type MoisStats = { mois: number; france: number; belgique: number };
 type AdminHomeProps = {
   prenom: string;
   annee: number;
-  prospectsTotal: number;
-  affairesEnCours: number;
-  tauxConversion: number;
+  caGlobalAnnuel: number;
+  megaEffectifsMois: number;
+  dossiersFranceEnCours: number;
+  caFranceMois: number;
   mois: MoisStats[];
-  prospectsParEtape: EtapeStats[];
-  affairesParEtape: EtapeStats[];
 };
 
 const categories = [
-  {
-    titre: "Gestion des dossiers",
-    description: "Demandes, validation et suivi ADV.",
-    icon: ShieldCheck,
-    accent: "bg-sky-capella-50 text-sky-capella-700",
-    liens: [
-      { href: "/adv", label: "Espace ADV", icon: FileCheck2 },
-      { href: "/admin/acd", label: "Demandes d’ACD", icon: BriefcaseBusiness },
-    ],
-  },
-  {
-    titre: "Équipe & données",
-    description: "Commerciaux, apporteurs et données commerciales.",
-    icon: Users,
-    accent: "bg-violet-50 text-violet-700",
-    liens: [
-      { href: "/admin/commerciaux", label: "Équipe & apporteurs", icon: Users },
-      { href: "/admin/reservoir", label: "Réservoir & attribution", icon: Database },
-      { href: "/admin/corbeille", label: "Corbeille", icon: Trash2 },
-    ],
-  },
-  {
-    titre: "Emails & communication",
-    description: "Boîtes connectées et modèles de messages.",
-    icon: MailCheck,
-    accent: "bg-amber-50 text-amber-700",
-    liens: [
-      { href: "/admin/emails", label: "Emails & templates", icon: MailCheck },
-      { href: "/admin/boites-email", label: "Boîtes e-mail", icon: Inbox },
-    ],
-  },
-  {
-    titre: "Reporting & facturation",
-    description: "Exports et suivi de la production belge.",
-    icon: Wallet,
-    accent: "bg-emerald-50 text-emerald-700",
-    liens: [
-      { href: "/admin/export", label: "Export des données", icon: BarChart3 },
-      { href: "/belgique", label: "Production & facturation BE", icon: CircleDollarSign },
-    ],
-  },
-];
+  { title: "Suivi commercial", description: "Commerciaux, clients et suivi des dossiers.", icon: Users, href: "/clients", links: [
+    ["/admin/commerciaux", "Commerciaux"], ["/clients", "Dossiers en cours"], ["/mes-clients", "Clients"], ["/journee", "Suivi de la journée"], ["/echeances", "Échéances"], ["/agenda", "Agenda"],
+  ] },
+  { title: "Apport d’affaire", description: "Opportunités et portefeuille apporteurs.", icon: Building2, href: "/partenaires/opportunites", links: [
+    ["/partenaires/opportunites", "Opportunités"], ["/partenaires/cotations", "Cotations"], ["/partenaires/portefeuille", "Portefeuille clients"],
+  ] },
+  { title: "Prospection", description: "Leads, relances et demandes entrantes.", icon: Search, href: "/prospection", links: [
+    ["/prospection", "Espace prospection"], ["/conversion", "Demandes de cotation"],
+  ] },
+  { title: "ADV", description: "Validation et traitement administratif.", icon: FileCheck2, href: "/adv", links: [
+    ["/adv", "Dossiers ADV"], ["/admin/acd", "Demandes d’ACD"],
+  ] },
+  { title: "Comptabilité / KPI", description: "Chiffres par compte et facturation.", icon: Calculator, href: "/commissions", links: [
+    ["/commissions", "Commissions et comptes"], ["/admin/export", "Exports"], ["/belgique?tab=billing", "Facturation"],
+  ] },
+  { title: "Belgique", description: "Inscriptions, contrats et clawbacks.", icon: Landmark, href: "/belgique", links: [
+    ["/belgique", "Vue Belgique"], ["/belgique?tab=cycles", "Cycles et clawbacks"],
+  ] },
+  { title: "Admin", description: "Comptes, accès et outils de gestion.", icon: ShieldCheck, href: "/admin/commerciaux", links: [
+    ["/admin/commerciaux", "Création de comptes"], ["/admin/reservoir", "Réservoir"], ["/admin/emails", "Modèles e-mail"], ["/admin/boites-email", "Boîtes e-mail"], ["/admin/corbeille", "Corbeille"],
+  ] },
+] as const;
 
-function BarresMensuelles({ mois, cle, format }: {
-  mois: MoisStats[];
-  cle: "nbSignees" | "caSigne";
-  format: (value: number) => string;
-}) {
-  const max = Math.max(1, ...mois.map((m) => m[cle]));
-  return (
-    <div className="flex h-56 items-end gap-1.5 sm:gap-2">
-      {mois.map((m) => {
-        const value = m[cle];
-        const height = value > 0 ? Math.max(5, (value / max) * 100) : 0;
-        return (
-          <div key={m.mois} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
-            <span className="max-w-full truncate text-[9px] font-semibold text-navy-600 sm:text-[10px]">{value > 0 ? format(value) : ""}</span>
-            <div className="flex h-36 w-full items-end justify-center rounded-t-md bg-navy-50">
-              <div className="w-full max-w-9 rounded-t-md bg-sky-capella-600 transition-all" style={{ height: `${height}%` }} />
+const moneyCompact = (value: number) => new Intl.NumberFormat("fr-FR", {
+  style: "currency", currency: "EUR", notation: "compact", maximumFractionDigits: 1,
+}).format(value);
+
+function Mensuel({ mois }: { mois: MoisStats[] }) {
+  const maximum = Math.max(1, ...mois.map((row) => row.france + row.belgique));
+  return <div role="img" aria-label="Chiffre d’affaires mensuel signé France et MEGA Belgique">
+    <div className="flex h-56 items-end gap-2 sm:gap-3">
+      {mois.map((row) => {
+        const franceHeight = (row.france / maximum) * 100;
+        const belgiqueHeight = (row.belgique / maximum) * 100;
+        return <div key={row.mois} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
+          <span className="truncate text-[9px] font-medium text-neutral-500 sm:text-[10px]" title={fmtEuros(row.france + row.belgique)}>
+            {(row.france + row.belgique) ? moneyCompact(row.france + row.belgique) : ""}
+          </span>
+          <div className="flex h-36 w-full max-w-12 items-end overflow-hidden rounded-t-md bg-neutral-100" title={`France : ${fmtEuros(row.france)} · Belgique : ${fmtEuros(row.belgique)}`}>
+            <div className="flex w-full flex-col justify-end">
+              <div className="w-full bg-[#111827]" style={{ height: `${franceHeight}%` }} />
+              <div className="w-full bg-[#a3a3a3]" style={{ height: `${belgiqueHeight}%` }} />
             </div>
-            <span className="text-[9px] font-semibold uppercase text-grey-brand sm:text-[10px]">{MOIS[m.mois - 1].slice(0, 3)}</span>
           </div>
-        );
+          <span className="text-[9px] font-medium uppercase text-neutral-500 sm:text-[10px]">{MOIS[row.mois - 1].slice(0, 3)}</span>
+        </div>;
       })}
     </div>
-  );
+    <div className="mt-5 flex flex-wrap gap-5 border-t border-neutral-200 pt-4 text-xs text-neutral-600">
+      <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm bg-[#111827]" /> Courtage pro France</span>
+      <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm bg-[#a3a3a3]" /> MEGA énergie Belgique</span>
+    </div>
+  </div>;
 }
 
-function RepartitionEtapes({ titre, lignes }: { titre: string; lignes: EtapeStats[] }) {
-  const maximum = Math.max(1, ...lignes.map((ligne) => ligne.total));
-  return (
-    <Card className="p-5">
-      <h2 className="font-display text-base font-bold text-navy-800">{titre}</h2>
-      <div className="mt-4 space-y-3">
-        {lignes.map((ligne) => (
-          <div key={ligne.stage}>
-            <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-              <span className="truncate text-navy-700">{ligne.stage}</span>
-              <span className="tabular font-bold text-navy-800">{fmtNombre(ligne.total)}</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-navy-50">
-              <div className="h-full rounded-full bg-sky-capella-600" style={{ width: `${ligne.total > 0 ? Math.max(2, (ligne.total / maximum) * 100) : 0}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
+function Indicateur({ label, value, note, icon: Icon }: { label: string; value: string; note: string; icon: typeof Euro }) {
+  return <article className="min-h-36 border border-neutral-200 bg-white p-5">
+    <div className="flex items-start justify-between gap-3">
+      <div className="text-sm font-medium text-neutral-500">{label}</div>
+      <Icon size={18} strokeWidth={1.7} className="shrink-0 text-neutral-500" aria-hidden />
+    </div>
+    <div className="mt-3 font-display text-3xl font-semibold tracking-tight text-neutral-900">{value}</div>
+    <div className="mt-2 text-xs leading-5 text-neutral-500">{note}</div>
+  </article>;
 }
 
 export function AdminHome(props: AdminHomeProps) {
-  const caAnnee = props.mois.reduce((total, ligne) => total + ligne.caSigne, 0);
-  const signaturesAnnee = props.mois.reduce((total, ligne) => total + ligne.nbSignees, 0);
+  return <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-9">
+    <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.13em] text-neutral-500"><BarChart3 size={15} /> Tableau de bord global</div>
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-neutral-900">Bonjour {props.prenom}</h1>
+        <p className="mt-2 text-sm text-neutral-500">Toute l’activité de Capella · année {props.annee}</p>
+      </div>
+      <span className="inline-flex items-center gap-2 border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-600"><CheckCircle2 size={15} /> Vue administrateur complète</span>
+    </header>
 
-  return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-      <header className="crm-page-header mb-6 flex flex-wrap items-center justify-between gap-4 px-5 py-6 sm:px-7">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.14em] text-star-600"><BarChart3 size={14} /> Vue consolidée · toute l’équipe</div>
-          <h1 className="font-display text-2xl font-bold text-navy-800">Bonjour {props.prenom}, Capella avance.</h1>
-          <p className="mt-1 text-sm text-grey-brand">Tous les commerciaux, apporteurs et dossiers réunis dans une seule vue.</p>
-        </div>
-        <div className="hidden h-14 w-14 items-center justify-center rounded-2xl bg-[var(--crm-gradient-navy)] text-star-400 shadow-[var(--crm-shadow-card)] sm:flex"><Building2 size={24} /></div>
-      </header>
+    <section aria-label="Indicateurs globaux" className="mb-10">
+      <div className="mb-3 flex items-center gap-2"><ClipboardList size={17} className="text-neutral-500" /><h2 className="font-display text-lg font-semibold text-neutral-900">Les chiffres clés</h2></div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Indicateur label={`CA global généré en ${props.annee}`} value={fmtEuros(props.caGlobalAnnuel)} note="France pro signé + MEGA énergie Belgique" icon={Euro} />
+        <Indicateur label="Contrats MEGA effectifs ce mois" value={fmtNombre(props.megaEffectifsMois)} note="Contrats inscrits ce mois, actuellement effectifs" icon={CheckCircle2} />
+        <Indicateur label="Dossiers courtage énergie pro en cours" value={fmtNombre(props.dossiersFranceEnCours)} note="France · hors dossiers signés et perdus" icon={BriefcaseBusiness} />
+        <Indicateur label="CA courtage pro France ce mois" value={fmtEuros(props.caFranceMois)} note={MOIS[new Date().getMonth()] + " · dossiers signés"} icon={Wallet} />
+      </div>
+      <p className="mt-3 text-xs leading-5 text-neutral-500">Le CA consolidé additionne les dossiers pro France signés et la part Capella MEGA énergie en Belgique (validée et prévisionnelle). Les autres activités et fournisseurs ne sont pas encore intégrés à ce total.</p>
+    </section>
 
-      <section aria-label="Catégories principales" className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Chiffre d’affaires mensuel" className="mb-10 border border-neutral-200 bg-white p-5 sm:p-6">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div><h2 className="font-display text-lg font-semibold text-neutral-900">Évolution du chiffre d’affaires</h2><p className="mt-1 text-sm text-neutral-500">Tous les comptes · mois par mois · {props.annee}</p></div>
+        <span className="inline-flex items-center gap-2 text-xs text-neutral-500"><BarChart3 size={15} /> CA signé / validé + prévision MEGA</span>
+      </div>
+      <Mensuel mois={props.mois} />
+    </section>
+
+    <section aria-label="Sections principales">
+      <div className="mb-4"><h2 className="font-display text-lg font-semibold text-neutral-900">Accéder à une section</h2><p className="mt-1 text-sm text-neutral-500">Choisis un espace pour retrouver ses outils.</p></div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((category) => {
           const Icon = category.icon;
-          return (
-            <Card key={category.titre} className="flex min-h-64 flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${category.accent}`}>
-                <Icon size={23} strokeWidth={1.8} />
-              </div>
-              <h2 className="mt-4 font-display text-lg font-bold text-navy-800">{category.titre}</h2>
-              <p className="mt-1 min-h-10 text-sm leading-5 text-grey-brand">{category.description}</p>
-              <ul className="mt-4 space-y-1 border-t border-navy-100 pt-3">
-                {category.liens.map((lien) => {
-                  const LienIcon = lien.icon;
-                  return <li key={lien.href}><Link href={lien.href} className="group flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-navy-700 transition-colors hover:bg-sky-capella-50 hover:text-sky-capella-700"><LienIcon size={15} className="shrink-0 text-navy-400 group-hover:text-sky-capella-600" /><span className="min-w-0 flex-1">{lien.label}</span><ArrowRight size={14} className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" /></Link></li>;
-                })}
-              </ul>
-            </Card>
-          );
+          return <article key={category.title} className="border border-neutral-200 bg-white p-5 transition-colors hover:border-neutral-400">
+            <Link href={category.href} className="group flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center bg-neutral-100 text-neutral-800"><Icon size={21} strokeWidth={1.7} /></span>
+              <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2 font-display font-semibold text-neutral-900">{category.title}<ArrowUpRight size={16} className="text-neutral-400 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span><span className="mt-1 block text-sm leading-5 text-neutral-500">{category.description}</span></span>
+            </Link>
+            <ul className="mt-4 space-y-0.5 border-t border-neutral-200 pt-3">
+              {category.links.map(([href, label]) => <li key={href}><Link href={href} className="block px-2 py-2 text-sm text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-950">{label}</Link></li>)}
+            </ul>
+          </article>;
         })}
-      </section>
-
-      <section aria-label="Indicateurs globaux" className="mb-8">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-          <div><h2 className="font-display text-xl font-bold text-navy-800">L’activité, tous dossiers confondus</h2><p className="mt-1 text-sm text-grey-brand">Indicateurs globaux · année {props.annee}</p></div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-800"><Users size={14} /> Équipe complète</span>
-        </div>
-        <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiTile label="Prospects suivis" value={fmtNombre(props.prospectsTotal)} hint="Tous les statuts du CRM" />
-          <KpiTile label="Dossiers en cours" value={fmtNombre(props.affairesEnCours)} hint="Toutes les affaires ouvertes" />
-          <KpiTile label={`Validés ADV en ${props.annee}`} value={fmtNombre(signaturesAnnee)} hint="Équipe complète" />
-          <KpiTile label={`Montant validé en ${props.annee}`} value={fmtEuros(caAnnee)} hint={`Taux de conversion global : ${fmtPourcent(props.tauxConversion)}`} />
-        </div>
-        <div className="grid gap-5 xl:grid-cols-2">
-          <Card className="p-5">
-            <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="font-display text-base font-bold text-navy-800">Dossiers validés par mois</h3><p className="mt-1 text-xs text-grey-brand">Nombre de validations ADV · {props.annee}</p></div><BriefcaseBusiness size={18} className="text-sky-capella-700" /></div>
-            <BarresMensuelles mois={props.mois} cle="nbSignees" format={(v) => fmtNombre(v)} />
-          </Card>
-          <Card className="p-5">
-            <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="font-display text-base font-bold text-navy-800">Montant validé par mois</h3><p className="mt-1 text-xs text-grey-brand">Montants enregistrés dans les dossiers · {props.annee}</p></div><CircleDollarSign size={18} className="text-star-600" /></div>
-            <BarresMensuelles mois={props.mois} cle="caSigne" format={(v) => fmtEuros(v)} />
-          </Card>
-        </div>
-        <div className="mt-5 grid gap-5 xl:grid-cols-2">
-          <RepartitionEtapes titre="Prospection par étape" lignes={props.prospectsParEtape} />
-          <RepartitionEtapes titre="Dossiers par étape" lignes={props.affairesParEtape} />
-        </div>
-      </section>
-    </main>
-  );
+      </div>
+    </section>
+  </main>;
 }
