@@ -11,6 +11,7 @@ import { chargerApporteurs } from "@/lib/referentiels";
 import type { Affaire, Apporteur, Profile, Prospect } from "@/lib/domain/database.types";
 import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 import { AdminHome } from "@/components/admin-home";
+import { PartnerHome } from "@/components/partner-home";
 import { loadBelgiumDashboardMetrics } from "@/lib/belgium/server";
 import { financialModel } from "@/lib/belgium/finance.js";
 
@@ -36,6 +37,7 @@ function bornesSemaine() {
 export default async function TableauDeBordPage({ searchParams }: { searchParams: Promise<Recherche> }) {
   const profil = await requireProfile();
   const estAdmin = profil.role === "admin";
+  if (profil.role === "apporteur") return <PartnerHome prenom={profil.full_name.split(" ")[0]} />;
   const filtres = await searchParams;
   const supabase = await createClient();
   const semaine = bornesSemaine();
