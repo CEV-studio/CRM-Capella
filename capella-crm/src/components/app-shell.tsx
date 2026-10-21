@@ -21,10 +21,16 @@ const section = (titre: string, href: string, icon: IconType, items: NavItem[]):
 const dashboard = { href: "/", label: "Tableau de bord", icon: LayoutDashboard };
 const PARTNER_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
-  section("Apport d’affaire", "/partenaires/opportunites", Building2, [
+  section("Opportunités", "/partenaires/opportunites", Target, [
     { href: "/partenaires/opportunites", label: "Opportunités", icon: Target },
+  ]),
+  section("Suivi des demandes d’ACD", "/suivi-acd", FileCheck2, [
     { href: "/suivi-acd", label: "Suivi des demandes d’ACD", icon: FileCheck2 },
+  ]),
+  section("Demandes de cotation", "/partenaires/cotations", BriefcaseBusiness, [
     { href: "/partenaires/cotations", label: "Demandes de cotation", icon: BriefcaseBusiness },
+  ]),
+  section("Portefeuille clients", "/partenaires/portefeuille", Building2, [
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
 ];
