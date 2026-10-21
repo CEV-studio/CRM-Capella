@@ -26,21 +26,21 @@ export async function PartnerHome({ prenom }: { prenom: string }) {
     { title: "Portefeuille clients", description: "Retrouver vos entreprises et contrats.", href: "/partenaires/portefeuille", icon: Building2 },
   ];
   return <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-9">
-    <header className="mb-8"><div className="mb-2 text-xs font-semibold uppercase tracking-[.13em] text-neutral-500">Tableau de bord apporteur</div><h1 className="font-display text-3xl font-semibold tracking-tight text-neutral-900">Bonjour {prenom}</h1><p className="mt-2 text-sm text-neutral-500">Vos dossiers, cotations et commissions.</p></header>
+    <header className="mb-8"><div className="mb-2 text-xs font-semibold uppercase tracking-[.13em] text-grey-brand">Tableau de bord apporteur</div><h1 className="font-display text-3xl font-semibold tracking-tight text-navy-900">Bonjour {prenom}</h1><p className="mt-2 text-sm text-grey-brand">Vos dossiers, cotations et commissions.</p></header>
     <section aria-label="Mes indicateurs" className="mb-9">
-      <h2 className="mb-3 font-display text-lg font-semibold text-neutral-900">Mes chiffres clés</h2>
+      <h2 className="mb-3 font-display text-lg font-semibold text-navy-900">Mes chiffres clés</h2>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Dossiers apportés", value: fmtNombre(liste.length), icon: Target, note: "Votre portefeuille" },
           { label: "ACD signées", value: fmtNombre(liste.filter((d) => d.acd_status === "signee").length), icon: CheckCircle2, note: "Dossiers prêts pour cotation" },
           { label: "Cotations demandées", value: fmtNombre(quotes.length), icon: BriefcaseBusiness, note: "Toutes périodes" },
           { label: "Commissions signées", value: fmtEuros(commission), icon: CircleDollarSign, note: "Cotations avec date de signature" },
-        ].map(({ label, value, icon: Icon, note }) => <article key={label} className="border border-neutral-200 bg-white p-5"><div className="flex items-center justify-between gap-3 text-sm text-neutral-500"><span>{label}</span><Icon size={17} className="text-neutral-500" /></div><div className="mt-3 font-display text-3xl font-semibold text-neutral-900">{value}</div><p className="mt-2 text-xs text-neutral-500">{note}</p></article>)}
+        ].map(({ label, value, icon: Icon, note }) => <article key={label} className="border border-navy-100 bg-white p-5"><div className="flex items-center justify-between gap-3 text-sm text-grey-brand"><span>{label}</span><Icon size={17} className="text-grey-brand" /></div><div className="mt-3 font-display text-3xl font-semibold text-navy-900">{value}</div><p className="mt-2 text-xs text-grey-brand">{note}</p></article>)}
       </div>
     </section>
     <section aria-label="Mes catégories">
-      <h2 className="mb-3 font-display text-lg font-semibold text-neutral-900">Accéder à une section</h2>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{categories.map(({ title, description, href, icon: Icon }) => <Link key={href} href={href} className="group border border-neutral-200 bg-white p-5 transition-colors hover:border-neutral-400"><div className="flex items-start gap-3"><span className="flex h-11 w-11 items-center justify-center bg-neutral-100 text-neutral-800"><Icon size={21} /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between font-display font-semibold text-neutral-900">{title}<ArrowUpRight size={16} className="text-neutral-400 group-hover:text-neutral-900" /></span><span className="mt-1 block text-sm text-neutral-500">{description}</span></span></div></Link>)}</div>
+      <h2 className="mb-3 font-display text-lg font-semibold text-navy-900">Accéder à une section</h2>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{categories.map(({ title, description, href, icon: Icon }) => <Link key={href} href={href} className="group border border-navy-100 bg-white p-5 transition-colors hover:border-neutral-400"><div className="flex items-start gap-3"><span className="flex h-11 w-11 items-center justify-center bg-sky-capella-50 text-navy-800"><Icon size={21} /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between font-display font-semibold text-navy-900">{title}<ArrowUpRight size={16} className="text-neutral-400 group-hover:text-navy-900" /></span><span className="mt-1 block text-sm text-grey-brand">{description}</span></span></div></Link>)}</div>
     </section>
   </main>;
 }
