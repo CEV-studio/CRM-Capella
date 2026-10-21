@@ -38,7 +38,7 @@
   --color-sky-capella-700: #24679E;
 
   --color-grey-brand: #7D899B;
-  --color-surface: #F5F7FB;
+  --color-surface: #F6F8FB;
   --color-surface-raised: #FFFFFF;
 
   --color-status-signe:   #C6EFCE;
@@ -49,22 +49,22 @@
 
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --radius-card: 0.9rem;
+  --radius-card: 0.75rem;
 }
 
 :root {
   color-scheme: light;
   --crm-border: #DDE5F0;
   --crm-border-strong: #C6D2E2;
-  --crm-shadow-sm: 0 1px 2px rgba(8, 17, 30, .04), 0 4px 14px rgba(13, 27, 46, .04);
-  --crm-shadow-card: 0 8px 26px rgba(13, 27, 46, .07);
-  --crm-shadow-hover: 0 12px 30px rgba(13, 27, 46, .11);
+  --crm-shadow-sm: none;
+  --crm-shadow-card: none;
+  --crm-shadow-hover: none;
   --crm-gradient-navy: linear-gradient(180deg, #081A31 0%, #0D2848 100%);
   --crm-gradient-accent: linear-gradient(135deg, #0D1B2E 0%, #183B62 72%, #6D3A2B 100%);
 }
 
 body {
-  background: radial-gradient(circle at 92% 2%, rgba(79, 155, 216, .07), transparent 27rem), var(--color-surface);
+  background: var(--color-surface);
   color: var(--color-navy-800);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -78,14 +78,14 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 :focus-visible { outline: 2px solid var(--color-star-500); outline-offset: 2px; }
 
 .crm-shell {
-  background: radial-gradient(circle at 100% 0%, rgba(79, 155, 216, .055), transparent 34rem), linear-gradient(180deg, #F8FAFD 0, var(--color-surface) 22rem);
+  background: var(--color-surface);
 }
 
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]),
 .crm-shell main select,
 .crm-shell main textarea {
   border-color: var(--crm-border-strong);
-  box-shadow: 0 1px 2px rgba(13, 27, 46, .025);
+  box-shadow: none;
   transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]):hover,
@@ -108,5 +108,14 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
   background: linear-gradient(135deg, #fff 0%, #F7FAFE 70%, #FFF8F4 100%);
   box-shadow: var(--crm-shadow-sm);
 }
-.crm-page-header::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: linear-gradient(180deg, var(--color-star-500), var(--color-star-300)); }
-.crm-table-shell { overflow: hidden; border: 1px solid var(--crm-border); border-radius: var(--radius-card); background: white; box-shadow: var(--crm-shadow-sm); }
+.crm-page-header::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--color-star-500); }
+.crm-table-shell { overflow: hidden; border: 1px solid var(--crm-border); border-radius: var(--radius-card); background: white; box-shadow: none; }
+
+/* Flat, compact workspace styling shared across all CRM sections. */
+.crm-shell main > header:not(.crm-page-header) { color: var(--color-navy-800); }
+.crm-shell main table thead { background: var(--color-navy-50) !important; color: var(--color-navy-800) !important; }
+.crm-shell main table thead th { color: var(--color-navy-700) !important; border-bottom: 1px solid var(--crm-border); }
+.crm-shell main table tbody tr:hover { background-color: var(--color-sky-capella-50); }
+.crm-shell main button:not([aria-label*="Replier"]):not([aria-label*="Déplier"]):not([aria-label="Se déconnecter"]) { box-shadow: none; }
+.crm-shell main input:not([type="checkbox"]):not([type="radio"]), .crm-shell main select, .crm-shell main textarea { border-radius: .625rem; }
+.crm-shell .rounded-2xl, .crm-shell .rounded-xl { --tw-shadow: 0 0 #0000; }
