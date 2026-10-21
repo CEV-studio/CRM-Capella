@@ -107,7 +107,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
 
   return <div className="crm-shell flex min-h-screen bg-[#f6f8fb]">
     <aside className="hidden w-64 shrink-0 flex-col border-r border-navy-100 bg-[#f6f8fb] text-navy-900 md:flex">
-      <Link href="/" className="flex justify-center border-b border-neutral-200 bg-white px-5 py-5" aria-label="Accueil Capella Energy">
+      <Link href="/" className="flex justify-center border-b border-navy-100 bg-white px-5 py-5" aria-label="Accueil Capella Energy">
         <Logotype className="w-[190px]" />
       </Link>
       <nav className="scroll-slim flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -122,36 +122,36 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
                 <span className="min-w-0 flex-1 truncate">{s.titre}</span>
                 {isActive && <span className="h-1.5 w-1.5 rounded-full bg-star-500" aria-label="Section actuelle" />}
               </Link>
-              {s.items.length > 1 && <button type="button" onClick={() => toggle(s.titre, isActive)} aria-label={`${isOpen ? "Replier" : "Déplier"} ${s.titre}`} aria-expanded={isOpen} className="px-2 py-2.5 text-grey-brand hover:text-neutral-900"><ChevronDown size={15} className={isOpen ? "rotate-180" : ""} /></button>}
+              {s.items.length > 1 && <button type="button" onClick={() => toggle(s.titre, isActive)} aria-label={`${isOpen ? "Replier" : "Déplier"} ${s.titre}`} aria-expanded={isOpen} className="px-2 py-2.5 text-grey-brand hover:text-navy-900"><ChevronDown size={15} className={isOpen ? "rotate-180" : ""} /></button>}
             </div>
             {s.items.length > 1 && isOpen && <ul className="mb-2 ml-5 mt-1 space-y-0.5 border-l border-navy-200 pl-3">
               {s.items.filter(visible).filter(item => item.href !== s.href).map(item => {
                 const itemActive = actif(pathname, item.href);
                 const ItemIcon = item.icon;
-                return <li key={item.href}><Link href={item.href} className={`flex items-center gap-2 rounded-md px-2.5 py-2 text-[13px] transition-colors ${itemActive ? "bg-white font-semibold text-navy-900" : "text-neutral-600 hover:bg-sky-capella-50 hover:text-navy-900"}`}>
-                  <ItemIcon size={14} className="shrink-0 text-neutral-500" /><span className="min-w-0 flex-1 truncate">{item.label}</span>{itemActive && <ChevronRight size={13} />}
+                return <li key={item.href}><Link href={item.href} className={`flex items-center gap-2 rounded-md px-2.5 py-2 text-[13px] transition-colors ${itemActive ? "bg-white font-semibold text-navy-900" : "text-navy-600 hover:bg-sky-capella-50 hover:text-navy-900"}`}>
+                  <ItemIcon size={14} className="shrink-0 text-grey-brand" /><span className="min-w-0 flex-1 truncate">{item.label}</span>{itemActive && <ChevronRight size={13} />}
                 </Link></li>;
               })}
             </ul>}
           </div>;
         })}
       </nav>
-      <div className="border-t border-neutral-200 px-4 py-4">
-        <div className="flex items-center gap-3 border border-neutral-200 bg-white p-3">
+      <div className="border-t border-navy-100 px-4 py-4">
+        <div className="flex items-center gap-3 border border-navy-100 bg-white p-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-800 font-display text-sm font-semibold text-white">{profile.full_name.slice(0, 1).toUpperCase()}</div>
-          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-neutral-900">{profile.full_name}</div><div className="truncate text-[11px] text-neutral-500">{profile.role === "admin" ? "Administrateur" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
-          <Link href="/deconnexion" prefetch={false} className="p-1.5 text-neutral-500 hover:bg-navy-50 hover:text-neutral-900" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
+          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-grey-brand">{profile.role === "admin" ? "Administrateur" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
+          <Link href="/deconnexion" prefetch={false} className="p-1.5 text-grey-brand hover:bg-navy-50 hover:text-navy-900" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
         </div>
       </div>
     </aside>
 
-    <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between border-b border-neutral-200 bg-[#f5f5f4] px-4 py-2.5 md:hidden">
+    <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between border-b border-navy-100 bg-[#f6f8fb] px-4 py-2.5 md:hidden">
       <Link href="/"><Logotype className="w-36" /></Link>
-      <Link href="/deconnexion" prefetch={false} className="inline-flex items-center gap-1.5 text-xs text-neutral-600"><LogOut size={14} /> Quitter</Link>
+      <Link href="/deconnexion" prefetch={false} className="inline-flex items-center gap-1.5 text-xs text-navy-600"><LogOut size={14} /> Quitter</Link>
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
-      <div className="flex justify-end border-b border-neutral-200 bg-white px-6 py-2"><NotificationBell /></div>
-      <nav className="flex gap-2 overflow-x-auto border-b border-neutral-200 bg-white p-3 md:hidden">{sections.map(s => <Link key={s.titre} href={s.href} className={`whitespace-nowrap px-3 py-2 text-xs ${sectionActive(pathname, s) ? "bg-sky-capella-100 font-semibold" : "bg-neutral-100"}`}>{s.titre}</Link>)}</nav>
+      <div className="flex justify-end border-b border-navy-100 bg-white px-6 py-2"><NotificationBell /></div>
+      <nav className="flex gap-2 overflow-x-auto border-b border-navy-100 bg-white p-3 md:hidden">{sections.map(s => <Link key={s.titre} href={s.href} className={`whitespace-nowrap px-3 py-2 text-xs ${sectionActive(pathname, s) ? "bg-sky-capella-100 font-semibold" : "bg-navy-50"}`}>{s.titre}</Link>)}</nav>
       {children}
     </div>
   </div>;
