@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, Calculator,
-  CheckCircle2, ClipboardList, Euro, FileCheck2, Landmark, Mail,
+  CheckCircle2, ClipboardList, Euro, FileCheck2, Landmark,
   Search, ShieldCheck, Users, Wallet,
 } from "lucide-react";
 import { fmtEuros, fmtNombre, MOIS } from "@/lib/format";
@@ -15,6 +15,7 @@ type AdminHomeProps = {
   dossiersFranceEnCours: number;
   caFranceMois: number;
   mois: MoisStats[];
+  moisCourant: number;
 };
 
 const categories = [
@@ -57,7 +58,7 @@ function Mensuel({ mois }: { mois: MoisStats[] }) {
             {(row.france + row.belgique) ? moneyCompact(row.france + row.belgique) : ""}
           </span>
           <div className="flex h-36 w-full max-w-12 items-end overflow-hidden rounded-t-md bg-neutral-100" title={`France : ${fmtEuros(row.france)} · Belgique : ${fmtEuros(row.belgique)}`}>
-            <div className="flex w-full flex-col justify-end">
+            <div className="flex h-full w-full flex-col justify-end">
               <div className="w-full bg-[#111827]" style={{ height: `${franceHeight}%` }} />
               <div className="w-full bg-[#a3a3a3]" style={{ height: `${belgiqueHeight}%` }} />
             </div>
@@ -101,7 +102,7 @@ export function AdminHome(props: AdminHomeProps) {
         <Indicateur label={`CA global généré en ${props.annee}`} value={fmtEuros(props.caGlobalAnnuel)} note="France pro signé + MEGA énergie Belgique" icon={Euro} />
         <Indicateur label="Contrats MEGA effectifs ce mois" value={fmtNombre(props.megaEffectifsMois)} note="Contrats inscrits ce mois, actuellement effectifs" icon={CheckCircle2} />
         <Indicateur label="Dossiers courtage énergie pro en cours" value={fmtNombre(props.dossiersFranceEnCours)} note="France · hors dossiers signés et perdus" icon={BriefcaseBusiness} />
-        <Indicateur label="CA courtage pro France ce mois" value={fmtEuros(props.caFranceMois)} note={MOIS[new Date().getMonth()] + " · dossiers signés"} icon={Wallet} />
+        <Indicateur label="CA courtage pro France ce mois" value={fmtEuros(props.caFranceMois)} note={MOIS[props.moisCourant - 1] + " · dossiers signés"} icon={Wallet} />
       </div>
       <p className="mt-3 text-xs leading-5 text-neutral-500">Le CA consolidé additionne les dossiers pro France signés et la part Capella MEGA énergie en Belgique (validée et prévisionnelle). Les autres activités et fournisseurs ne sont pas encore intégrés à ce total.</p>
     </section>
