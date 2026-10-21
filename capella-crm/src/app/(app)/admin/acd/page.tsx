@@ -19,7 +19,7 @@ export default async function AcdATraiterPage(){
   ]);
   const {data:partnerDossiers}=await supabase.from("partner_dossiers").select("id,acd_request_id");
   const partnerMap=new Map((partnerDossiers??[]).map(d=>[d.acd_request_id,d.id]));
-  const allRows=(requests??[]) as RequestRow[];const rows=allRows.filter(row=>["a_traiter","en_cours"].includes(row.status));const meterRows=(meters??[]) as MeterRow[];const names=new Map((profiles??[]).map(p=>[p.id,p.full_name]));const requestedProspects=new Set(allRows.map(r=>r.prospect_id));const incomplete=(legacy??[]).filter(p=>!requestedProspects.has(p.id));
+  const allRows=(requests??[]) as RequestRow[];const rows=allRows.filter(row=>["a_traiter","en_cours","envoyee"].includes(row.status));const meterRows=(meters??[]) as MeterRow[];const names=new Map((profiles??[]).map(p=>[p.id,p.full_name]));const requestedProspects=new Set(allRows.map(r=>r.prospect_id));const incomplete=(legacy??[]).filter(p=>!requestedProspects.has(p.id));
   return <main className="mx-auto w-full max-w-7xl px-6 py-8">
     <h1 className="font-display text-2xl font-bold text-navy-800">Demandes d&apos;ACD</h1><p className="mt-1 text-sm text-grey-brand">Informations transmises par les agents pour créer l&apos;ACD dans Volto et l&apos;envoyer depuis YouSign.</p>
     {error?<div className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">Impossible de charger les demandes : {error.message}</div>:null}
