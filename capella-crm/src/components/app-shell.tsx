@@ -24,7 +24,7 @@ const PARTNER_NAV = [
   section("Apport d’affaire", "/partenaires/opportunites", Building2, [
     { href: "/partenaires/opportunites", label: "Opportunités", icon: Target },
     { href: "/suivi-acd", label: "Suivi des demandes d’ACD", icon: FileCheck2 },
-    { href: "/partenaires/cotations", label: "Cotations", icon: BriefcaseBusiness },
+    { href: "/partenaires/cotations", label: "Demandes de cotation", icon: BriefcaseBusiness },
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
 ];
