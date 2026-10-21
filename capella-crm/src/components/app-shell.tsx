@@ -5,7 +5,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  ArrowRight, BarChart3, Building2, BriefcaseBusiness, CalendarDays,
+  BarChart3, Building2, BriefcaseBusiness, CalendarDays,
   ChevronDown, ChevronRight, CircleDollarSign, FileCheck2, FileDown,
   Home, Hourglass, LayoutDashboard, LogOut, Mail, Search, ShieldCheck, Target, Users,
 } from "lucide-react";
