@@ -18,8 +18,8 @@ export function Card({ className, children }: { className?: string; children: Re
 
 export function CardHeader({ title, hint, action }: { title: string; hint?: string; action?: React.ReactNode }) {
   return (
-    <div className="relative flex items-start justify-between gap-4 border-b border-navy-100 bg-gradient-to-r from-navy-50/80 via-white to-star-50/40 px-5 py-4">
-      <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-star-500" aria-hidden />
+    <div className="relative flex items-start justify-between gap-4 border-b border-navy-100 bg-navy-50/70 px-5 py-4">
+      <span className="absolute inset-y-3 left-0 w-[3px] bg-star-500" aria-hidden />
       <div>
         <h2 className="font-display text-base font-semibold text-navy-800">{title}</h2>
         {hint ? <p className="mt-0.5 text-sm text-grey-brand">{hint}</p> : null}
@@ -33,16 +33,16 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "
 
 export function Button({ variant = "primary", className, ...props }: ButtonProps) {
   const styles = {
-    primary: "bg-star-500 text-white shadow-[0_5px_14px_rgba(232,96,48,.20)] hover:bg-star-600 hover:shadow-[0_7px_18px_rgba(232,96,48,.26)] disabled:bg-star-200 disabled:text-white/70",
-    secondary: "bg-navy-800 text-white shadow-[0_5px_14px_rgba(13,27,46,.16)] hover:bg-navy-700 disabled:bg-navy-300",
-    ghost: "border border-navy-200 bg-white text-navy-700 shadow-sm hover:border-navy-300 hover:bg-sky-capella-50",
+    primary: "bg-star-500 text-white hover:bg-star-600 disabled:bg-star-200 disabled:text-white/70",
+    secondary: "bg-navy-800 text-white hover:bg-navy-700 disabled:bg-navy-300",
+    ghost: "border border-navy-200 bg-white text-navy-700 hover:border-navy-300 hover:bg-sky-capella-50",
   }[variant];
 
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold",
-        "transition-all duration-150 disabled:cursor-not-allowed active:translate-y-px",
+        "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold",
+        "transition-colors duration-150 disabled:cursor-not-allowed",
         styles,
         className,
       )}
@@ -65,7 +65,7 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   return (
     <input
       className={cn(
-        "h-10 w-full rounded-xl border border-navy-200 bg-white px-3 text-sm shadow-sm",
+        "h-10 w-full rounded-lg border border-navy-200 bg-white px-3 text-sm",
         "placeholder:text-navy-300 hover:border-navy-300",
         "focus:border-star-500 focus:outline-none focus:ring-2 focus:ring-star-500/15",
         className,
@@ -80,8 +80,8 @@ export function StageBadge({ label, color, className }: { label: string; color: 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-navy-200/60 px-2.5 py-1",
-        "whitespace-nowrap text-[11px] font-bold text-navy-800 shadow-sm",
+        "inline-flex items-center gap-1.5 rounded-full border border-navy-200 px-2.5 py-1",
+        "whitespace-nowrap text-[11px] font-semibold text-navy-800",
         className,
       )}
       style={{ backgroundColor: color }}
