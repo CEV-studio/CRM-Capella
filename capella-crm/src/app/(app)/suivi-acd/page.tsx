@@ -7,14 +7,16 @@ type RequestRow = { id: string; raison_sociale: string; status: string; submitte
 const statusLabel: Record<string, string> = {
   a_traiter: "Transmise à l’ADV",
   en_cours: "Traitement en cours",
+  envoyee: "ACD envoyée — en attente de signature",
   terminee: "ACD signée",
   annulee: "Demande annulée",
 };
 const statusStyle: Record<string, string> = {
   a_traiter: "bg-amber-50 text-amber-800",
   en_cours: "bg-sky-capella-50 text-sky-capella-700",
+  envoyee: "bg-violet-100 text-violet-800",
   terminee: "bg-emerald-50 text-emerald-800",
-  annulee: "bg-navy-100 text-navy-600",
+  annulee: "bg-rose-100 text-rose-800",
 };
 
 export default async function SuiviAcdPage() {
