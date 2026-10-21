@@ -14,7 +14,7 @@ export async function loadBelgium(){
 export async function loadBelgiumDashboardMetrics() {
  await requireAdmin();
  const db=await createClient();
- async function all<T>(table:'be_contracts'|'be_statement_lines',columns:string,order:string){
+ async function all<T>(table:'be_contracts'|'be_statement_lines',columns:'data'|'supplier,period,contract_key,gross_cents,centre_cents',order:'key'|'id'){
   const out:T[]=[];
   for(let offset=0;;offset+=1000){
    const {data,error}=await db.from(table).select(columns).order(order).range(offset,offset+999);
