@@ -11,6 +11,8 @@ import { chargerApporteurs } from "@/lib/referentiels";
 import type { Affaire, Apporteur, Profile, Prospect } from "@/lib/domain/database.types";
 import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 import { AdminHome } from "@/components/admin-home";
+import { loadBelgiumDashboardMetrics } from "@/lib/belgium/server";
+import { financialModel } from "@/lib/belgium/finance.js";
 
 export const metadata = { title: "Tableau de bord — Capella CRM" };
 export const dynamic = "force-dynamic";
@@ -42,12 +44,13 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
     : Promise.resolve({ data: [profil] as Pick<Profile, "id" | "full_name" | "commission_rate">[] });
   const apporteursQuery = estAdmin ? chargerApporteurs() : Promise.resolve([] as Apporteur[]);
 
-  const [{ data: affairesBrutes }, { data: summary, error: summaryError }, { data: profils }, { data: evenementsBruts }, apporteurs] = await Promise.all([
+  const [{ data: affairesBrutes }, { data: summary, error: summaryError }, { data: profils }, { data: evenementsBruts }, apporteurs, belgiumMetrics] = await Promise.all([
     supabase.from("affaires").select("commercial_id, apporteur_id, stage, date_signature, date_relance, commission, raison_sociale").is("deleted_at", null),
     supabase.rpc("crm_prospect_summary"),
     profilsQuery,
     estAdmin ? supabase.from("calendar_events").select("id, prospect_id, profile_id, title, start_at, end_at").eq("kind", "rdv").eq("status", "confirmed").gte("start_at", `${semaine.debut}T00:00:00Z`).lt("start_at", `${semaine.fin}T23:59:59Z`).order("start_at") : Promise.resolve({ data: [] as EvenementSemaine[] }),
     apporteursQuery,
+    estAdmin ? loadBelgiumDashboardMetrics() : Promise.resolve(null),
   ]);
 
   const toutesAffaires = (affairesBrutes ?? []) as Affaire[];
@@ -70,28 +73,41 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
   const owners = new Map(summary.owners.map(s => [s.assigned_to, s]));
 
   if (estAdmin) {
-    const globalStats = calculerIndicateurs(toutesAffaires, tauxCommercial, tauxApporteur);
-    const anneeGlobale = Number(dateParis(new Date()).slice(0, 4));
-    const moisGlobal = commissionsParMois(toutesAffaires, anneeGlobale, tauxCommercial);
-    const totalProspectsGlobal = summary.stages.reduce((total, stage) => total + stage.total, 0);
-    const prospectsGlobalParEtape = PROSPECT_STAGES.map((stage) => ({
-      stage: stage.label,
-      total: summary.stages.find((row) => row.stage === stage.label)?.total ?? 0,
-    }));
-    const affairesGlobalParEtape = AFFAIRE_STAGES.map((stage) => ({
-      stage: stage.label,
-      total: toutesAffaires.filter((affaire) => affaire.stage === stage.label).length,
-    }));
+    const todayParis = dateParis(new Date());
+    const anneeGlobale = Number(todayParis.slice(0, 4));
+    const moisCourant = Number(todayParis.slice(5, 7));
+    const moisKey = todayParis.slice(0, 7);
+    const franceParMois = Array.from({ length: 12 }, (_, index) => {
+      const mois = String(index + 1).padStart(2, "0");
+      const key = `${anneeGlobale}-${mois}`;
+      return toutesAffaires
+        .filter((affaire) => affaire.stage === "Signé" && affaire.date_signature?.slice(0, 7) === key)
+        .reduce((total, affaire) => total + Number(affaire.commission || 0), 0);
+    });
+    const belgique = belgiumMetrics!;
+    const caBelgiqueParMois = Array.from({ length: 12 }, (_, index) => {
+      const scope = { view: "month", year: anneeGlobale, month: index + 1 } as const;
+      const result = financialModel(belgique.contracts, belgique.statements, [], [], scope, todayParis);
+      return (result.validatedCapella + result.forecastCapella) / 100;
+    });
+    const megaEffectifsMois = belgique.contracts.filter((contract) =>
+      contract.supplier === "MEGA" &&
+      contract.status_class === "Effectif" &&
+      contract.registered_date?.slice(0, 7) === moisKey
+    ).length;
+    const dossiersFranceEnCours = toutesAffaires.filter((affaire) => !["Signé", "KO"].includes(affaire.stage)).length;
+    const caFranceMois = franceParMois[moisCourant - 1] ?? 0;
+    const caGlobalAnnuel = franceParMois.reduce((total, amount) => total + amount, 0) +
+      caBelgiqueParMois.reduce((total, amount) => total + amount, 0);
 
     return <AdminHome
       prenom={profil.full_name.split(" ")[0]}
       annee={anneeGlobale}
-      prospectsTotal={totalProspectsGlobal}
-      affairesEnCours={globalStats.nbEnCours}
-      tauxConversion={globalStats.tauxConversion}
-      mois={moisGlobal}
-      prospectsParEtape={prospectsGlobalParEtape}
-      affairesParEtape={affairesGlobalParEtape}
+      caGlobalAnnuel={caGlobalAnnuel}
+      megaEffectifsMois={megaEffectifsMois}
+      dossiersFranceEnCours={dossiersFranceEnCours}
+      caFranceMois={caFranceMois}
+      mois={franceParMois.map((france, index) => ({ mois: index + 1, france, belgique: caBelgiqueParMois[index] }))}
     />;
   }
   const relancesProspection = summary.upcoming;
