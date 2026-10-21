@@ -8,7 +8,7 @@ export async function PATCH(request:Request,{params}:{params:Promise<{requestId:
   const profile=await requireAdmin();
   const {requestId}=await params;
   const body=await request.json().catch(()=>({})) as {status?:string};
-  if (!["a_traiter","en_cours","terminee","annulee"].includes(body.status||"")) return NextResponse.json({error:"Statut invalide."},{status:400});
+  if (!["a_traiter","en_cours","envoyee","terminee","annulee"].includes(body.status||"")) return NextResponse.json({error:"Statut invalide."},{status:400});
   const supabase=await createClient();
   const db=supabase as any;
   const {data:acd,error:acdError}=await db.from("acd_requests").select("id,prospect_id").eq("id",requestId).maybeSingle();
