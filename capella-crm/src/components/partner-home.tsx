@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BriefcaseBusiness, Building2, CheckCircle2, CircleDollarSign, Target } from "lucide-react";
+import { ArrowUpRight, BriefcaseBusiness, Building2, CheckCircle2, CircleDollarSign, FileCheck2, Target } from "lucide-react";
 import { partnerContext } from "@/lib/partners/server";
 import { fmtEuros, fmtNombre } from "@/lib/format";
 
@@ -22,7 +22,8 @@ export async function PartnerHome({ prenom }: { prenom: string }) {
   const commission = signees.reduce((sum, quote) => sum + Number(quote.partner_commission ?? 0), 0);
   const categories = [
     { title: "Opportunités", description: "Créer et suivre vos dossiers apportés.", href: "/partenaires/opportunites", icon: Target },
-    { title: "Cotations", description: "Demander et suivre les cotations.", href: "/partenaires/cotations", icon: BriefcaseBusiness },
+    { title: "Demandes de cotation", description: "Suivre les demandes transmises à l’ADV.", href: "/partenaires/cotations", icon: BriefcaseBusiness },
+    { title: "Suivi des demandes d’ACD", description: "Voir les étapes de traitement de vos ACD.", href: "/suivi-acd", icon: FileCheck2 },
     { title: "Portefeuille clients", description: "Retrouver vos entreprises et contrats.", href: "/partenaires/portefeuille", icon: Building2 },
   ];
   return <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-9">
