@@ -74,27 +74,9 @@ export default async function ExportPage() {
       <Card>
         <CardHeader title="Pourquoi c'est important" />
         <div className="space-y-3 px-5 py-4 text-sm text-navy-700">
-          <p>
-            Le plan gratuit de Supabase ne garde pas d&apos;historique de
-            sauvegarde. Si quelque chose tourne mal, ce fichier est ta seule
-            copie. <strong>Télécharge-le une fois par semaine</strong> et garde-le
-            ailleurs que sur ton Mac — Drive, disque externe, peu importe, mais
-            ailleurs.
-          </p>
-          <p>
-            Les fichiers s&apos;ouvrent directement dans Excel ou Google Sheets.
-            Les identifiants techniques sont remplacés par les vrais noms :
-            « Aly » plutôt qu&apos;une suite de caractères.
-          </p>
-          <p
-            className="rounded-lg px-3 py-2"
-            style={{ backgroundColor: "var(--color-status-relance)" }}
-          >
-            Quand le CRM portera vraiment le business, passe au{" "}
-            <strong>plan Pro Supabase (~25 $/mois)</strong> : sauvegardes
-            quotidiennes automatiques sur 7 jours. Cet export restera utile, mais
-            il ne sera plus ton seul filet.
-          </p>
+          
+          
+          
         </div>
       </Card>
     </main>
