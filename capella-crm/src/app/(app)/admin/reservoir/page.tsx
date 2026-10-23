@@ -114,11 +114,7 @@ export default async function ReservoirPage({
         <h1 className="font-display text-2xl font-bold text-navy-800">
           Réservoir &amp; attribution
         </h1>
-        <p className="mt-1 text-sm text-grey-brand">
-          Tes leads bruts, en attente. Aucun commercial ne les voit tant que tu
-          ne les as pas attribués — et un lead attribué ne peut pas se retrouver
-          chez deux personnes.
-        </p>
+        
       </header>
 
       <div className="space-y-6">
@@ -165,14 +161,7 @@ export default async function ReservoirPage({
         </nav>
 
         {sansSource > 0 ? (
-          <p
-            className="rounded-lg px-3 py-2 text-sm text-navy-800"
-            style={{ backgroundColor: "var(--color-status-relance)" }}
-          >
-            {sansSource} lead(s) du réservoir n&apos;ont pas de source. Tu ne
-            pourras pas les attribuer par lot, ni savoir plus tard d&apos;où ils
-            viennent. Ouvre leur fiche pour la renseigner.
-          </p>
+          
         ) : null}
 
         <Reattribution commerciaux={commerciaux} />
