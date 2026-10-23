@@ -187,7 +187,7 @@ export default async function JourneePage() {
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-star-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-star-700"><Target size={13}/>Cockpit commercial</div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-navy-900">Ma journée</h1>
-          <p className="mt-1 max-w-3xl text-sm text-navy-500">Prépare ta journée sans surcharge : traite les rappels en retard et anticipe uniquement les comparatifs prévus aujourd’hui.</p>
+          
         </div>
         {top ? <Link href={`/prospection/${top.prospect.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-star-500 px-5 text-sm font-bold text-white shadow-[0_8px_20px_rgba(232,96,48,.20)] hover:bg-star-600"><Flame size={17}/>Traiter le prospect prioritaire<ArrowRight size={16}/></Link> : null}
       </header>
@@ -196,7 +196,7 @@ export default async function JourneePage() {
 
       <section className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm sm:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div><h2 className="font-display text-lg font-bold text-navy-900">Échéances à anticiper</h2><p className="mt-0.5 text-xs text-navy-500">Alertes dès 18 mois avant l’échéance, avec les dates dépassées à rattraper.</p></div>
+          <div><h2 className="font-display text-lg font-bold text-navy-900">Échéances à anticiper</h2></div>
           <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{expiryItems.length} échéance{expiryItems.length > 1 ? "s" : ""}</span>
         </div>
         {expiryItems.length ? <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{expiryItems.slice(0, 30).map((item, index) => <article key={`${item.prospect.id}-${item.meter ?? "contrat"}-${item.date}-${index}`} className="flex items-center gap-3 rounded-xl border border-amber-100 bg-white p-3">
