@@ -34,11 +34,7 @@ export default async function NouveauProspectPage() {
         <h1 className="font-display text-2xl font-bold text-navy-800">
           Nouveau prospect
         </h1>
-        <p className="mt-1 text-sm text-grey-brand">
-          {estAdmin
-            ? "Saisie unitaire. L'import d'un fichier complet arrive à l'étape 4."
-            : "Le prospect te sera attribué automatiquement."}
-        </p>
+        
       </header>
 
       <FicheForm

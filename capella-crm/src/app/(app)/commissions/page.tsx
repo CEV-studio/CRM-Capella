@@ -68,7 +68,7 @@ export default async function CommissionsPage({ searchParams }: { searchParams: 
   const totalAttenteCommercial = enAttente.reduce((s, a) => s + Number(a.commission ?? 0) * Number(profilParId.get(a.commercial_id)?.commission_rate ?? 0), 0);
 
   return <main className="mx-auto w-full max-w-6xl px-6 py-8">
-    <header className="mb-5"><h1 className="font-display text-2xl font-bold text-navy-800">Commissions</h1><p className="mt-1 text-sm text-grey-brand">Tes commissions sont séparées entre montants en attente et montants validés par l’ADV.</p></header>
+    <header className="mb-5"><h1 className="font-display text-2xl font-bold text-navy-800">Commissions</h1></header>
 
     <div className="mb-5"><FiltresPeriode chemin="/commissions" annees={annees} commerciaux={estAdmin ? listeProfils.map((p) => ({ value: p.id, label: p.full_name })) : []} apporteurs={estAdmin ? listeApporteurs.map((a) => ({ value: a.id, label: a.name })) : []}/></div>
 

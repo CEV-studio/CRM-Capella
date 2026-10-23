@@ -47,7 +47,7 @@ export default async function AdminEmailsPage({ searchParams }: {
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-8">
       <h1 className="font-display text-2xl font-bold text-navy-800">Emails & templates</h1>
-      <p className="mt-1 text-sm text-grey-brand">Configure la boîte Gmail utilisée par l’équipe, les signatures CRM et les modèles disponibles depuis les fiches clients.</p>
+      
 
       {query.gmail === "connecte" ? <div className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800">Boîte Gmail connectée.</div> : null}
       {query.gmail === "deconnecte" ? <div className="mt-4 rounded-lg bg-navy-50 px-4 py-3 text-sm text-navy-700">Boîte Gmail déconnectée.</div> : null}
@@ -83,9 +83,7 @@ export default async function AdminEmailsPage({ searchParams }: {
 
       <section className="mt-6 rounded-xl border border-navy-100 bg-white p-5">
         <h2 className="font-semibold text-navy-800">Signatures CRM</h2>
-        <p className="mt-1 text-sm text-grey-brand">
-          Pour une boîte partagée comme hello@capellaenergy.fr, le CRM utilise d’abord la signature du commercial qui envoie. S’il n’en a pas, il prend la signature par défaut. La signature Gmail ne sert qu’en dernier recours.
-        </p>
+        
 
         <div className="mt-5 rounded-xl border border-star-200 bg-star-50/30 p-4">
           <div className="mb-3">

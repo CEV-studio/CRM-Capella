@@ -32,7 +32,7 @@ export default async function SuiviAcdPage() {
   return <main className="mx-auto w-full max-w-6xl px-6 py-8">
     <header className="mb-6">
       <h1 className="font-display text-2xl font-bold text-navy-900">Suivi des demandes d’ACD</h1>
-      <p className="mt-1 text-sm text-grey-brand">Retrouvez les étapes de traitement de vos demandes transmises à l’ADV.</p>
+      
     </header>
     {error ? <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">Impossible de charger le suivi des demandes pour le moment.</div> : null}
     {rows.length === 0 ? <div className="rounded-2xl border border-navy-100 bg-white p-6 text-sm text-grey-brand">Aucune demande d’ACD à afficher.</div> :

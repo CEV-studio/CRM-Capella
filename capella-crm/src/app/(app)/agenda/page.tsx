@@ -46,7 +46,7 @@ export default async function AgendaPage({ searchParams }: {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy-800">Mon agenda</h1>
-          <p className="mt-1 text-sm text-grey-brand">Tes RDV comparatif et rappels Capella synchronisés avec ton Google Calendar.</p>
+          
           <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
             <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sky-800">● RDV comparatif</span>
             <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-800">● Rappel</span>
@@ -70,7 +70,7 @@ export default async function AgendaPage({ searchParams }: {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-navy-800">Google Calendar</h2>
-            {account ? <p className="mt-1 text-sm text-grey-brand">Connecté avec <strong className="text-navy-700">{account.email}</strong></p> : <p className="mt-1 text-sm text-grey-brand">Connecte ton compte Google pour créer des RDV depuis les fiches prospect.</p>}
+            {account ? <p className="mt-1 text-sm text-grey-brand">Connecté avec <strong className="text-navy-700">{account.email}</strong></p> : }
           </div>
           {account ? <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">● Connecté</span> : <span className="rounded-full bg-grey-100 px-3 py-1 text-xs font-semibold text-grey-brand">Non connecté</span>}
         </div>

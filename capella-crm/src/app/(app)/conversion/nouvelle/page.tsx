@@ -50,11 +50,7 @@ export default async function NouvelleAffairePage({
         <h1 className="font-display text-2xl font-bold text-navy-800">
           Nouvelle demande de cotation
         </h1>
-        <p className="mt-1 text-sm text-grey-brand">
-          {p
-            ? `Transmission du prospect ${p.ref} dans le parcours de cotation. Le dossier ADV sera créé avec les informations déjà disponibles.`
-            : "Saisie directe, avec les mêmes champs que l'ancien formulaire Google."}
-        </p>
+        
       </header>
 
       {p ? <TransferProspectForm prospectId={p.id} /> : <AffaireForm

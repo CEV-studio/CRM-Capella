@@ -84,7 +84,7 @@ export default async function MesClientsPage({ searchParams }: { searchParams: P
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy-800">Mes clients</h1>
-          <p className="mt-1 text-sm text-grey-brand">Une fiche par entreprise, avec toutes ses affaires et tous ses compteurs regroupés.</p>
+          
         </div>
         <div className="rounded-full bg-navy-50 px-3 py-1.5 text-xs font-bold text-navy-700">{clients.length} client{clients.length > 1 ? "s" : ""}</div>
       </header>

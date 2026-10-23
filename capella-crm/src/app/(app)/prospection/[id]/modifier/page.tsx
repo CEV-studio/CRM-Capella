@@ -38,7 +38,7 @@ export default async function ModifierProspectPage({ params }: { params: Promise
       <div className="mb-6">
         <Link href={`/prospection/${p.id}`} className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700">← Retour à la fiche client</Link>
         <h1 className="mt-2 font-display text-2xl font-bold text-navy-800">Modifier les informations</h1>
-        <p className="mt-1 text-sm text-grey-brand">Tous les champs de la fiche sont regroupés ici pour garder l’écran commercial principal léger.</p>
+        
       </div>
 
       <FicheForm

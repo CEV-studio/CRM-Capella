@@ -116,7 +116,7 @@ export function AdminHome(props: AdminHomeProps) {
     </section>
 
     <section aria-label="Sections principales">
-      <div className="mb-4"><h2 className="font-display text-lg font-semibold text-navy-900">Accéder à une section</h2><p className="mt-1 text-sm text-grey-brand">Choisis un espace pour retrouver ses outils.</p></div>
+      <div className="mb-4"><h2 className="font-display text-lg font-semibold text-navy-900">Accéder à une section</h2></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((category) => {
           const Icon = category.icon;

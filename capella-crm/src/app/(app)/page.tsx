@@ -147,7 +147,7 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
       <div>
         <div className="mb-1.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.14em] text-star-600"><Sparkles size={14} /> Cockpit commercial</div>
         <h1 className="font-display text-2xl font-bold text-navy-800">Bonjour {profil.full_name.split(" ")[0]}</h1>
-        <p className="mt-1 text-sm text-grey-brand">{estAdmin ? "Vue d'ensemble de Capella Energy." : "Ton activité. Tu ne vois que tes propres chiffres."}</p>
+        
       </div>
       <div className="hidden h-14 w-14 items-center justify-center rounded-2xl bg-[var(--crm-gradient-navy)] shadow-[var(--crm-shadow-card)] sm:flex"><Sparkles className="text-star-400" size={24} /></div>
     </header>

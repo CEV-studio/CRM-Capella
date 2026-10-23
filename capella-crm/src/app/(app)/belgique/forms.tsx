@@ -31,7 +31,7 @@ export function CycleForm({contractKey,value}:{contractKey:string;value?:CycleTr
  <Field label="Déjà repris par MEGA (€)"><Input type="number" step="0.01" min="0" name="mega_recovered" defaultValue={(value?.mega_recovered_cents??0)/100}/></Field>
  <Field label="Justificatif / notes"><Input name="notes" defaultValue={value?.notes??''}/></Field>
  <Button disabled={busy} className="self-end">Confirmer les informations</Button>
- <p className="text-xs text-grey-brand sm:col-span-2 lg:col-span-3">Renseigner des dates et montants vérifiés. Les dates observées lors d’un reporting ne sont pas automatiquement des dates confirmées.</p>
+ 
  <p role="status" className="text-sm sm:col-span-2 lg:col-span-3">{message}</p></form>;
 }
 export function SupplierBillingForm({period,value}:{period:string;value?:SupplierBilling}){

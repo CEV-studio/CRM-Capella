@@ -70,7 +70,7 @@ export default async function AdvPage({searchParams}:{searchParams:Promise<Reche
  const chip=(key:string,label:string,n:number)=> <Link href={url(key)} className={statut===key?"rounded-full bg-navy-800 px-3 py-1.5 text-xs font-semibold text-white":"rounded-full border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700"}>{label} <span className="ml-1 opacity-70">{n}</span></Link>;
 
  return <main className="w-full px-6 py-8">
-  <header className="mb-5"><h1 className="font-display text-2xl font-bold text-navy-800">ADV</h1><p className="mt-1 text-sm text-grey-brand">Vue opérationnelle des cotations. Les KO sont décidés par les commerciaux ; l’ADV consulte leur motif mais ne les crée pas.</p></header>
+  <header className="mb-5"><h1 className="font-display text-2xl font-bold text-navy-800">ADV</h1></header>
 
   <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
    <div className="rounded-xl border border-navy-100 bg-white p-4"><div className="text-xs text-grey-brand">À traiter</div><div className="mt-1 text-2xl font-bold text-navy-800">{aTraiter.length}</div></div>

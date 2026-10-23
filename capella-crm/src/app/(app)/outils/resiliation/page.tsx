@@ -23,7 +23,7 @@ export default async function ResiliationPage({ searchParams }: { searchParams: 
     <main className="mx-auto w-full max-w-4xl px-6 py-8">
       <Link href={`/prospection/${p.id}`} className="text-sm text-grey-brand underline underline-offset-2 hover:text-navy-700">← Retour à la fiche</Link>
       <h1 className="mt-3 font-display text-2xl font-bold text-navy-800">Lettre de résiliation</h1>
-      <p className="mt-1 text-sm text-grey-brand">Les données connues sont préremplies. Vérifie les éléments contractuels avant de générer le PDF.</p>
+      
 
       <form action="/api/outils/resiliation" method="post" target="_blank" className="mt-6 rounded-xl border border-navy-100 bg-white p-6">
         <input type="hidden" name="prospect_id" value={p.id} />

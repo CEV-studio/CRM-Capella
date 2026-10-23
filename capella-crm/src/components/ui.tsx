@@ -22,7 +22,7 @@ export function CardHeader({ title, hint, action }: { title: string; hint?: stri
       <span className="absolute inset-y-3 left-0 w-[3px] bg-star-500" aria-hidden />
       <div>
         <h2 className="font-display text-base font-semibold text-navy-800">{title}</h2>
-        {hint ? <p className="mt-0.5 text-sm text-grey-brand">{hint}</p> : null}
+        
       </div>
       {action}
     </div>
@@ -56,7 +56,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-navy-700">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-xs text-grey-brand">{hint}</span> : null}
+      
     </label>
   );
 }
@@ -98,7 +98,7 @@ export function KpiTile({ label, value, hint }: { label: string; value: string; 
     <Card className="px-5 py-4">
       <div className="text-sm font-medium text-grey-brand">{label}</div>
       <div className="tabular mt-3 font-display text-2xl font-semibold text-navy-900">{value}</div>
-      {hint ? <div className="mt-2 text-xs text-grey-brand">{hint}</div> : null}
+      
     </Card>
   );
 }

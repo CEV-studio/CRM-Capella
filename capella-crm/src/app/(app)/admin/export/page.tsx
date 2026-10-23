@@ -37,9 +37,7 @@ export default async function ExportPage() {
         <h1 className="font-display text-2xl font-bold text-navy-800">
           Export complet
         </h1>
-        <p className="mt-1 text-sm text-grey-brand">
-          Toutes tes données, en un fichier. C&apos;est ta sauvegarde.
-        </p>
+        
       </header>
 
       <Card className="mb-6">

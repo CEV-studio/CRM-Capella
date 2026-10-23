@@ -100,7 +100,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-navy-800">Dossiers en cours</h1>
-          <p className="mt-1 text-sm text-grey-brand">Deuxième partie de la prospection : de la demande ACD jusqu’au passage en cotation.</p>
+          
         </div>
         <div className="flex gap-2">
           <div className="inline-flex rounded-lg border border-navy-200 p-0.5">
