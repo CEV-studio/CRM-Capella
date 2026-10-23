@@ -34,11 +34,7 @@ export default async function CorbeillePage() {
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
       <header className="mb-6">
         <h1 className="font-display text-2xl font-bold text-navy-800">Corbeille</h1>
-        <p className="mt-1 text-sm text-grey-brand">
-          Les éléments supprimés arrivent ici. Tu peux les restaurer, ou les
-          supprimer pour de bon. Rien n&apos;est perdu tant que tu ne l&apos;as
-          pas décidé.
-        </p>
+        
       </header>
 
       <Card className="mb-6">
