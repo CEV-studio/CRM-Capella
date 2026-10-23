@@ -110,7 +110,7 @@ export default async function AgendaPage({ searchParams }: {
         ) : (
           <div className="rounded-xl border border-dashed border-navy-200 bg-white px-5 py-10 text-center">
             <p className="text-sm font-semibold text-navy-700">Aucun événement Capella à venir.</p>
-            <p className="mt-1 text-xs text-grey-brand">Ouvre une fiche prospect et utilise le bloc « Rendez-vous & rappels ».</p>
+            
             <Link href="/prospection" className="mt-4 inline-flex h-9 items-center rounded-lg bg-navy-800 px-4 text-xs font-semibold text-white hover:bg-navy-700">Aller à la prospection</Link>
           </div>
         )}
