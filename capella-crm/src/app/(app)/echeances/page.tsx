@@ -105,7 +105,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
               </tr>;
             })}
           </tbody>
-        </table></div> : <div className="px-5 py-12 text-center"><CalendarClock size={24} className="mx-auto text-navy-300"/><p className="mt-3 text-sm font-semibold text-navy-700">Aucun dossier dans cette vue.</p><p className="mt-1 text-xs text-navy-500">Essaie une autre période ou enlève ta recherche.</p></div>}
+        </table></div> : <div className="px-5 py-12 text-center"><CalendarClock size={24} className="mx-auto text-navy-300"/><p className="mt-3 text-sm font-semibold text-navy-700">Aucun dossier dans cette vue.</p></div>}
         {totalPages > 1 ? <footer className="flex items-center justify-between border-t border-navy-100 px-4 py-3 text-sm"><span className="text-xs tabular text-navy-500">Page {currentPage} sur {totalPages}</span><div className="flex gap-2">{currentPage > 1 ? <Link href={hrefFor(period, q, currentPage - 1)} className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50">Précédent</Link> : null}{currentPage < totalPages ? <Link href={hrefFor(period, q, currentPage + 1)} className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50">Suivant</Link> : null}</div></footer> : null}
       </section>
       
