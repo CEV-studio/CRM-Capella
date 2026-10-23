@@ -65,10 +65,7 @@ export function CreerCommercialForm() {
           style={{ backgroundColor: "var(--color-status-signe)" }}
         >
           <p className="text-sm font-semibold text-navy-800">{etat.message}</p>
-          <p className="mt-1 text-sm text-navy-700">
-            Transmets-lui ce mot de passe provisoire par WhatsApp ou SMS. Il devra
-            en choisir un nouveau dès sa première connexion.
-          </p>
+          
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <code className="tabular rounded-md bg-white px-3 py-2 font-mono text-base font-bold tracking-wide text-navy-800">
               {etat.motDePasse}
@@ -81,10 +78,7 @@ export function CreerCommercialForm() {
               {copie ? "Copié ✓" : "Copier"}
             </Button>
           </div>
-          <p className="mt-3 text-xs text-navy-700">
-            ⚠️ Ce mot de passe ne sera plus jamais affiché. Si tu le perds, utilise
-            « Réinitialiser » dans la liste ci-dessous.
-          </p>
+          
         </div>
       ) : null}
     </div>
