@@ -65,11 +65,7 @@ export default async function CommerciauxPage() {
         )}
       </Card>
 
-      <p className="mt-6 text-xs text-grey-brand">
-        À prévoir : quand tu désactiveras un commercial qui a déjà des prospects
-        et des affaires, l&apos;écran te proposera de les réattribuer en un clic.
-        Cette partie arrive à l&apos;étape 4.
-      </p>
+      
     </main>
   );
 }
