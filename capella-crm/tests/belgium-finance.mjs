@@ -26,3 +26,17 @@ m=financialModel([active,second],[paid],[],[],{view:'month',year:2026,month:10},
 m=financialModel([contract],[paid],[{contract_key:'a',...dates}],[],{view:'month',year:2026,month:9},'2026-10-20');assert.equal(m.clawbacks.length,1);assert.equal(m.centreToRecover,1000);
 m=financialModel([contract],[paid],[{contract_key:'a',...dates}],[],{view:'month',year:2026,month:10},'2026-10-20');assert.equal(m.clawbacks.length,0);
 console.log('PASS: true clawbacks only, 0/1/2/3 months, prorata, recovered balances, no fabricated dates, three-month retention bonus, invoicing vs receipts, monthly periods and M+1 15th.');
+const {monthlyProduction}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const cohorts=monthlyProduction([
+ {...active,key:'sept',effect_date:'2026-10-05',period:'2026-09-01'},
+ {...contract,key:'lost',effect_date:'2026-09-30',period:'2026-09-01'},
+ {...active,key:'oct',effect_date:'2026-10-20',period:'2026-10-01'},
+ {...contract,key:'never',effect_date:null,period:null,status_class:'Annulé'}
+],[{...paid,key:'sept',period:'2026-09-01'}],[]);
+assert.equal(cohorts.length,2);
+assert.equal(cohorts[1].contracts.length,2);
+assert.equal(cohorts[1].active,1);
+assert.equal(cohorts[1].terminated,1);
+assert.equal(cohorts[1].terminationDatesMissing,1);
+assert.equal(cohorts[1].confirmed,1);
+assert.equal(cohorts[0].active,1);

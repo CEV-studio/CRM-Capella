@@ -80,3 +80,22 @@ export function financialModel(contracts,statements,tracking,billing,scope,today
   pendingGlobal:cycles.filter(c=>c.pending).length,bonusPotential:sumBonus('potential'),bonusDue:sumBonus('due'),
   bonusInvoiced:sumBonus('invoiced'),bonusPaid:sumBonus('paid'),bonusUndated:cycles.filter(c=>c.bonusState!=='none'&&!c.bonusDate).length,calendar};
 }
+
+/** Production par cohorte de commissionnement, conservée après résiliation.
+ * @param {Contract[]} contracts @param {Statement[]} statements @param {CycleTracking[]} tracking
+ */
+export function monthlyProduction(contracts,statements,tracking) {
+ const groups=new Map();
+ for(const c of contracts){
+  const official=statements.filter(s=>s.key===c.key).sort((a,b)=>a.period.localeCompare(b.period))[0];
+  if(!c.effect_date&&c.status_class!=='Effectif'&&!official)continue;
+  const period=official?.period||c.period||null;
+  const key=period||'unknown';
+  if(!groups.has(key))groups.set(key,{period,contracts:[],active:0,terminated:0,other:0,confirmed:0,terminationDatesMissing:0});
+  const row=groups.get(key);row.contracts.push(c);if(official)row.confirmed++;
+  if(c.status_class==='Effectif')row.active++;
+  else if(c.status_class==='Résilié'){row.terminated++;if(!tracking.find(t=>t.contract_key===c.key)?.termination_date)row.terminationDatesMissing++;}
+  else row.other++;
+ }
+ return [...groups.values()].sort((a,b)=>(b.period||'').localeCompare(a.period||''));
+}
