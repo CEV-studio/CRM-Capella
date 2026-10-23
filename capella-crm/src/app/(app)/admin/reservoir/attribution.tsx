@@ -250,7 +250,6 @@ export function TableauReservoir({
         </Field>
         <Button type="submit">Filtrer</Button>
         {kva ? <a href="/admin/reservoir" className="px-2 py-2 text-sm font-medium text-navy-700 underline">Effacer le filtre</a> : null}
-        <span className="text-xs text-grey-brand">La sélection porte sur les leads affichés après filtrage.</span>
       </form>
 
       <form action={action}>
