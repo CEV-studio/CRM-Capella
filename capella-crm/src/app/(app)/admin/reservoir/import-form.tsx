@@ -82,10 +82,6 @@ export function ImportForm({
             >
               ↓ Télécharger le modèle CSV
             </a>
-            <span className="text-grey-brand">
-              {ENTETES_IMPORT.length} colonnes. Seule la raison sociale ou le nom
-              est obligatoire.
-            </span>
           </div>
 
           <form
