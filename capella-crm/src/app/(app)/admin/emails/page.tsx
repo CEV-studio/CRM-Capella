@@ -88,7 +88,7 @@ export default async function AdminEmailsPage({ searchParams }: {
         <div className="mt-5 rounded-xl border border-star-200 bg-star-50/30 p-4">
           <div className="mb-3">
             <h3 className="text-sm font-semibold text-navy-800">Signature par défaut de l’équipe</h3>
-            <p className="text-xs text-grey-brand">Utilisée lorsqu’un utilisateur n’a pas de signature personnelle.</p>
+            
           </div>
           <form action={enregistrerSignature} className="grid gap-3">
             <input type="hidden" name="profile_id" value="default" />
@@ -136,7 +136,7 @@ export default async function AdminEmailsPage({ searchParams }: {
       <section className="mt-6 rounded-xl border border-navy-100 bg-white p-5">
         <h2 className="font-semibold text-navy-800">Balises disponibles</h2>
         <div className="mt-3 flex flex-wrap gap-2">{BALISES.map((b) => <code key={b} className="rounded bg-navy-50 px-2 py-1 text-xs text-navy-700">{b}</code>)}</div>
-        <p className="mt-2 text-xs text-grey-brand">Les balises sont remplacées lors du choix du template. Le commercial peut ensuite modifier librement l’objet et le contenu avant l’envoi.</p>
+        
       </section>
 
       <section className="mt-6 rounded-xl border border-navy-100 bg-white p-5">
