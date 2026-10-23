@@ -64,7 +64,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-800"><CalendarClock size={14}/>Suivi des contrats</div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-navy-900">Échéances</h1>
-          <p className="mt-1 max-w-3xl text-sm text-navy-500">Tous les dossiers avec une date connue. L’alerte commence 18 mois avant l’échéance et reste visible après son dépassement.</p>
+          
         </div>
         <form action="/echeances" className="flex w-full gap-2 md:max-w-md">
           {period !== "toutes" ? <input type="hidden" name="periode" value={period}/> : null}
@@ -86,7 +86,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
 
       <section className="overflow-hidden rounded-2xl border border-navy-100 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy-100 px-4 py-3">
-          <div><h2 className="font-display text-base font-bold text-navy-900">Dossiers à suivre</h2><p className="text-xs text-navy-500">Triés par date d’échéance, de la plus proche à la plus lointaine.</p></div>
+          <div><h2 className="font-display text-base font-bold text-navy-900">Dossiers à suivre</h2></div>
           <span className="rounded-full bg-navy-50 px-3 py-1 text-xs font-bold text-navy-700">{total} résultat{total > 1 ? "s" : ""}</span>
         </div>
         {pageRows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[950px] border-collapse text-left text-sm">
@@ -108,7 +108,7 @@ export default async function EcheancesPage({ searchParams }: { searchParams: Se
         </table></div> : <div className="px-5 py-12 text-center"><CalendarClock size={24} className="mx-auto text-navy-300"/><p className="mt-3 text-sm font-semibold text-navy-700">Aucun dossier dans cette vue.</p><p className="mt-1 text-xs text-navy-500">Essaie une autre période ou enlève ta recherche.</p></div>}
         {totalPages > 1 ? <footer className="flex items-center justify-between border-t border-navy-100 px-4 py-3 text-sm"><span className="text-xs tabular text-navy-500">Page {currentPage} sur {totalPages}</span><div className="flex gap-2">{currentPage > 1 ? <Link href={hrefFor(period, q, currentPage - 1)} className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50">Précédent</Link> : null}{currentPage < totalPages ? <Link href={hrefFor(period, q, currentPage + 1)} className="rounded-lg border border-navy-200 px-3 py-1.5 text-xs font-semibold text-navy-700 hover:bg-navy-50">Suivant</Link> : null}</div></footer> : null}
       </section>
-      <p className="mt-4 text-xs text-navy-500">La période d’anticipation démarre à J−18 mois. Les dates déjà passées restent affichées pour faciliter le rattrapage.</p>
+      
     </main>
   );
 }
