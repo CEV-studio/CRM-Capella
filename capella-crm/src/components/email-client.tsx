@@ -167,7 +167,7 @@ export function EmailClient({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy-100 px-5 py-4">
         <div>
           <h2 className="font-semibold text-navy-800">Emails</h2>
-          <p className="text-xs text-grey-brand">Envoi, réponses et historique Gmail rattachés à cette fiche.</p>
+          
         </div>
         {gmailConnected && prospectEmail ? (
           <button type="button" onClick={() => void synchroniser(false)} disabled={syncing} className="h-9 rounded-lg border border-navy-200 px-3 text-xs font-semibold text-navy-700 hover:bg-navy-50 disabled:opacity-50">
@@ -204,10 +204,10 @@ export function EmailClient({
                   <input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="CC — une ou plusieurs adresses" className="h-9 rounded-lg border border-navy-200 bg-white px-3 text-sm" />
                   <input value={bcc} onChange={(e) => setBcc(e.target.value)} placeholder="CCI — une ou plusieurs adresses" className="h-9 rounded-lg border border-navy-200 bg-white px-3 text-sm" />
                 </div>
-                <div className="mt-2 text-[11px] text-grey-brand">Sépare plusieurs adresses par une virgule ou un point-virgule.</div>
+                
               </div>
 
-              <div className="text-xs text-grey-brand">Le template est entièrement modifiable avant envoi.</div>
+              
               <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={9} placeholder="Écris ton message…" className="rounded-lg border border-navy-200 px-3 py-2 text-sm leading-6" />
 
               {piecesTri.length ? (
@@ -268,7 +268,7 @@ export function EmailClient({
               <span className="text-xs text-grey-brand">{messages.length} message{messages.length > 1 ? "s" : ""}</span>
             </div>
             {!messages.length ? (
-              <p className="text-sm text-grey-brand">Aucun échange trouvé avec {prospectEmail}. La synchronisation Gmail recherche aussi les emails antérieurs à la création de la fiche.</p>
+              
             ) : (
               <div className="space-y-3">
                 {messages.map((message) => (

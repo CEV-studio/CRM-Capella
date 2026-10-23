@@ -36,7 +36,7 @@ function formatDateTime(value: string): string {
 }
 
 function Timeline({ items }: { items: TimelineItem[] }) {
-  if (!items.length) return <div className="rounded-2xl bg-navy-50 px-5 py-10 text-center"><Mail size={22} className="mx-auto text-navy-300"/><p className="mt-2 text-sm font-bold text-navy-700">Aucune activité enregistrée</p><p className="mt-1 text-xs text-grey-brand">Les notes, e-mails, rappels, rendez-vous et documents disponibles apparaîtront ici.</p></div>;
+  if (!items.length) return <div className="rounded-2xl bg-navy-50 px-5 py-10 text-center"><Mail size={22} className="mx-auto text-navy-300"/><p className="mt-2 text-sm font-bold text-navy-700">Aucune activité enregistrée</p></div>;
 
   return (
     <div className="relative space-y-3 before:absolute before:bottom-4 before:left-[18px] before:top-4 before:w-px before:bg-navy-100">

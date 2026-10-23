@@ -104,7 +104,7 @@ export function AdminHome(props: AdminHomeProps) {
         <Indicateur label="Dossiers courtage énergie pro en cours" value={fmtNombre(props.dossiersFranceEnCours)} note="France · hors dossiers signés et perdus" icon={BriefcaseBusiness} />
         <Indicateur label="CA courtage pro France ce mois" value={fmtEuros(props.caFranceMois)} note={MOIS[props.moisCourant - 1] + " · dossiers signés"} icon={Wallet} />
       </div>
-      <p className="mt-3 text-xs leading-5 text-grey-brand">Le CA consolidé additionne les dossiers pro France signés et la part Capella MEGA énergie en Belgique (validée et prévisionnelle). Les autres activités et fournisseurs ne sont pas encore intégrés à ce total.</p>
+      
     </section>
 
     <section aria-label="Chiffre d’affaires mensuel" className="mb-10 border border-navy-100 bg-white p-5 sm:p-6">

@@ -44,7 +44,7 @@ export function DossierTransfert({ prospect, contacts, compteurs, factures }: { 
 
   return <div className="space-y-4">
     <section className="rounded-xl border border-navy-100 bg-white p-4">
-      <div className="flex items-center justify-between gap-3"><div><h2 className="text-sm font-semibold text-navy-800">Dossier à transmettre</h2><p className="text-[11px] text-grey-brand">Prépare uniquement les données nécessaires au courtier.</p></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${state.ready ? "bg-green-100 text-green-800" : "bg-amber-50 text-amber-800"}`}>{state.ready ? "Dossier complet" : `${state.done}/${state.total}`}</span></div>
+      <div className="flex items-center justify-between gap-3"><div><h2 className="text-sm font-semibold text-navy-800">Dossier à transmettre</h2></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${state.ready ? "bg-green-100 text-green-800" : "bg-amber-50 text-amber-800"}`}>{state.ready ? "Dossier complet" : `${state.done}/${state.total}`}</span></div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-navy-50"><div className="h-full bg-star-500 transition-all" style={{width:`${pct}%`}}/></div>
       <p className="mt-2 text-[11px] text-grey-brand">{state.ready ? "✓ Prêt à être saisi/transmis dans le CRM du courtier." : "Complète entreprise, contact, compteur(s), échéances et facture(s)."}</p>
     </section>

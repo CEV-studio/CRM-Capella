@@ -37,7 +37,7 @@ export function ProspectToolsModal({ prospectId, prospectLabel }: { prospectId: 
         <header className="flex shrink-0 items-center justify-between gap-4 border-b border-navy-100 bg-white px-5 py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-capella-50 text-sky-capella-700"><active.Icon size={16}/></span><h2 className="truncate font-display text-lg font-bold text-navy-900">{active.title} — {prospectLabel}</h2></div>
-            <p className="mt-1 text-[11px] text-grey-brand">Chargé uniquement à l’ouverture de cette fenêtre.</p>
+            
           </div>
           <button type="button" onClick={() => setTool(null)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-600 shadow-sm hover:bg-navy-50 hover:text-navy-900" aria-label="Fermer"><X size={17}/></button>
         </header>
