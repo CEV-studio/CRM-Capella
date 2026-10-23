@@ -81,7 +81,7 @@ function Indicateur({ label, value, note, icon: Icon }: { label: string; value: 
       <Icon size={18} strokeWidth={1.7} className="shrink-0 text-grey-brand" aria-hidden />
     </div>
     <div className="mt-3 font-display text-3xl font-semibold tracking-tight text-navy-900">{value}</div>
-    <div className="mt-2 text-xs leading-5 text-grey-brand">{note}</div>
+    
   </article>;
 }
 
