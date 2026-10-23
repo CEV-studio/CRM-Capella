@@ -116,10 +116,7 @@ export function ImportForm({
             </Button>
           </form>
 
-          <p className="text-xs text-grey-brand">
-            L&apos;analyse ne modifie rien. Elle te montre ce qui sera importé et
-            ce qui existe déjà, avant que tu ne valides.
-          </p>
+          
 
           {analyse && !analyse.ok ? (
             <p
@@ -168,11 +165,7 @@ export function ImportForm({
                 <div className="text-sm font-semibold text-navy-800">
                   Colonnes non reconnues — à rattacher
                 </div>
-                <p className="mt-0.5 mb-3 text-xs text-grey-brand">
-                  Pour chaque colonne de ton fichier qui ne correspond à aucune
-                  colonne du CRM, choisis à quelle colonne l&apos;associer (ou
-                  laisse « Ignorer »), puis ré-analyse.
-                </p>
+                
                 <div className="space-y-2">
                   {rapport.entetesInconnues.map((entete) => (
                     <div key={entete} className="flex flex-wrap items-center gap-2 text-sm">
@@ -217,10 +210,7 @@ export function ImportForm({
               </div>
             ) : null}
             {rapport.entetesManquantes.length > 0 ? (
-              <p className="text-sm text-grey-brand">
-                Colonnes du modèle absentes du fichier :{" "}
-                {rapport.entetesManquantes.join(", ")}. Ce n&apos;est pas bloquant.
-              </p>
+              
             ) : null}
 
             {avecDoublon.length > 0 ? (
