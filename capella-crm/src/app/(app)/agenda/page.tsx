@@ -70,7 +70,7 @@ export default async function AgendaPage({ searchParams }: {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-navy-800">Google Calendar</h2>
-            {account ? <p className="mt-1 text-sm text-grey-brand">Connecté avec <strong className="text-navy-700">{account.email}</strong></p> : }
+            
           </div>
           {account ? <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">● Connecté</span> : <span className="rounded-full bg-grey-100 px-3 py-1 text-xs font-semibold text-grey-brand">Non connecté</span>}
         </div>
