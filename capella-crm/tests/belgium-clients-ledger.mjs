@@ -15,6 +15,8 @@ const october={...dual,registered_date:'2026-10-02'};
 assert.equal(clientDirectory([september,october],{cohortView:'month',year:'2026',month:'9',status:'Effectif'})[0].contracts.length,1);
 assert.equal(clientDirectory([september,october],{cohortView:'year',year:'2026'})[0].contracts.length,2);
 assert.equal(clientDirectory([september,october],{cohortView:'month',year:'2026',month:'8'}).length,0);
+const unnamed=[{...c,key:'SAISIE:a',mega_id:'',client_id:'CRM:a'},{...c,key:'SAISIE:b',mega_id:'',client_id:'CRM:b'}];
+assert.equal(clientDirectory(unnamed).length,2,'no-MEGA clients are never grouped under a blank ID');
 const finance='data:text/javascript;base64,'+Buffer.from(fs.readFileSync('src/lib/belgium/finance.js','utf8')).toString('base64');
 const source=fs.readFileSync('src/lib/belgium/ledger.js','utf8').replace("'./finance.js'",JSON.stringify(finance));
 const {accountingLedger}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));

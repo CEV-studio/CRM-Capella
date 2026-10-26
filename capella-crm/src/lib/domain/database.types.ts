@@ -112,6 +112,7 @@ export type ProspectSummary = {
 export interface Database {
   public: {
     Tables: {
+      be_products:Table<import('@/lib/belgium/products').SaleProduct>;
       be_client_comments:Table<import('@/lib/belgium/comments').ClientComment>;
       be_comment_history:Table<import('@/lib/belgium/comments').CommentRevision>;
       be_contract_history:Table<{id:number;contract_key:string;import_id:string;before_data:Record<string,unknown>|null;after_data:Record<string,unknown>;created_at:string}>;

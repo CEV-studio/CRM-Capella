@@ -124,4 +124,30 @@ const reconciled=portal.contracts.filter(c=>c.mega_id==='99901');assert.equal(re
 await asUser(admin);await db.query('update be_access set is_active=false where user_id=$1',[encoder]);
 await asUser(encoder);assert.equal((await db.query('select * from be_sale_entries')).rows.length,0);assert.equal((await db.query('select * from be_client_comments')).rows.length,0);await assert.rejects(()=>db.query('select be_encode_sale($1::jsonb)',[JSON.stringify({...sale,mega_id:'99903'})]));
 console.log('PASS: signed encoding, immutable server-assigned ownership, centre and agent isolation, comment revisions and author protection, inactive denial, duplicate-free MEGA reconciliation.');
+
+// Optional identifiers keep independent CRM client keys; product catalogue controls activity.
+await asUser(admin);await db.query('update be_access set is_active=true where user_id=$1',[encoder]);
+const telecom=(await db.query("select id from be_products where code='mega-telecom'")).rows[0].id;
+const another=(await db.query("insert into be_products(label,kind,supplier) values('Autre offre test','other','Autre fournisseur') returning id")).rows[0].id;
+await asUser(encoder);
+await assert.rejects(()=>db.query("insert into be_products(label,kind) values('Intrusion','other')"));
+assert.equal((await db.query("update be_products set is_active=false returning id")).rows.length,0);
+const noId={...sale,mega_id:'',ean:'',contract_reference:'',energy:'',product_id:telecom,submission_id:'10000000-0000-4000-8000-000000000011',comment:'Sans identifiant fournisseur'};
+const blankOne=(await db.query('select be_encode_sale($1::jsonb) id',[JSON.stringify(noId)])).rows[0].id;
+await assert.rejects(()=>db.query('select be_encode_sale($1::jsonb)',[JSON.stringify(noId)]));
+const blankTwo=(await db.query('select be_encode_sale($1::jsonb) id',[JSON.stringify({...noId,last_name:'Autre client',submission_id:'10000000-0000-4000-8000-000000000012'})])).rows[0].id;
+let blankRows=(await db.query("select * from be_sale_entries where mega_id is null")).rows;
+assert.equal(blankRows.length,2);assert.ok(blankRows.every(r=>r.energy==='Telecom'&&r.product==='Mega telecom'&&r.status==='Signé'));
+portal=(await db.query('select be_production_read() data')).rows[0].data;
+let blankCards=portal.contracts.filter(c=>[blankOne,blankTwo].includes(c.entry_id));assert.equal(blankCards.length,2);assert.notEqual(blankCards[0].client_id,blankCards[1].client_id);assert.ok(blankCards.every(c=>c.mega_id===''&&c.product_kind==='telecom'));
+const blankComment=(await db.query('select * from be_client_comments where mega_id=$1',['CRM:'+blankOne])).rows[0];assert.ok(blankComment);
+await db.query("select be_save_comment($1,$2,'TILIRA','Suivi sans ID MEGA')",[blankComment.id,'CRM:'+blankOne]);
+const other=(await db.query('select be_encode_sale($1::jsonb) id',[JSON.stringify({...noId,product_id:another,submission_id:'10000000-0000-4000-8000-000000000013'})])).rows[0].id;
+assert.equal((await db.query('select energy from be_sale_entries where id=$1',[other])).rows[0].energy,'Autre');
+await asUser(admin);await db.query('update be_products set is_active=false where id=$1',[telecom]);
+await asUser(encoder);assert.equal((await db.query('select * from be_products where id=$1',[telecom])).rows.length,0);
+await assert.rejects(()=>db.query('select be_encode_sale($1::jsonb)',[JSON.stringify({...noId,submission_id:'10000000-0000-4000-8000-000000000014'})]));
+assert.ok((await db.query('select be_production_read() data')).rows[0].data.contracts.some(c=>c.entry_id===blankOne),'existing sale survives product deactivation');
+await asUser(outsider);assert.equal((await db.query('select * from be_client_comments where mega_id=$1',['CRM:'+blankOne])).rows.length,0);
+console.log('PASS: identifiers optional, anonymous CRM clients remain distinct, comments stay scoped, telecom and future products, inactive catalogue enforcement and retry protection.');
 await db.close();console.log('PASS: parsing, dual EAN, periods, month-end clawback, atomic imports, no duplicates, stale reports, immutable invoices, payment states, admin-only RLS.');

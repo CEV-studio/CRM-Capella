@@ -17,7 +17,8 @@ export default async function BelgiumPage({searchParams}:{searchParams:Promise<R
  const year=Number(params.year)||Number(today.slice(0,4)),month=Math.max(1,Math.min(12,Number(params.month)||Number(today.slice(5,7))));
  const scope:DashboardScope={view:params.view==='month'?'month':params.view==='year'?'year':'global',year,month};
  const years=[...new Set([year,...contracts.flatMap(c=>[c.registered_date,c.period].filter(Boolean).map(d=>Number(d!.slice(0,4))))])].sort((a,b)=>b-a);
- const centres=[...new Set(contracts.map(c=>c.centre))].sort();const scoped=contracts.filter(c=>!params.centre||params.centre===c.centre);
+ const energyContracts=contracts.filter(c=>['Elec','Gaz'].includes(c.energy));
+ const centres=[...new Set(energyContracts.map(c=>c.centre))].sort();const scoped=energyContracts.filter(c=>!params.centre||params.centre===c.centre);
  // Period confirmation metadata only; amounts never enter the production response.
  const statements:Statement[]=contracts.filter(c=>c.period_confirmed&&c.period).map(c=>({key:c.key,supplier:c.supplier,period:c.period!,status:c.status,gross_cents:0,centre_cents:0}));
  if(params.tab==='contracts'){
@@ -30,7 +31,7 @@ export default async function BelgiumPage({searchParams}:{searchParams:Promise<R
  {profile.role==='be_agent'&&<Link href="/belgique/encoder" className="inline-block rounded-xl bg-navy-800 px-4 py-3 text-sm font-semibold text-white">Encoder une vente</Link>}
  <nav className="flex gap-2">{[['dashboard','Tableau de bord'],['clients','Base clients']].map(([id,label])=><Link key={id} href={url({tab:id,contract:''})} className={`rounded-xl px-4 py-2 text-sm ${tab===id?'bg-navy-800 text-white':'border bg-white'}`}>{label}</Link>)}</nav>
  {tab!=='clients'&&<DashboardFilters scope={scope} years={years} centre={params.centre||''} centres={centres} tab={tab}/>}
- {tab==='clients'?<BelgiumClients contracts={contracts} history={history||[]} tracking={tracking} params={params} actor={profile}/>:<BelgiumDashboard contracts={scoped} allContracts={contracts} centres={centres} statements={statements} scope={scope} today={today} centre={params.centre||''} tracking={tracking} billing={[]} lastImport={last_report||'—'}/>}
+ {tab==='clients'?<BelgiumClients contracts={contracts} history={history||[]} tracking={tracking} params={params} actor={profile}/>:<BelgiumDashboard contracts={scoped} allContracts={energyContracts} centres={centres} statements={statements} scope={scope} today={today} centre={params.centre||''} tracking={tracking} billing={[]} lastImport={last_report||'—'}/>}
 
  </main>;
 }

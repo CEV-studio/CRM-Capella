@@ -1,14 +1,15 @@
 import { norm,type Contract } from './domain';
-export type ProductionContract=Contract&{phone?:string;postal_code?:string;product?:string;agent_reference?:string;email?:string;owner_id?:string;owner_name?:string;entry_id?:string;encoded_at?:string;reconciliation?:string};
+export type ProductionContract=Contract&{phone?:string;postal_code?:string;product?:string;agent_reference?:string;email?:string;owner_id?:string;owner_name?:string;entry_id?:string;encoded_at?:string;reconciliation?:string;client_id?:string;product_family?:string;product_kind?:string};
 export type ProductionHistory={contract_key:string;date:string;before_status:string|null;status:string;agent:string};
 export function clientDirectory(contracts:ProductionContract[],filters:Record<string,string|undefined>={}){
  const groups=new Map<string,ProductionContract[]>();
  for(const c of contracts){if(filters.centre&&c.centre!==filters.centre)continue;
   if(filters.cohortView==='month'&&c.registered_date?.slice(0,7)!==`${filters.year}-${String(filters.month).padStart(2,'0')}`)continue;
   if(filters.cohortView==='year'&&c.registered_date?.slice(0,4)!==filters.year)continue;
-  const list=groups.get(c.mega_id)||[];list.push(c);groups.set(c.mega_id,list);}
+  const clientId=c.client_id||c.mega_id||c.key;
+  const list=groups.get(clientId)||[];list.push(c);groups.set(clientId,list);}
  return [...groups].map(([id,rows])=>({id,name:rows[0].client,phone:rows.find(c=>c.phone)?.phone||'',contracts:rows})).filter(c=>{
-  const all=norm([c.id,c.name,...c.contracts.flatMap(r=>[r.agent,r.agent_reference,r.ean,r.reference])].join(' '));
-  return (!filters.q||filters.q.trim().split(/\s+/).every(t=>all.includes(norm(t))))&&(!filters.mega||c.id.includes(filters.mega.trim()))&&(!filters.name||filters.name.trim().split(/\s+/).every(t=>norm(c.name).includes(norm(t))))&&(!filters.agent||c.contracts.some(r=>norm(r.agent+' '+(r.agent_reference||'')).includes(norm(filters.agent))))&&(!filters.status||c.contracts.some(r=>r.status_class===filters.status));
+  const all=norm([c.id,c.name,...c.contracts.flatMap(r=>[r.mega_id,r.agent,r.agent_reference,r.ean,r.reference])].join(' '));
+  return (!filters.q||filters.q.trim().split(/\s+/).every(t=>all.includes(norm(t))))&&(!filters.mega||c.contracts.some(r=>r.mega_id.includes(filters.mega!.trim())))&&(!filters.name||filters.name.trim().split(/\s+/).every(t=>norm(c.name).includes(norm(t))))&&(!filters.agent||c.contracts.some(r=>norm(r.agent+' '+(r.agent_reference||'')).includes(norm(filters.agent))))&&(!filters.status||c.contracts.some(r=>r.status_class===filters.status));
  }).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
 }
