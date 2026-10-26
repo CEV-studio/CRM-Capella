@@ -131,25 +131,18 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       </Link>
       <nav className="scroll-slim flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {sections.map(s => {
-          const isActive = sectionActive(pathname, s);
-          const isOpen = openSections[s.titre] ?? isActive;
-          const Icon = s.icon;
+          const items=s.items.filter(visible);
+          const grouped=items.length>1;
+          const isActive=sectionActive(pathname,s);
+          const isOpen=openSections[s.titre]??isActive;
+          const Icon=s.icon;
+          const heading=<><Icon size={17} strokeWidth={1.8} className="shrink-0 text-navy-600" aria-hidden/><span className="min-w-0 flex-1 text-left leading-5">{s.titre}</span>{isActive&&<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-star-500" aria-label="Section actuelle"/>}</>;
           return <div key={s.titre}>
-            <div className={`flex items-center rounded-lg ${isActive ? "bg-sky-capella-50" : "hover:bg-sky-capella-50"}`}>
-              <Link href={s.href} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-sm font-medium text-navy-800">
-                <Icon size={17} strokeWidth={1.8} className="shrink-0 text-navy-600" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{s.titre}</span>
-                {isActive && <span className="h-1.5 w-1.5 rounded-full bg-star-500" aria-label="Section actuelle" />}
-              </Link>
-              {s.items.length > 1 && <button type="button" onClick={() => toggle(s.titre, isActive)} aria-label={`${isOpen ? "Replier" : "Déplier"} ${s.titre}`} aria-expanded={isOpen} className="px-2 py-2.5 text-grey-brand hover:text-navy-900"><ChevronDown size={15} className={isOpen ? "rotate-180" : ""} /></button>}
-            </div>
-            {s.items.length > 1 && isOpen && <ul className="mb-2 ml-5 mt-1 space-y-0.5 border-l border-navy-200 pl-3">
-              {s.items.filter(visible).filter(item => item.href !== s.href).map(item => {
-                const itemActive = actif(pathname, item.href);
-                const ItemIcon = item.icon;
-                return <li key={item.href}><Link href={item.href} className={`flex items-center gap-2 rounded-md px-2.5 py-2 text-[13px] transition-colors ${itemActive ? "bg-white font-semibold text-navy-900" : "text-navy-600 hover:bg-sky-capella-50 hover:text-navy-900"}`}>
-                  <ItemIcon size={14} className="shrink-0 text-grey-brand" /><span className="min-w-0 flex-1 truncate">{item.label}</span>{itemActive && <ChevronRight size={13} />}
-                </Link></li>;
+            {grouped?<button type="button" onClick={()=>toggle(s.titre,isActive)} aria-expanded={isOpen} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-navy-800 ${isActive?'bg-sky-capella-50':'hover:bg-sky-capella-50'}`}>{heading}<ChevronDown size={15} className={`shrink-0 text-grey-brand ${isOpen?'rotate-180':''}`}/></button>:<Link href={items[0].href} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-navy-800 ${isActive?'bg-sky-capella-50':'hover:bg-sky-capella-50'}`}>{heading}</Link>}
+            {grouped&&isOpen&&<ul className="mb-2 ml-5 mt-1 space-y-0.5 border-l border-navy-200 pl-3">
+              {items.map(item=>{
+                const itemActive=actif(pathname,item.href),ItemIcon=item.icon;
+                return <li key={item.href}><Link href={item.href} aria-current={itemActive?'page':undefined} className={`flex items-start gap-2 rounded-md px-2.5 py-2 text-[13px] transition-colors ${itemActive?'bg-white font-semibold text-navy-900':'text-navy-600 hover:bg-sky-capella-50 hover:text-navy-900'}`}><ItemIcon size={14} className="mt-0.5 shrink-0 text-grey-brand"/><span className="min-w-0 flex-1 whitespace-normal leading-5">{item.label}</span>{itemActive&&<ChevronRight size={13} className="mt-1 shrink-0"/>}</Link></li>;
               })}
             </ul>}
           </div>;
@@ -170,7 +163,10 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
       <div className="flex justify-end border-b border-navy-100 bg-white px-6 py-2">{!['qualite','be_centre','be_agent'].includes(profile.role)&&<NotificationBell />}</div>
-      <nav className="flex gap-2 overflow-x-auto border-b border-navy-100 bg-white p-3 md:hidden">{sections.map(s => <Link key={s.titre} href={s.href} className={`whitespace-nowrap px-3 py-2 text-xs ${sectionActive(pathname, s) ? "bg-sky-capella-100 font-semibold" : "bg-navy-50"}`}>{s.titre}</Link>)}</nav>
+      <nav className="flex items-start gap-2 overflow-x-auto border-b border-navy-100 bg-white p-3 md:hidden">{sections.map(s=>{
+        const items=s.items.filter(visible),active=sectionActive(pathname,s);
+        return items.length>1?<details key={s.titre} className="shrink-0 rounded-lg bg-navy-50"><summary className={`cursor-pointer whitespace-nowrap px-3 py-2 text-xs font-semibold ${active?'bg-sky-capella-100':''}`}>{s.titre}</summary><ul className="w-60 space-y-1 p-2">{items.map(item=><li key={item.href}><Link href={item.href} aria-current={actif(pathname,item.href)?'page':undefined} className={`block rounded-md px-3 py-2 text-xs leading-5 ${actif(pathname,item.href)?'bg-sky-capella-100 font-semibold':'hover:bg-white'}`}>{item.label}</Link></li>)}</ul></details>:<Link key={s.titre} href={items[0].href} className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs ${active?'bg-sky-capella-100 font-semibold':'bg-navy-50'}`}>{s.titre}</Link>;
+      })}</nav>
       {children}
     </div>
   </div>;
