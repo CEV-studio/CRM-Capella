@@ -40,7 +40,7 @@ export async function PartnerHome({ prenom }: { prenom: string }) {
     </section>
     <section aria-label="Mes catégories">
       <h2 className="mb-3 font-display text-lg font-semibold text-navy-900">Accéder à une section</h2>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{categories.map(({ title, description, href, icon: Icon }) => <Link key={href} href={href} className="group border border-navy-100 bg-white p-5 transition-colors hover:border-neutral-400"><div className="flex items-start gap-3"><span className="flex h-11 w-11 items-center justify-center bg-sky-capella-50 text-navy-800"><Icon size={21} /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between font-display font-semibold text-navy-900">{title}<ArrowUpRight size={16} className="text-neutral-400 group-hover:text-navy-900" /></span></span></div></Link>)}</div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{categories.map(({ title, href, icon: Icon }) => <Link key={href} href={href} className="group border border-navy-100 bg-white p-5 transition-colors hover:border-neutral-400"><div className="flex items-start gap-3"><span className="flex h-11 w-11 items-center justify-center bg-sky-capella-50 text-navy-800"><Icon size={21} /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between font-display font-semibold text-navy-900">{title}<ArrowUpRight size={16} className="text-neutral-400 group-hover:text-navy-900" /></span></span></div></Link>)}</div>
     </section>
   </main>;
 }

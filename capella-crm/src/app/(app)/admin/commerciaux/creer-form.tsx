@@ -26,7 +26,7 @@ export function CreerCommercialForm() {
   return (
     <div className="px-5 py-4">
       <form action={action} className="grid gap-4 sm:grid-cols-2 sm:items-end">
-        <Field label="Type de compte"><select name="role" defaultValue="apporteur" className="h-10 rounded-lg border border-navy-200 px-3"><option value="apporteur">Apporteur</option><option value="commercial">Commercial</option></select></Field>
+        <Field label="Type de compte"><select name="role" defaultValue="apporteur" className="h-10 rounded-lg border border-navy-200 px-3"><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option><option value="commercial">Commercial</option></select></Field>
         <Field label="Nom et prénom">
           <Input name="full_name" required placeholder="Aly Badara Doumbouya" />
         </Field>

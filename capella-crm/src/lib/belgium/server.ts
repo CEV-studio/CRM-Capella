@@ -35,3 +35,15 @@ export async function loadBelgiumDashboardMetrics() {
   statements:statementRows.map(row=>({key:row.contract_key,supplier:row.supplier,period:row.period,gross_cents:row.gross_cents,centre_cents:row.centre_cents,status:''} satisfies Statement)),
  };
 }
+
+/** Whitelisted production RPC: never loads financial JSON, invoices or statements. */
+export async function loadBelgiumProduction(){
+ const {requireProfile}=await import('@/lib/auth');
+ const {redirect}=await import('next/navigation');
+ const profile=await requireProfile();
+ if(profile.role!=='admin'&&profile.role!=='qualite')redirect('/?motif=acces-refuse');
+ const db=await createClient();const {data,error}=await db.rpc('be_production_read',{});
+ if(error)throw new Error(error.message);
+ const result=data as unknown as {contracts:(Contract&{period_confirmed:boolean;phone?:string;postal_code?:string;product?:string})[];tracking:CycleTracking[];last_report:string|null};
+ return {profile,...result,contracts:result.contracts.map(c=>({...c,gross_cents:0,centre_cents:0,payment:''}))};
+}

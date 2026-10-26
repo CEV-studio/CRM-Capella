@@ -57,6 +57,17 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if(userId && !isPublic){
+    const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",userId).maybeSingle();
+    if(profile?.role==="qualite"){
+      const allowed=path==="/belgique"&&request.method==="GET" || path==="/changer-mot-de-passe" || path==="/deconnexion";
+      if(!allowed){
+        if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});
+        const url=request.nextUrl.clone();url.pathname="/belgique";url.search="";return NextResponse.redirect(url);
+      }
+    }
+  }
+
   // A partner cannot use the legacy prospecting/commission/API routes.
   const partnerAllowed = ["/partenaires", "/notifications", "/api/partenaires", "/api/notifications", "/pieces", "/changer-mot-de-passe", "/deconnexion"].some(prefix=>path===prefix||path.startsWith(prefix+"/"));
   if (userId && !isPublic && !partnerAllowed) {

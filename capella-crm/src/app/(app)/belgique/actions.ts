@@ -2,8 +2,8 @@
 import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-export async function createInvoice(form:FormData){await requireAdmin();const db=await createClient();const period=String(form.get('period')??'')+'-01';const {error}=await db.rpc('be_create_invoice',{p_centre:String(form.get('centre')),p_period:period,p_reference:String(form.get('reference'))});if(error)return {error:error.message};revalidatePath('/belgique');return {success:'Appel à facturation établi. Les lignes et le montant sont figés.'};}
-export async function updateInvoice(form:FormData){await requireAdmin();const db=await createClient();const state=String(form.get('state'));if(!['Établie','Émise','Payée'].includes(state))return {error:'État invalide'};const issued=String(form.get('issued_at')??'')||null,paid=String(form.get('paid_at')??'')||null;const today=new Date().toISOString().slice(0,10);if((state==='Établie'&&(issued||paid))||(state==='Émise'&&paid))return {error:'Retirer les dates incompatibles avec cet état.'};if((issued&&issued>today)||(paid&&paid>today)||(paid&&issued&&paid<issued))return {error:'Dates incohérentes'};const {data,error}=await db.from('be_invoices').update({state,issued_at:issued,paid_at:paid}).eq('id',String(form.get('id'))).select('id');if(error||!data?.length)return {error:error?.message??'Pièce introuvable'};revalidatePath('/belgique');return {success:'État mis à jour à partir de ta confirmation.'};}
+export async function createInvoice(form:FormData){await requireAdmin();const db=await createClient();const period=String(form.get('period')??'')+'-01';const {error}=await db.rpc('be_create_invoice',{p_centre:String(form.get('centre')),p_period:period,p_reference:String(form.get('reference'))});if(error)return {error:error.message};revalidatePath('/belgique');revalidatePath('/comptabilite/belgique');return {success:'Appel à facturation établi. Les lignes et le montant sont figés.'};}
+export async function updateInvoice(form:FormData){await requireAdmin();const db=await createClient();const state=String(form.get('state'));if(!['Établie','Émise','Payée'].includes(state))return {error:'État invalide'};const issued=String(form.get('issued_at')??'')||null,paid=String(form.get('paid_at')??'')||null;const today=new Date().toISOString().slice(0,10);if((state==='Établie'&&(issued||paid))||(state==='Émise'&&paid))return {error:'Retirer les dates incompatibles avec cet état.'};if((issued&&issued>today)||(paid&&paid>today)||(paid&&issued&&paid<issued))return {error:'Dates incohérentes'};const {data,error}=await db.from('be_invoices').update({state,issued_at:issued,paid_at:paid}).eq('id',String(form.get('id'))).select('id');if(error||!data?.length)return {error:error?.message??'Pièce introuvable'};revalidatePath('/belgique');revalidatePath('/comptabilite/belgique');return {success:'État mis à jour à partir de ta confirmation.'};}
 
 export async function saveCycle(form:FormData){
  await requireAdmin();const db=await createClient();
@@ -25,7 +25,7 @@ export async function saveCycle(form:FormData){
  if((row.bonus_invoiced_at||row.bonus_paid_at)&&cycle.bonusState==='none'||(row.bonus_invoiced_at||row.bonus_paid_at)&&cycle.bonusState==='potential')return {error:'Le cycle de trois mois doit être confirmé avant de facturer le bonus'};
  if(row.centre_recovered_cents>(cycle.centreDue??0)||row.mega_recovered_cents>(cycle.megaDue??0))return {error:'La récupération dépasse la reprise calculée ou les dates de reprise ne sont pas confirmées'};
  const {error}=await db.from('be_cycle_tracking').upsert(row);if(error)return {error:error.message};
- revalidatePath('/belgique');return {success:'Dates confirmées et suivi financier enregistrés.'};
+ revalidatePath('/belgique');revalidatePath('/comptabilite/belgique');return {success:'Dates confirmées et suivi financier enregistrés.'};
  }catch(e){return {error:e instanceof Error?e.message:'Enregistrement impossible'};}
 }
 export async function saveSupplierBilling(form:FormData){
@@ -44,5 +44,5 @@ export async function saveSupplierBilling(form:FormData){
  if([row.call_received_at,row.invoiced_at,row.received_at].some(d=>d&&(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>today)))return {error:'Dates invalides ou futures'};
  if(!invoiced&&(row.invoiced_at||row.received_at||row.received_cents>0))return {error:'Confirmer la facturation avant de saisir un encaissement'};
  const {error}=await db.from('be_supplier_billing').upsert(row);if(error)return {error:error.message};
- revalidatePath('/belgique');return {success:'Suivi de la facture MEGA enregistré. Aucune facture n’a été envoyée.'};
+ revalidatePath('/belgique');revalidatePath('/comptabilite/belgique');return {success:'Suivi de la facture MEGA enregistré. Aucune facture n’a été envoyée.'};
 }

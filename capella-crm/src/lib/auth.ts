@@ -45,12 +45,12 @@ export function estAdmin(profile: Profile): boolean {
 
 /** Vrai si ce profil peut gérer l'équipe (admin ou droit « gérer l'équipe »). */
 export function peutGerer(profile: Profile): boolean {
-  return profile.role === "admin" || (profile.role !== "apporteur" && profile.can_manage_team);
+  return profile.role === "admin" || (profile.role === "commercial" && profile.can_manage_team);
 }
 
 /** Vrai si ce profil voit les données de toute l'équipe. */
 export function voitTout(profile: Profile): boolean {
-  return profile.role === "admin" || (profile.role !== "apporteur" && profile.can_view_all);
+  return profile.role === "admin" || (profile.role === "commercial" && profile.can_view_all);
 }
 
 /** Vrai si ce profil peut supprimer des leads (même droit que la gestion). */

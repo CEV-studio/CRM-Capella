@@ -267,9 +267,7 @@ export function EmailClient({
               <h3 className="text-sm font-semibold text-navy-800">Historique des échanges</h3>
               <span className="text-xs text-grey-brand">{messages.length} message{messages.length > 1 ? "s" : ""}</span>
             </div>
-            {!messages.length ? (
-              
-            ) : (
+            {!messages.length ? null : (
               <div className="space-y-3">
                 {messages.map((message) => (
                   <article key={message.id} className={`rounded-xl border p-4 ${message.direction === "incoming" ? "border-star-200 bg-star-50/30" : "border-navy-100 bg-navy-50/30"}`}>

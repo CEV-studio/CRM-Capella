@@ -2,7 +2,7 @@ import type { CycleTracking, SupplierBilling } from '@/lib/belgium/domain';
 import type { Contract, Statement, Invoice, ImportRun as BelgiumImportRun } from "@/lib/belgium/domain";
 import type { Dossier, Quote } from "@/lib/partners/types";
 /** Types manuels de la base Supabase — miroir des migrations. */
-export type Role = "admin" | "commercial" | "apporteur";
+export type Role = "admin" | "commercial" | "apporteur" | "qualite";
 export type PaymentStatus = "À payer" | "Payé" | "En attente";
 export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 
@@ -163,6 +163,7 @@ export interface Database {
       is_active_user:{ Args:Record<never,never>; Returns:boolean };
       can_view_all:{ Args:Record<never,never>; Returns:boolean };
       can_manage:{ Args:Record<never,never>; Returns:boolean };
+      be_production_read:{ Args:Record<never,never>; Returns:unknown };
       current_role_name:{ Args:Record<never,never>; Returns:string };
       can_access_email_account:{ Args:{ p_account:string; p_send?:boolean }; Returns:boolean };
     };

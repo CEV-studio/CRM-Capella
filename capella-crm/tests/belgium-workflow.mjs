@@ -43,4 +43,20 @@ const pending=parseRows([header,['99','','Agent','Incomplète','Test','Pending',
 await imp([pending]);const activated=parseRows([header,['99','541449020000073166','Agent','Contrat effectif','Test','Pending','10/17/26 11:35','','Elec']],'report','2026-10-21','2026-10-01')[0];await imp([activated],'2026-10-21');
 assert.equal((await db.query("select count(*)::int n from be_contracts where mega_id='99'")).rows[0].n,1,'pending activation merges without duplicate');
 await imp([{key:activated.key,supplier:'MEGA',period:'2026-10-01',gross_cents:6500,centre_cents:3000,status:'Contrat effectif'}],'2026-10-21','statement');
+
+await db.exec("reset role;select set_config('request.jwt.claim.sub','',false);");
+const quality='10000000-0000-4000-8000-000000000003';
+await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${quality}','quality@test.com','{"full_name":"Quality"}');update profiles set role='qualite',commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false where id='${quality}';`);
+await asUser(quality);
+const safe=(await db.query('select public.be_production_read() as data')).rows[0].data;
+assert.ok(safe.contracts.length>0);
+for(const c of safe.contracts){for(const forbidden of ['gross_cents','centre_cents','commission','payment','notes','data'])assert.equal(Object.hasOwn(c,forbidden),false,forbidden+' never returned');}
+for(const table of ['be_contracts','be_contract_history','be_statement_lines','be_invoices','be_imports','be_supplier_billing','be_cycle_tracking','affaires','prospects'])assert.equal((await db.query('select * from '+table)).rows.length,0,table+' denied to quality');
+await assert.rejects(()=>db.query("select be_create_invoice('Cimsourse','2026-09-01','QUALITY-HACK')"));
+await db.query("update profiles set role='admin',can_manage_team=true where id=$1",[quality]);
+assert.equal((await db.query('select role from profiles where id=$1',[quality])).rows[0].role,'qualite');
+await asUser(user);await assert.rejects(()=>db.query('select public.be_production_read()'));
+await db.exec('reset role;set role anon;');await assert.rejects(()=>db.query('select public.be_production_read()'));
+await asUser(admin);assert.ok((await db.query('select * from be_invoices')).rows.length>0);
+console.log('PASS: quality whitelist, finance and other CRM tables denied, admin accounting preserved, role escalation blocked.');
 await db.close();console.log('PASS: parsing, dual EAN, periods, month-end clawback, atomic imports, no duplicates, stale reports, immutable invoices, payment states, admin-only RLS.');

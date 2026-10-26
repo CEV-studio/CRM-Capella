@@ -77,7 +77,7 @@ export function LigneCommercial({
           <div className="text-xs text-grey-brand">{profil.email}</div>
         </div>
 
-        {profil.role!=="admin"?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="apporteur">Apporteur</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
+        {profil.role!=="admin"?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
         <form action={actionTaux} className="flex items-center gap-1.5">
           <input type="hidden" name="id" value={profil.id} />
           <Input

@@ -112,7 +112,7 @@ export function ImportForm({
             </Button>
           </form>
 
-          
+
 
           {analyse && !analyse.ok ? (
             <p
@@ -161,7 +161,7 @@ export function ImportForm({
                 <div className="text-sm font-semibold text-navy-800">
                   Colonnes non reconnues — à rattacher
                 </div>
-                
+
                 <div className="space-y-2">
                   {rapport.entetesInconnues.map((entete) => (
                     <div key={entete} className="flex flex-wrap items-center gap-2 text-sm">
@@ -205,9 +205,7 @@ export function ImportForm({
                 </button>
               </div>
             ) : null}
-            {rapport.entetesManquantes.length > 0 ? (
-              
-            ) : null}
+
 
             {avecDoublon.length > 0 ? (
               <div className="rounded-lg border border-navy-200">

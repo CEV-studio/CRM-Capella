@@ -114,7 +114,7 @@ export default async function ReservoirPage({
         <h1 className="font-display text-2xl font-bold text-navy-800">
           Réservoir &amp; attribution
         </h1>
-        
+
       </header>
 
       <div className="space-y-6">
@@ -160,9 +160,7 @@ export default async function ReservoirPage({
           </div>
         </nav>
 
-        {sansSource > 0 ? (
-          
-        ) : null}
+
 
         <Reattribution commerciaux={commerciaux} />
       </div>

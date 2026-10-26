@@ -28,8 +28,8 @@ export async function creerCommercial(
   formData: FormData,
 ): Promise<ActionResult> {
   const actor = await requireManage();
-  const role = formData.get("role") === "apporteur" ? "apporteur" : "commercial";
-  if(role === "apporteur" && actor.role !== "admin")return {ok:false,message:"Seul l’administrateur peut créer un apporteur."};
+  const role = formData.get("role") === "qualite" ? "qualite" : formData.get("role") === "apporteur" ? "apporteur" : "commercial";
+  if(role !== "commercial" && actor.role !== "admin")return {ok:false,message:"Seul l’administrateur peut créer un apporteur."};
 
   const nom = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -52,7 +52,7 @@ export async function creerCommercial(
     user_metadata: {
       full_name: nom,
       role: "commercial",
-      commission_rate: taux / 100,
+      commission_rate: role === "qualite" ? 0 : taux / 100,
       must_change_password: true,
     },
   });
@@ -69,8 +69,8 @@ export async function creerCommercial(
     };
   }
 
-  if(role === "apporteur" && created.user){
-    const {error:roleError}=await admin.from("profiles").update({role:"apporteur",can_export:false,can_view_all:false,can_manage_team:false}).eq("id",created.user.id);
+  if(role !== "commercial" && created.user){
+    const {error:roleError}=await admin.from("profiles").update({role,can_export:false,can_view_all:false,can_manage_team:false}).eq("id",created.user.id);
     if(roleError){await admin.auth.admin.deleteUser(created.user.id);return {ok:false,message:`Création annulée : ${roleError.message}`};}
   }
   revalidatePath("/admin/commerciaux");
@@ -203,7 +203,7 @@ export async function modifierPermissions(
 export async function modifierRole(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
  const p=await requireManage();if(p.role!=="admin")return {ok:false,message:"Réservé à l’administrateur."};
  const id=String(formData.get("id")??"");const role=formData.get("role");
- if(id===p.id||!['commercial','apporteur'].includes(String(role)))return {ok:false,message:"Modification interdite."};
- const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'apporteur',can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin");
+ if(id===p.id||!['commercial','apporteur','qualite'].includes(String(role)))return {ok:false,message:"Modification interdite."};
+ const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'apporteur'|'qualite',...(role==='qualite'?{commission_rate:0}:{}),can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin");
  revalidatePath("/admin/commerciaux");return {ok:!error,message:error?.message??"Rôle mis à jour."};
 }

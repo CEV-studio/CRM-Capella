@@ -31,6 +31,7 @@ const PARTNER_NAV = [
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
 ];
+const QUALITY_NAV = [section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production et qualité",icon:ShieldCheck}])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
   section("Suivi commercial", "/journee", Users, [
@@ -79,8 +80,9 @@ const ADMIN_NAV = [
     { href: "/adv", label: "Dossiers ADV", icon: FileCheck2 },
     { href: "/admin/acd", label: "Demandes d’ACD", icon: BriefcaseBusiness },
   ]),
-  section("Comptabilité / KPI", "/commissions", CircleDollarSign, [
+  section("Comptabilité", "/commissions", CircleDollarSign, [
     { href: "/commissions", label: "Commissions et comptes", icon: CircleDollarSign },
+    { href: "/comptabilite/belgique", label: "Belgique : factures et commissions", icon: CircleDollarSign },
     { href: "/admin/export", label: "Exports", icon: FileDown, needs: p => peutGererLocal(p) || p.can_export },
   ]),
   section("Belgique", "/belgique", Building2, [
@@ -110,7 +112,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   const gere = peutGererLocal(profile);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const visible = (i: NavItem) => (!i.adminOnly || profile.role === "admin") && (!i.needs || i.needs(profile));
-  const navigation = profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? ADMIN_NAV : COMMERCIAL_NAV;
+  const navigation = profile.role === "qualite" ? QUALITY_NAV : profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? ADMIN_NAV : COMMERCIAL_NAV;
   const sections = navigation.filter(s => s.items.some(visible));
   const toggle = (title: string, defaultOpen: boolean) => setOpenSections(current => ({ ...current, [title]: !(current[title] ?? defaultOpen) }));
 
@@ -148,7 +150,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       <div className="border-t border-navy-100 px-4 py-4">
         <div className="flex items-center gap-3 border border-navy-100 bg-white p-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-800 font-display text-sm font-semibold text-white">{profile.full_name.slice(0, 1).toUpperCase()}</div>
-          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-grey-brand">{profile.role === "admin" ? "Administrateur" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
+          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-grey-brand">{profile.role === "qualite" ? "Responsable qualité" : profile.role === "admin" ? "Administrateur" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
           <Link href="/deconnexion" prefetch={false} className="p-1.5 text-grey-brand hover:bg-navy-50 hover:text-navy-900" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
         </div>
       </div>
@@ -159,7 +161,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       <Link href="/deconnexion" prefetch={false} className="inline-flex items-center gap-1.5 text-xs text-navy-600"><LogOut size={14} /> Quitter</Link>
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
-      <div className="flex justify-end border-b border-navy-100 bg-white px-6 py-2"><NotificationBell /></div>
+      <div className="flex justify-end border-b border-navy-100 bg-white px-6 py-2">{profile.role!=="qualite"&&<NotificationBell />}</div>
       <nav className="flex gap-2 overflow-x-auto border-b border-navy-100 bg-white p-3 md:hidden">{sections.map(s => <Link key={s.titre} href={s.href} className={`whitespace-nowrap px-3 py-2 text-xs ${sectionActive(pathname, s) ? "bg-sky-capella-100 font-semibold" : "bg-navy-50"}`}>{s.titre}</Link>)}</nav>
       {children}
     </div>
