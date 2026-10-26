@@ -14,7 +14,7 @@ export function statusTone(value:string):Tone{
  if(!value.trim()||value==='—')return 'slate';
  if(value.toLowerCase().includes('abandonn'))return 'rose';
  if(value.toLowerCase().includes('erreur'))return 'orange';
- const known:Record<string,Tone>={'Effectif':'emerald','En attente':'amber','Salle d’attente':'sky','Résilié':'violet','Annulé':'rose','Rejeté':'rose','Incomplet':'slate','En cours':'indigo'};
+ const known:Record<string,Tone>={'Signé':'emerald','Effectif':'emerald','En attente':'amber','Salle d’attente':'sky','Résilié':'violet','Annulé':'rose','Rejeté':'rose','Incomplet':'slate','En cours':'indigo'};
  return known[value]||known[classify(value)]||'slate';
 }
 export function ColorBadge({label,tone='slate'}:{label:string;tone?:Tone}){

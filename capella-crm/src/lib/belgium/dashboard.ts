@@ -1,6 +1,7 @@
 import { retained, type Contract, type Statement } from './domain';
 export type DashboardScope = { view:'global'|'year'|'month';year:number;month:number };
 export const STATUS_SERIES = [
+ {key:'Signé',label:'Signés',color:'#0d9488',soft:'#f0fdfa'},
  {key:'Effectif',label:'Effectifs',color:'#059669',soft:'#ecfdf5'},
  {key:'Salle d’attente',label:'Salle d’attente',color:'#f59e0b',soft:'#fffbeb'},
  {key:'Annulé',label:'Annulés',color:'#ef4444',soft:'#fef2f2'},

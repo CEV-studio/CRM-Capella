@@ -112,6 +112,8 @@ export type ProspectSummary = {
 export interface Database {
   public: {
     Tables: {
+      be_client_comments:Table<import('@/lib/belgium/comments').ClientComment>;
+      be_comment_history:Table<import('@/lib/belgium/comments').CommentRevision>;
       be_contract_history:Table<{id:number;contract_key:string;import_id:string;before_data:Record<string,unknown>|null;after_data:Record<string,unknown>;created_at:string}>;
       be_cycle_tracking:Table<CycleTracking>;
       be_supplier_billing:Table<SupplierBilling>;
@@ -154,6 +156,8 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      be_encode_sale:{Args:{p_data:Record<string,string>};Returns:string};
+      be_save_comment:{Args:{p_id:string|null;p_mega:string;p_centre:string;p_body:string};Returns:string};
       be_import:{Args:{p_kind:string;p_source:string;p_date:string;p_fingerprint:string;p_rows:unknown[]};Returns:{id:string;added:number;changed:number;unchanged:number}};
       be_create_invoice:{Args:{p_centre:string;p_period:string;p_reference:string};Returns:string};
       crm_deadlines_page:{Args:{p_period?:string;p_query?:string;p_page?:number};Returns:DeadlinePage};

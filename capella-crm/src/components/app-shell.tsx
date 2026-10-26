@@ -31,7 +31,7 @@ const PARTNER_NAV = [
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
 ];
-const QUALITY_NAV = [section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users}])];
+const QUALITY_NAV = [section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>p.role==='be_agent'}])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
   section("Suivi commercial", "/journee", Users, [
@@ -91,7 +91,7 @@ const ADMIN_NAV = [
   ]),
   section("Admin", "/admin/commerciaux", ShieldCheck, [
     { href: "/admin/commerciaux", label: "Création de comptes", icon: Users },
-    { href: "/admin/centres", label: "Comptes centres", icon: Building2 },
+    { href: "/admin/centres", label: "Comptes centres et agents", icon: Building2 },
     { href: "/admin/reservoir", label: "Réservoir", icon: BarChart3 },
     { href: "/admin/emails", label: "Modèles e-mail", icon: Mail },
     { href: "/admin/boites-email", label: "Boîtes e-mail", icon: Mail },

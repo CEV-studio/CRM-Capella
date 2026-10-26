@@ -44,6 +44,6 @@ export async function loadBelgiumProduction(){
  if(!['admin','qualite','be_centre','be_agent'].includes(profile.role))redirect('/?motif=acces-refuse');
  const db=await createClient();const {data,error}=await db.rpc('be_production_read',{});
  if(error)throw new Error(error.message);
- const result=data as unknown as {contracts:(Contract&{period_confirmed:boolean;phone?:string;postal_code?:string;product?:string;agent_reference?:string})[];tracking:CycleTracking[];last_report:string|null;history:import('./clients').ProductionHistory[]};
+ const result=data as unknown as {contracts:(Contract&{period_confirmed:boolean;phone?:string;postal_code?:string;product?:string;agent_reference?:string})[];tracking:CycleTracking[];last_report:string|null;encoding:{centre:string;agent_ref:string}|null;history:import('./clients').ProductionHistory[]};
  return {profile,...result,contracts:result.contracts.map(c=>({...c,gross_cents:0,centre_cents:0,payment:''}))};
 }

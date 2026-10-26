@@ -1,5 +1,5 @@
 import { norm,type Contract } from './domain';
-export type ProductionContract=Contract&{phone?:string;postal_code?:string;product?:string;agent_reference?:string};
+export type ProductionContract=Contract&{phone?:string;postal_code?:string;product?:string;agent_reference?:string;email?:string;owner_id?:string;owner_name?:string;entry_id?:string;encoded_at?:string;reconciliation?:string};
 export type ProductionHistory={contract_key:string;date:string;before_status:string|null;status:string;agent:string};
 export function clientDirectory(contracts:ProductionContract[],filters:Record<string,string|undefined>={}){
  const groups=new Map<string,ProductionContract[]>();

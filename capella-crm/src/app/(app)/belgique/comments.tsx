@@ -1,0 +1,14 @@
+'use client';
+import { useActionState } from 'react';
+import { sauvegarderCommentaire } from './encoding-actions';
+import { Button } from '@/components/ui';
+import type { ActionResult } from '@/lib/action-result';
+import type { ClientComment,CommentRevision } from '@/lib/belgium/comments';
+function CommentForm({mega,centre,comment}:{mega:string;centre:string;comment?:ClientComment}){
+ const [state,action,pending]=useActionState<ActionResult|null,FormData>(sauvegarderCommentaire,null);
+ return <form action={action} className="mt-3 space-y-3"><input type="hidden" name="mega_id" value={mega}/><input type="hidden" name="centre" value={centre}/>{comment&&<input type="hidden" name="id" value={comment.id}/>}<textarea aria-label={comment?'Modifier le commentaire':'Nouveau commentaire'} name="body" defaultValue={comment?.body} required maxLength={5000} rows={3} className="w-full rounded-xl border border-sky-200 bg-white p-3 text-sm"/><Button type="submit" disabled={pending}>{pending?'Enregistrement…':comment?'Enregistrer la modification':'Ajouter un commentaire'}</Button>{state&&<p role={state.ok?'status':'alert'} className={state.ok?'text-sm text-emerald-800':'text-sm text-rose-800'}>{state.message}</p>}</form>;
+}
+const date=(s:string)=>new Intl.DateTimeFormat('fr-FR',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Paris'}).format(new Date(s));
+export function ClientComments({mega,centres,comments,revisions,actorId,isAdmin}:{mega:string;centres:string[];comments:ClientComment[];revisions:CommentRevision[];actorId:string;isAdmin:boolean}){
+ return <section className="mt-4 rounded-xl border border-sky-200 bg-white p-4"><h3 className="font-semibold text-navy-800">Commentaires client</h3>{centres.map(centre=><div key={centre} className="mt-4"><h4 className="text-sm font-semibold text-indigo-900">{centre}</h4>{comments.filter(c=>c.centre===centre).map(c=><article key={c.id} className="mt-3 rounded-lg border border-navy-100 bg-slate-50 p-3 text-sm"><p className="text-xs text-grey-brand">{c.author_name} · {date(c.created_at)}{c.updated_at!==c.created_at?' · modifié':''}</p><p className="mt-2 whitespace-pre-wrap break-words">{c.body}</p>{(isAdmin||actorId===c.author_id)&&<details className="mt-2"><summary className="cursor-pointer font-semibold">Modifier</summary><CommentForm mega={mega} centre={centre} comment={c}/></details>}<details className="mt-2"><summary className="cursor-pointer text-xs">Historique du commentaire</summary>{revisions.filter(r=>r.comment_id===c.id).map(r=><div key={r.id} className="mt-2 border-t pt-2"><p className="text-xs text-grey-brand">{r.editor_name} · {date(r.created_at)}</p>{r.before_body&&<p className="whitespace-pre-wrap break-words text-slate-500">Avant : {r.before_body}</p>}<p className="whitespace-pre-wrap break-words">{r.before_body?'Après':'Création'} : {r.after_body}</p></div>)}</details></article>)}<CommentForm mega={mega} centre={centre}/></div>)}</section>;
+}
