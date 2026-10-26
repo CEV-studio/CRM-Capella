@@ -5,7 +5,7 @@ export const STATUS_SERIES = [
  {key:'Salle d’attente',label:'Salle d’attente',color:'#f59e0b',soft:'#fffbeb'},
  {key:'Annulé',label:'Annulés',color:'#ef4444',soft:'#fef2f2'},
  {key:'Résilié',label:'Résiliés',color:'#8b5cf6',soft:'#f5f3ff'},
- {key:'En attente',label:'Validation client',color:'#0ea5e9',soft:'#f0f9ff'},
+ {key:'En attente',label:'En attente de signature client',color:'#0ea5e9',soft:'#f0f9ff'},
  {key:'Autres',label:'Autres statuts',color:'#94a3b8',soft:'#f8fafc'},
 ];
 export const MONTHS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];

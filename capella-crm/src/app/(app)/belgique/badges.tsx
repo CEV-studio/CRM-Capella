@@ -1,4 +1,4 @@
-import { classify } from '@/lib/belgium/domain';
+import { classify,statusLabel } from '@/lib/belgium/domain';
 export const tones={
  emerald:{badge:'border-emerald-200 bg-emerald-100 text-emerald-900',panel:'border-emerald-200 bg-emerald-50',edge:'border-l-emerald-500'},
  sky:{badge:'border-sky-200 bg-sky-100 text-sky-900',panel:'border-sky-200 bg-sky-50',edge:'border-l-sky-500'},
@@ -20,4 +20,4 @@ export function statusTone(value:string):Tone{
 export function ColorBadge({label,tone='slate'}:{label:string;tone?:Tone}){
  return <span className={`inline-flex max-w-full items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold leading-5 ${tones[tone].badge}`}><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"/>{label}</span>;
 }
-export function StatusBadge({value}:{value:string}){return <ColorBadge label={value} tone={statusTone(value)}/>;}
+export function StatusBadge({value}:{value:string}){return <ColorBadge label={statusLabel(value)} tone={statusTone(value)}/>;}
