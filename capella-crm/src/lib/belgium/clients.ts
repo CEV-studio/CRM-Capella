@@ -4,6 +4,8 @@ export type ProductionHistory={contract_key:string;date:string;before_status:str
 export function clientDirectory(contracts:ProductionContract[],filters:Record<string,string|undefined>={}){
  const groups=new Map<string,ProductionContract[]>();
  for(const c of contracts){if(filters.centre&&c.centre!==filters.centre)continue;
+  if(filters.cohortView==='month'&&c.registered_date?.slice(0,7)!==`${filters.year}-${String(filters.month).padStart(2,'0')}`)continue;
+  if(filters.cohortView==='year'&&c.registered_date?.slice(0,4)!==filters.year)continue;
   const list=groups.get(c.mega_id)||[];list.push(c);groups.set(c.mega_id,list);}
  return [...groups].map(([id,rows])=>({id,name:rows[0].client,phone:rows.find(c=>c.phone)?.phone||'',contracts:rows})).filter(c=>{
   const all=norm([c.id,c.name,...c.contracts.flatMap(r=>[r.agent,r.agent_reference,r.ean,r.reference])].join(' '));
