@@ -32,7 +32,7 @@ export function contractCycle(contract,statements,tracking,today) {
  const end=start?shiftMonths(start,3):null;
  const terminated=contract.status_class==='Résilié'||!!termination;
  const hasCommission=!!first;
- const pending=hasCommission&&terminated&&(!start||!termination);
+ const pending=hasCommission&&terminated&&(!start||!termination||termination<start);
  const clawback=hasCommission&&terminated&&!!start&&!!termination&&termination>=start&&termination<shiftMonths(start,3);
  const months=clawback?completedMonths(start,termination):null;
  const centreDue=clawback?Math.round(first.centre_cents*(3-Number(months))/3):null;

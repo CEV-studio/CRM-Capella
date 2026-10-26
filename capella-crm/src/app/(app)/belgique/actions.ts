@@ -20,6 +20,9 @@ export async function saveCycle(form:FormData){
  for(const d of [row.effect_date,row.termination_date,row.completed_at,row.bonus_invoiced_at,row.bonus_paid_at])if(d&&(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>today))return {error:'Dates confirmées invalides ou futures'};
  if(row.termination_date&&row.effect_date&&row.termination_date<row.effect_date)return {error:'La résiliation précède la prise d’effet'};
  const cycle=contractCycle(contract,statements,row,today);
+ const {data:deductions,error:deductionError}=await db.from('be_deductions').select('side,amount_cents').eq('contract_key',key);
+ if(deductionError)return {error:deductionError.message};
+ for(const side of ['centre','mega']){const recorded=(deductions||[]).filter(d=>d.side===side).reduce((n,d)=>n+d.amount_cents,0);if((side==='centre'?row.centre_recovered_cents:row.mega_recovered_cents)<recorded)return {error:'Le montant récupéré ne peut pas être inférieur aux déductions confirmées.'};}
  // Conserver la preuve d’acquisition lors de la facturation : une résiliation ultérieure ne doit pas effacer le bonus déjà acquis.
  if((row.bonus_invoiced_at||row.bonus_paid_at)&&!row.completed_at&&['due','invoiced','paid'].includes(cycle.bonusState))row.completed_at=cycle.end;
  if((row.bonus_invoiced_at||row.bonus_paid_at)&&cycle.bonusState==='none'||(row.bonus_invoiced_at||row.bonus_paid_at)&&cycle.bonusState==='potential')return {error:'Le cycle de trois mois doit être confirmé avant de facturer le bonus'};
@@ -45,4 +48,13 @@ export async function saveSupplierBilling(form:FormData){
  if(!invoiced&&(row.invoiced_at||row.received_at||row.received_cents>0))return {error:'Confirmer la facturation avant de saisir un encaissement'};
  const {error}=await db.from('be_supplier_billing').upsert(row);if(error)return {error:error.message};
  revalidatePath('/belgique');revalidatePath('/comptabilite/belgique');return {success:'Suivi de la facture MEGA enregistré. Aucune facture n’a été envoyée.'};
+}
+
+export async function recordDeduction(form:FormData){
+ await requireAdmin();const db=await createClient();
+ const amount=Number(String(form.get('amount')||'').replace(',','.'));
+ if(!Number.isFinite(amount)||amount<=0)return {error:'Montant positif requis'};
+ const {error}=await db.rpc('be_record_deduction',{p_key:String(form.get('contract_key')),p_side:String(form.get('side')),p_reference:String(form.get('document_reference')||''),p_date:String(form.get('applied_at')||''),p_amount:Math.round(amount*100)});
+ if(error)return {error:error.message};
+ revalidatePath('/comptabilite/belgique');return {success:'Déduction confirmée et rapprochée.'};
 }

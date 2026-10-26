@@ -59,7 +59,7 @@ export default async function proxy(request: NextRequest) {
 
   if(userId && !isPublic){
     const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",userId).maybeSingle();
-    if(profile?.role==="qualite"){
+    if(['qualite','be_centre','be_agent'].includes(profile?.role||'')){
       const allowed=path==="/belgique"&&request.method==="GET" || path==="/changer-mot-de-passe" || path==="/deconnexion";
       if(!allowed){
         if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});

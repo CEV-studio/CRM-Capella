@@ -62,7 +62,7 @@ export function parseRows(rows:unknown[][],kind:'report'|'statement',reportDate:
  const period=monthOf(dateValue(get('Période commissionnement','Période de commissionnement')))||monthOf(effect_date);
  const payment=text(get('Type de paiement','Domiciliation','Domiciliation (Mega)'));
  const complete=norm(payment).includes('complete');const active=status_class==='Effectif';
- return {key,supplier:'MEGA',mega_id:id,ean,reference:text(get('Référence contrat','ContratNbr','Numéro de contrat','Référence contrat Mega')).replace(/[',]/g,''),client:text(get('Client'))||[text(get('nom','Nom client')),text(get('prenom','Prénom client'))].filter(Boolean).join(' '),agent,centre,energy,status,status_class,registered_date,effect_date,period,period_confirmed:false,payment,report_date:reportDate,clawback_end:dateValue(get('Fin clawback estimée'))||(effect_date?addMonths(effect_date,3):null),gross_cents:active?6500+(complete?1000:0):0,centre_cents:active?3000+(complete?500:0):0};
+ return {key,supplier:'MEGA',mega_id:id,ean,reference:text(get('Référence contrat','ContratNbr','Numéro de contrat','Référence contrat Mega')).replace(/[',]/g,''),client:text(get('Client'))||[text(get('nom','Nom client')),text(get('prenom','Prénom client'))].filter(Boolean).join(' '),agent,centre,energy,status,status_class,registered_date,effect_date,period,period_confirmed:false,payment,agent_reference:text(get('Référence agent','Userfield_Agent'))||agent,report_date:reportDate,clawback_end:dateValue(get('Fin clawback estimée'))||(effect_date?addMonths(effect_date,3):null),gross_cents:active?6500+(complete?1000:0):0,centre_cents:active?3000+(complete?500:0):0};
  });
 }
 export function retained(c:Contract,statements:Statement[]){const s=statements.filter(s=>s.key===c.key).sort((a,b)=>b.period.localeCompare(a.period))[0];return {period:s?.period??c.period,gross_cents:s?.gross_cents??c.gross_cents,centre_cents:s?.centre_cents??c.centre_cents,confirmed:!!s};}
@@ -81,3 +81,5 @@ export type SupplierBilling = {
  supplier:string;period:string;call_received_at:string|null;invoiced:boolean;invoiced_at:string|null;
  invoice_reference:string|null;received_cents:number;received_at:string|null;notes:string;updated_at:string;
 };
+
+export type Deduction={id:string;contract_key:string;side:'centre'|'mega';document_reference:string;applied_at:string;amount_cents:number;created_by:string;created_at:string};

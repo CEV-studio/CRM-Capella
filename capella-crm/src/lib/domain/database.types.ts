@@ -2,7 +2,7 @@ import type { CycleTracking, SupplierBilling } from '@/lib/belgium/domain';
 import type { Contract, Statement, Invoice, ImportRun as BelgiumImportRun } from "@/lib/belgium/domain";
 import type { Dossier, Quote } from "@/lib/partners/types";
 /** Types manuels de la base Supabase — miroir des migrations. */
-export type Role = "admin" | "commercial" | "apporteur" | "qualite";
+export type Role = "admin" | "commercial" | "apporteur" | "qualite" | "be_centre" | "be_agent";
 export type PaymentStatus = "À payer" | "Payé" | "En attente";
 export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 
@@ -115,6 +115,7 @@ export interface Database {
       be_contract_history:Table<{id:number;contract_key:string;import_id:string;before_data:Record<string,unknown>|null;after_data:Record<string,unknown>;created_at:string}>;
       be_cycle_tracking:Table<CycleTracking>;
       be_supplier_billing:Table<SupplierBilling>;
+      be_deductions:Table<import('@/lib/belgium/domain').Deduction>;
       be_contracts:Table<{key:string;supplier:string;mega_id:string;ean:string;agent:string;centre:string;status:string;status_class:string;report_date:string;data:Contract;import_id:string}>;
       be_statement_lines:Table<{id:string;supplier:string;period:string;contract_key:string;gross_cents:number;centre_cents:number;data:Statement;import_id:string}>;
       be_imports:Table<BelgiumImportRun>;
@@ -163,6 +164,7 @@ export interface Database {
       is_active_user:{ Args:Record<never,never>; Returns:boolean };
       can_view_all:{ Args:Record<never,never>; Returns:boolean };
       can_manage:{ Args:Record<never,never>; Returns:boolean };
+      be_record_deduction:{Args:{p_key:string;p_side:string;p_reference:string;p_date:string;p_amount:number};Returns:string};
       be_production_read:{ Args:Record<never,never>; Returns:unknown };
       current_role_name:{ Args:Record<never,never>; Returns:string };
       can_access_email_account:{ Args:{ p_account:string; p_send?:boolean }; Returns:boolean };

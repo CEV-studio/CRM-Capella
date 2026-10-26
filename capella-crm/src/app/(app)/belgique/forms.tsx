@@ -2,7 +2,7 @@
 import { useRef,useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button,Input,Field } from '@/components/ui';
-import { createInvoice,updateInvoice,saveCycle,saveSupplierBilling } from './actions';
+import { createInvoice,updateInvoice,saveCycle,saveSupplierBilling,recordDeduction } from './actions';
 import type { Invoice,CycleTracking,SupplierBilling } from '@/lib/belgium/domain';
 type Preview={count:number;added:number;statusChanges:number;blocked:boolean;warning:string;changes:{key:string;client:string;centre:string;before:string;after:string;kind:string}[]};
 const select='h-10 rounded-xl border border-navy-200 bg-white px-3 text-sm';
@@ -49,4 +49,10 @@ export function SupplierBillingForm({period,value}:{period:string;value?:Supplie
  <Field label="Date d’encaissement"><Input type="date" name="received_at" defaultValue={value?.received_at??''}/></Field>
  <Field label="Notes / justificatif"><Input name="notes" defaultValue={value?.notes??''}/></Field>
  <Button disabled={busy} className="self-end">Enregistrer le suivi MEGA</Button><p role="status" className="text-sm sm:col-span-2 lg:col-span-3">{message}</p></form>;
+}
+
+export function DeductionForm({contractKey,centreRemaining,megaRemaining}:{contractKey:string;centreRemaining:number;megaRemaining:number}){
+ const [message,setMessage]=useState(''),[busy,setBusy]=useState(false);const router=useRouter();
+ return <form className="mt-3 grid gap-3 rounded-xl bg-navy-50 p-4 md:grid-cols-4" onSubmit={async e=>{e.preventDefault();const form=new FormData(e.currentTarget);setBusy(true);try{const result=await recordDeduction(form);setMessage(result.error??result.success??'');if(result.success)router.refresh();}catch{setMessage('Enregistrement impossible');}finally{setBusy(false);}}}>
+ <input type="hidden" name="contract_key" value={contractKey}/><Field label="Déduction effectuée"><select className={select} name="side" defaultValue={centreRemaining>0?'centre':'mega'}><option disabled={centreRemaining<=0} value="centre">Auprès du centre</option><option disabled={megaRemaining<=0} value="mega">Par MEGA</option></select></Field><Field label="Facture ou avoir concerné"><Input name="document_reference" minLength={3} required/></Field><Field label="Date de déduction"><Input name="applied_at" type="date" required/></Field><Field label="Montant déduit (€)"><Input name="amount" type="number" min="0.01" step="0.01" required/></Field><Button disabled={busy}>Confirmer la déduction effectuée</Button><p className="text-sm md:col-span-3" role="status">{message}</p></form>;
 }
