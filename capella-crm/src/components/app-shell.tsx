@@ -91,6 +91,7 @@ const ADMIN_NAV = [
   ]),
   section("Admin", "/admin/commerciaux", ShieldCheck, [
     { href: "/admin/commerciaux", label: "Création de comptes", icon: Users },
+    { href: "/admin/centres", label: "Comptes centres", icon: Building2 },
     { href: "/admin/reservoir", label: "Réservoir", icon: BarChart3 },
     { href: "/admin/emails", label: "Modèles e-mail", icon: Mail },
     { href: "/admin/boites-email", label: "Boîtes e-mail", icon: Mail },

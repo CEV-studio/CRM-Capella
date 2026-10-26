@@ -91,6 +91,8 @@ export async function reinitialiserMotDePasse(
   if (!id) return { ok: false, message: "Commercial introuvable." };
 
   const admin = createAdminClient();
+  const {data:cible}=await admin.from("profiles").select("role").eq("id",id).single();
+  if(!cible||['be_centre','be_agent'].includes(cible.role))return {ok:false,message:"Utilise la gestion des comptes centres."};
   const motDePasse = genererMotDePasse();
 
   const { error } = await admin.auth.admin.updateUserById(id, {
@@ -102,7 +104,7 @@ export async function reinitialiserMotDePasse(
   const { error: errProfil } = await admin
     .from("profiles")
     .update({ must_change_password: true })
-    .eq("id", id);
+    .eq("id", id).not("role","in","(be_centre,be_agent)");
   if (errProfil) return { ok: false, message: `Échec : ${errProfil.message}` };
 
   revalidatePath("/admin/commerciaux");
@@ -130,7 +132,7 @@ export async function basculerActivation(
   const { error } = await admin
     .from("profiles")
     .update({ is_active: actifDemande })
-    .eq("id", id);
+    .eq("id", id).not("role","in","(be_centre,be_agent)");
 
   if (error) return { ok: false, message: `Échec : ${error.message}` };
 
@@ -159,7 +161,7 @@ export async function modifierTaux(
   const { error } = await admin
     .from("profiles")
     .update({ commission_rate: taux / 100 })
-    .eq("id", id);
+    .eq("id", id).not("role","in","(be_centre,be_agent)");
 
   if (error) return { ok: false, message: `Échec : ${error.message}` };
 
@@ -193,7 +195,7 @@ export async function modifierPermissions(
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.from("profiles").update(patch).eq("id", id);
+  const { error } = await admin.from("profiles").update(patch).eq("id", id).not("role","in","(be_centre,be_agent)");
   if (error) return { ok: false, message: `Échec : ${error.message}` };
 
   revalidatePath("/admin/commerciaux");
@@ -204,6 +206,6 @@ export async function modifierRole(_prev:ActionResult|null,formData:FormData):Pr
  const p=await requireManage();if(p.role!=="admin")return {ok:false,message:"Réservé à l’administrateur."};
  const id=String(formData.get("id")??"");const role=formData.get("role");
  if(id===p.id||!['commercial','apporteur','qualite'].includes(String(role)))return {ok:false,message:"Modification interdite."};
- const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'apporteur'|'qualite',...(role==='qualite'?{commission_rate:0}:{}),can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin");
+ const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'apporteur'|'qualite',...(role==='qualite'?{commission_rate:0}:{}),can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin").not("role","in","(be_centre,be_agent)");
  revalidatePath("/admin/commerciaux");return {ok:!error,message:error?.message??"Rôle mis à jour."};
 }

@@ -116,6 +116,7 @@ export interface Database {
       be_cycle_tracking:Table<CycleTracking>;
       be_supplier_billing:Table<SupplierBilling>;
       be_deductions:Table<import('@/lib/belgium/domain').Deduction>;
+      be_access:Table<{user_id:string;centre:string;agent_ref:string|null;is_active:boolean;created_at:string}>;
       be_contracts:Table<{key:string;supplier:string;mega_id:string;ean:string;agent:string;centre:string;status:string;status_class:string;report_date:string;data:Contract;import_id:string}>;
       be_statement_lines:Table<{id:string;supplier:string;period:string;contract_key:string;gross_cents:number;centre_cents:number;data:Statement;import_id:string}>;
       be_imports:Table<BelgiumImportRun>;

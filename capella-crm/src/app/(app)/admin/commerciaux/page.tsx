@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requireManage } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader } from "@/components/ui";
@@ -17,6 +18,7 @@ export default async function CommerciauxPage() {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
+    .not("role", "in", "(be_centre,be_agent)")
     .order("is_active", { ascending: false })
     .order("full_name");
 
@@ -34,6 +36,8 @@ export default async function CommerciauxPage() {
           {actifs.length > 1 ? "s" : ""} sur {profils.length}.
         </p>
       </header>
+
+      {moi.role==='admin'&&<Link href="/admin/centres" className="mb-6 inline-block rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">Créer ou gérer un compte centre</Link>}
 
       <Card className="mb-6">
         <CardHeader
