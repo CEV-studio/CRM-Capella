@@ -1,6 +1,8 @@
 export type AnswerKind = "score" | "grave" | "na";
 export type QualityAnswer = { kind: AnswerKind; score: number | null; comment: string; reason: string };
 export type QualityStatus = "Conforme" | "À consolider" | "Insuffisant" | "Non conforme — faute grave";
+export const QUALITY_ELIGIBLE_SALE_STATUSES = ['Effectif', 'Salle d’attente'] as const;
+export const isQualityEligibleSale = (status:string) => QUALITY_ELIGIBLE_SALE_STATUSES.some(value=>value===status);
 
 // Formulations et repères repris de la grille fournie. Les éléments que cette grille
 // renvoie à une « liste de la grille actuelle » restent signalés comme tels.

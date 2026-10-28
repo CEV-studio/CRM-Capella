@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { calculateQuality, QUALITY_RUBRICS, type QualityRubricKey, validateQualityAnswers } from "@/lib/quality";
+import { calculateQuality, QUALITY_RUBRICS, type QualityRubricKey, validateQualityAnswers, isQualityEligibleSale } from "@/lib/quality";
 import { loadBelgiumProduction } from '@/lib/belgium/server';
 
 export async function POST(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   const saleKey=typeof input.sale_key==='string'?input.sale_key.trim():'';
   if(!saleKey||saleKey.length>160)return NextResponse.json({error:"Sélectionnez une vente dans la base clients."},{status:400});
   const production=await loadBelgiumProduction();
-  const sale=production.contracts.find(c=>c.key===saleKey&&c.supplier==='MEGA'&&['Elec','Gaz'].includes(c.energy));
+  const sale=production.contracts.find(c=>c.key===saleKey&&c.supplier==='MEGA'&&['Elec','Gaz'].includes(c.energy)&&isQualityEligibleSale(c.status_class));
   if(!sale)return NextResponse.json({error:"Cette vente n’est plus accessible dans la base clients."},{status:404});
   const note=typeof input.call_quality_note==='string'?input.call_quality_note.trim():'';
   const comments=typeof input.comments==='string'?input.comments.trim():'';
