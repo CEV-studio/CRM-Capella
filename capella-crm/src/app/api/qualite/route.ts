@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { calculateQuality, QUALITY_RUBRICS, type QualityRubricKey, validateQualityAnswers } from "@/lib/quality";
+import { loadBelgiumProduction } from '@/lib/belgium/server';
 
 export async function POST(request: NextRequest) {
   const profile = await requireProfile();
@@ -23,10 +24,11 @@ export async function POST(request: NextRequest) {
   const identification=input.identification as Record<string,unknown>;
   if (Object.keys(identification).some(key=>!/^([1-7])$/.test(key)) || Object.values(identification).some(value=>typeof value!=='string'||value.length>1000)) return NextResponse.json({error:"Les champs d’identification sont invalides."},{status:400});
   const identificationValues=Object.fromEntries(Object.entries(identification).map(([key,value])=>[key,value as string]));
-  const activityName=typeof input.activity_name==='string'?input.activity_name.trim():'';
-  const agentName=typeof input.agent_name==='string'?input.agent_name.trim():'';
-  const saleReference=typeof input.sale_reference==='string'?input.sale_reference.trim():'';
-  if(!activityName||activityName.length>120||!agentName||agentName.length>120||!saleReference||saleReference.length>160)return NextResponse.json({error:"Renseignez l’activité, l’agent et la référence de vente."},{status:400});
+  const saleKey=typeof input.sale_key==='string'?input.sale_key.trim():'';
+  if(!saleKey||saleKey.length>160)return NextResponse.json({error:"Sélectionnez une vente dans la base clients."},{status:400});
+  const production=await loadBelgiumProduction();
+  const sale=production.contracts.find(c=>c.key===saleKey&&c.supplier==='MEGA'&&['Elec','Gaz'].includes(c.energy));
+  if(!sale)return NextResponse.json({error:"Cette vente n’est plus accessible dans la base clients."},{status:404});
   const note=typeof input.call_quality_note==='string'?input.call_quality_note.trim():'';
   const comments=typeof input.comments==='string'?input.comments.trim():'';
   if(note.length>2000||comments.length>10000)return NextResponse.json({error:"Un commentaire dépasse la longueur autorisée."},{status:400});
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
   if(score.score_percent===null||score.status===null)return NextResponse.json({error:"Aucun critère applicable au calcul."},{status:400});
   const db=await createClient();
   const {data,error}=await db.from('quality_reviews').insert({
-    activity_name:activityName,rubric_key:rubric.key,agent_name:agentName,sale_reference:saleReference,
+    activity_name:'MEGA',rubric_key:rubric.key,agent_name:sale.agent_reference||sale.agent,sale_reference:sale.key,sale_key:sale.key,
     identification:identificationValues,condition_context:conditionValues,answers:input.answers,score_sum:score.score_sum,applicable_count:score.applicable_count,
     score_percent:Number(score.score_percent.toFixed(4)),status:score.status,grave_faults:score.grave_faults,
     call_quality_note:note||null,comments:comments||null,controller_id:profile.id,controller_name:profile.full_name,

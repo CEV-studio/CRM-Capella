@@ -9,7 +9,7 @@ export function clientDirectory(contracts:ProductionContract[],filters:Record<st
   const clientId=c.client_id||c.mega_id||c.key;
   const list=groups.get(clientId)||[];list.push(c);groups.set(clientId,list);}
  return [...groups].map(([id,rows])=>({id,name:rows[0].client,phone:rows.find(c=>c.phone)?.phone||'',contracts:rows})).filter(c=>{
-  const all=norm([c.id,c.name,...c.contracts.flatMap(r=>[r.mega_id,r.agent,r.agent_reference,r.ean,r.reference])].join(' '));
+  const all=norm([c.id,c.name,...c.contracts.flatMap(r=>[r.mega_id,r.agent,r.agent_reference,r.ean,r.reference,r.key])].join(' '));
   return (!filters.q||filters.q.trim().split(/\s+/).every(t=>all.includes(norm(t))))&&(!filters.mega||c.contracts.some(r=>r.mega_id.includes(filters.mega!.trim())))&&(!filters.name||filters.name.trim().split(/\s+/).every(t=>norm(c.name).includes(norm(t))))&&(!filters.agent||c.contracts.some(r=>norm(r.agent+' '+(r.agent_reference||'')).includes(norm(filters.agent))))&&(!filters.status||c.contracts.some(r=>r.status_class===filters.status));
  }).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
 }
