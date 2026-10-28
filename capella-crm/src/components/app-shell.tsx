@@ -31,7 +31,7 @@ const PARTNER_NAV = [
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
 ];
-const QUALITY_NAV = [section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>p.role==='be_agent'}])];
+const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Contrôles qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>p.role==='be_agent'}])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
   section("Suivi commercial", "/journee", Users, [
@@ -88,6 +88,9 @@ const ADMIN_NAV = [
   section("Belgique", "/belgique", Building2, [
     { href: "/belgique", label: "Production", icon: Building2 },
     { href: "/belgique?tab=clients", label: "Base clients", icon: Users },
+  ]),
+  section("Qualité des ventes", "/qualite", ShieldCheck, [
+    { href: "/qualite", label: "Contrôles qualité", icon: ShieldCheck },
   ]),
   section("Admin", "/admin/commerciaux", ShieldCheck, [
     { href: "/admin/commerciaux", label: "Création de comptes", icon: Users },

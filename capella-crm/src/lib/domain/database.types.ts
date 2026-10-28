@@ -7,6 +7,7 @@ export type PaymentStatus = "À payer" | "Payé" | "En attente";
 export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 
 export type Profile = { id:string; full_name:string; email:string; role:Role; commission_rate:number; is_active:boolean; must_change_password:boolean; can_export:boolean; can_view_all:boolean; can_manage_team:boolean; created_at:string; updated_at:string };
+export type QualityReview = { id:string; activity_name:string; rubric_key:string; agent_name:string; sale_reference:string; identification:Record<string,string>; condition_context:Record<string,boolean>; answers:Record<string,import('@/lib/quality').QualityAnswer>; score_sum:number; applicable_count:number; score_percent:number; status:import('@/lib/quality').QualityStatus; grave_faults:Array<{question_id:number;criterion:string;comment:string}>; call_quality_note:string|null; comments:string|null; controller_id:string; controller_name:string; reviewed_at:string; created_at:string };
 export type Source = { id:string; name:string; kind:"call_center"|"apporteur"|"fichier"|"web"|"autre"; is_active:boolean; created_at:string };
 export type Apporteur = { id:string; name:string; contact:string|null; commission_rate:number; payment_status:PaymentStatus; is_active:boolean; created_at:string; updated_at:string };
 export type Fournisseur = { id:string; name:string; is_active:boolean; sort_order:number };
@@ -124,6 +125,7 @@ export interface Database {
       be_statement_lines:Table<{id:string;supplier:string;period:string;contract_key:string;gross_cents:number;centre_cents:number;data:Statement;import_id:string}>;
       be_imports:Table<BelgiumImportRun>;
       be_invoices:Table<Invoice>;
+      quality_reviews:Table<QualityReview>;
       profiles:Table<Profile>;
       partner_dossiers:Table<Dossier>;
       partner_quotes:Table<Quote>;

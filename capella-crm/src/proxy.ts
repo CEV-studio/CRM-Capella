@@ -60,10 +60,12 @@ export default async function proxy(request: NextRequest) {
   if(userId && !isPublic){
     const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",userId).maybeSingle();
     if(['qualite','be_centre','be_agent'].includes(profile?.role||'')){
-      const allowed=path==="/belgique"&&(request.method==="GET"||request.method==="POST") || profile?.role==='be_agent'&&path==='/belgique/encoder'&&(request.method==='GET'||request.method==='POST') || path==="/changer-mot-de-passe" || path==="/deconnexion";
+      const qualityRoute = profile?.role === 'qualite' &&
+        (path === '/qualite' || path.startsWith('/qualite/') || path === '/api/qualite');
+      const allowed=qualityRoute || path==="/belgique"&&(request.method==="GET"||request.method==="POST") || profile?.role==='be_agent'&&path==='/belgique/encoder'&&(request.method==='GET'||request.method==='POST') || path==="/changer-mot-de-passe" || path==="/deconnexion";
       if(!allowed){
         if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});
-        const url=request.nextUrl.clone();url.pathname="/belgique";url.search="";return NextResponse.redirect(url);
+        const url=request.nextUrl.clone();url.pathname=profile?.role === 'qualite' ? '/qualite' : '/belgique';url.search="";return NextResponse.redirect(url);
       }
     }
   }
