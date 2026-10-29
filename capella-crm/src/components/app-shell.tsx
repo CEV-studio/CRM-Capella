@@ -64,13 +64,9 @@ const ADMIN_NAV = [
     { href: "/conversion", label: "Demandes de cotation", icon: FileCheck2 },
     { href: "/suivi-acd", label: "Suivi des demandes d’ACD", icon: FileCheck2 },
   ]),
-  section("Opportunités apporteurs", "/partenaires/opportunites", Target, [
+  section("Apporteurs", "/partenaires/opportunites", Building2, [
     { href: "/partenaires/opportunites", label: "Opportunités apporteurs", icon: Target },
-  ]),
-  section("Cotations apporteurs", "/partenaires/cotations", BriefcaseBusiness, [
     { href: "/partenaires/cotations", label: "Demandes de cotation apporteurs", icon: BriefcaseBusiness },
-  ]),
-  section("Portefeuille apporteurs", "/partenaires/portefeuille", Building2, [
     { href: "/partenaires/portefeuille", label: "Portefeuille apporteurs", icon: Building2 },
   ]),
   section("Prospection", "/prospection", Search, [
