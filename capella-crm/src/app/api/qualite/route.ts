@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   if(!sale)return NextResponse.json({error:"Cette vente n’est plus accessible dans la base clients."},{status:404});
   const note=typeof input.call_quality_note==='string'?input.call_quality_note.trim():'';
   const comments=typeof input.comments==='string'?input.comments.trim():'';
-  if((note&&!['1','2','3','4','5'].includes(note))||comments.length>10000)return NextResponse.json({error:"Un commentaire dépasse la longueur autorisée."},{status:400});
+  if(note&&!['1','2','3','4','5'].includes(note))return NextResponse.json({error:"La note de qualité de l’appel est invalide."},{status:400});
   const score=calculateQuality(input.answers,rubric.questions);
   if(score.score_percent===null||score.status===null)return NextResponse.json({error:"Aucun critère applicable au calcul."},{status:400});
   const db=await createClient();
