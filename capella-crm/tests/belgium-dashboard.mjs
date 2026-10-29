@@ -12,3 +12,10 @@ m=dashboardModel(rows,[],{view:'global',year:2026,month:1},'2026-10-20');assert.
 m=dashboardModel(rows,[{key:'a',period:'2026-09-01',gross_cents:7500,centre_cents:3500}],{view:'month',year:2026,month:10},'2026-10-20');assert.equal(m.gross,0,'official period overrides forecast');
 assert.equal(inScope(null,{view:'global',year:2026,month:1}),true);assert.equal(inScope(null,{view:'year',year:2026,month:1}),false);
 console.log('PASS: global/year/month cohorts, all statuses sum correctly, missing dates, 12 monthly buckets, commission periods distinct from registrations.');
+const {cancellationStats}=compile('src/lib/belgium/cancellations.ts',()=>domain);
+const cancelledRows=[{key:'pre',status:'Annulée par le client',effect_date:null},{key:'observed',status:'Annulée par le client (Résilié)',effect_date:'2026-10-01'},{key:'ended',status:'Contrat terminé',effect_date:null},{key:'duplicate',status:'Annulée : Inscription doublon'},{key:'existing',status:'Annulée : Déjà client MEGA'},{key:'deposit',status:'Annulée : Caution demandée'}];
+const cancellations=cancellationStats(cancelledRows);
+assert.deepEqual(cancellations.cancelled.map(c=>c.key),['pre','observed'],'raw client-cancelled status stays pre-commission even with an observed activation');
+assert.deepEqual(cancellations.terminated.map(c=>c.key),['ended'],'MEGA Terminé alone defines the clawback production bucket without requiring confirmed dates');
+assert.equal(cancellations.cancelled.some(c=>cancellations.terminated.includes(c)),false);
+console.log('PASS: supplier client cancellations vs terminated clawbacks, no activation/payment inference, other cancellation reasons excluded.');
