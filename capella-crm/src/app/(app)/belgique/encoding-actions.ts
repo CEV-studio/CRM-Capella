@@ -7,18 +7,16 @@ import type { ActionResult } from '@/lib/action-result';
 export async function encoderVente(_prev:ActionResult|null,form:FormData):Promise<ActionResult>{
  const profile=await requireProfile();
  if(profile.role!=='be_agent'||profile.must_change_password)return {ok:false,message:'Accès encodage refusé.'};
- const fields=['submission_id','mega_id','first_name','last_name','phone','email','energy','ean','contract_reference','product_id','comment'] as const;
+ const fields=['submission_id','first_name','last_name','phone','email','energy','product_id','comment'] as const;
  const payload=Object.fromEntries(fields.map(k=>[k,String(form.get(k)||'').trim()]));
  if(!/^[0-9a-f-]{36}$/i.test(payload.submission_id))return {ok:false,message:'Formulaire expiré : recharge la page.'};
- if(payload.mega_id&&!/^\d{1,20}$/.test(payload.mega_id))return {ok:false,message:'ID MEGA invalide.'};
  if(!/^[0-9a-f-]{36}$/i.test(payload.product_id)||payload.energy&&!['Elec','Gaz'].includes(payload.energy))return {ok:false,message:'Sélectionne un produit et une énergie valide.'};
  if(!payload.first_name||!payload.last_name||payload.first_name.length>100||payload.last_name.length>100)return {ok:false,message:'Nom et prénom requis (100 caractères maximum).'};
  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)||payload.email.length>254||payload.phone.length<6||payload.phone.length>40)return {ok:false,message:'Téléphone et email valides requis.'};
- if(payload.ean&&!/^\d{18}$/.test(payload.ean))return {ok:false,message:'L’EAN doit contenir 18 chiffres.'};
- if(payload.comment.length>5000||payload.contract_reference.length>100)return {ok:false,message:'Un champ dépasse la longueur autorisée.'};
+ if(payload.comment.length>5000)return {ok:false,message:'Un champ dépasse la longueur autorisée.'};
  const db=await createClient();const {data,error}=await db.rpc('be_encode_sale',{p_data:payload});
  if(error)return {ok:false,message:error.code==='23505'?'Cette vente a déjà été encodée.':error.message};
- revalidatePath('/belgique');return {ok:true,message:'Vente enregistrée au statut Signé.',venteClientId:payload.mega_id||'CRM:'+data};
+ revalidatePath('/belgique');return {ok:true,message:'Vente enregistrée au statut Signé.',venteClientId:'CRM:'+data};
 }
 
 export async function sauvegarderCommentaire(_prev:ActionResult|null,form:FormData):Promise<ActionResult>{

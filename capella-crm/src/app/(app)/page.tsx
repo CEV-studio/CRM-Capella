@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Sparkles, UsersRound } from "lucide-react";
 import { requireProfile } from "@/lib/auth";
@@ -36,6 +37,7 @@ function bornesSemaine() {
 
 export default async function TableauDeBordPage({ searchParams }: { searchParams: Promise<Recherche> }) {
   const profil = await requireProfile();
+  if (profil.role === "be_agent") redirect("/belgique?tab=clients");
   const estAdmin = profil.role === "admin";
   if (profil.role === "apporteur") return <PartnerHome prenom={profil.full_name.split(" ")[0]} />;
   const filtres = await searchParams;

@@ -72,8 +72,8 @@ assert.equal((await db.query('select * from be_contracts')).rows.length,0);
 assert.equal((await db.query('select * from be_deductions')).rows.length,0);
 await assert.rejects(()=>db.query("select be_record_deduction($1,'centre','HACK',current_date,100)",[pending.key]));
 await asUser(agentUser);portal=(await db.query('select be_production_read() data')).rows[0].data;
-assert.equal(portal.contracts.length,1);assert.equal(portal.contracts[0].agent,'Agent');
-assert.equal(portal.contracts[0].centre,'TILIRA');
+assert.equal(portal.contracts.length,0,'unencoded reporting rows must not be visible to agents');
+assert.equal(portal.history.length,0);
 await db.exec("reset role;select set_config('request.jwt.claim.sub','',false);");
 await db.query("update be_access set is_active=false where user_id=$1",[agentUser]);
 await asUser(agentUser);assert.equal((await db.query('select be_production_read() data')).rows[0].data.contracts.length,0);
@@ -121,6 +121,18 @@ const reported={...rows[1],key:'MEGA:99901:541449020000073180:ELEC',mega_id:'999
 await imp([reported],'2026-10-26','report','matching-signed-sale');
 await asUser(encoder);portal=(await db.query('select be_production_read() data')).rows[0].data;
 const reconciled=portal.contracts.filter(c=>c.mega_id==='99901');assert.equal(reconciled.length,1);assert.equal(reconciled[0].status_class,'Effectif');assert.equal(reconciled[0].owner_id,encoder);assert.equal(reconciled[0].email,sale.email);assert.equal(reconciled[0].entry_id,saleId);
+// Entries without MEGA identifiers are linked only on unique name, phone, energy, centre and agent.
+const energyProduct=(await db.query("select id from be_products where kind='energy' and supplier='MEGA' limit 1")).rows[0].id;
+const withoutId={...sale,mega_id:'',ean:'',contract_reference:'',product_id:energyProduct,first_name:'Benoit',last_name:'Unique',phone:'0470123456',submission_id:'10000000-0000-4000-8000-000000000021',comment:''};
+const anonymousId=(await db.query('select be_encode_sale($1::jsonb) id',[JSON.stringify(withoutId)])).rows[0].id;
+await asUser(admin);
+const anonymousReport={...reported,key:'MEGA:99990:541449020000073198:ELEC',mega_id:'99990',ean:'541449020000073198',client:'Unique Benoit',phone:'+32 470 12 34 56'};
+await imp([anonymousReport],'2026-10-27','report','match-no-id');
+await asUser(encoder);portal=(await db.query('select be_production_read() data')).rows[0].data;
+assert.equal(portal.contracts.find(c=>c.entry_id===anonymousId)?.status_class,'Effectif');
+assert.ok(portal.contracts.every(c=>c.owner_id===encoder));
+assert.ok(portal.history.every(h=>portal.contracts.some(c=>c.key===h.contract_key)));
+await asUser(outsider);assert.ok(!(await db.query('select be_production_read() data')).rows[0].data.contracts.some(c=>c.entry_id===anonymousId));
 await asUser(admin);await db.query('update be_access set is_active=false where user_id=$1',[encoder]);
 await asUser(encoder);assert.equal((await db.query('select * from be_sale_entries')).rows.length,0);assert.equal((await db.query('select * from be_client_comments')).rows.length,0);await assert.rejects(()=>db.query('select be_encode_sale($1::jsonb)',[JSON.stringify({...sale,mega_id:'99903'})]));
 console.log('PASS: signed encoding, immutable server-assigned ownership, centre and agent isolation, comment revisions and author protection, inactive denial, duplicate-free MEGA reconciliation.');
@@ -136,7 +148,7 @@ const noId={...sale,mega_id:'',ean:'',contract_reference:'',energy:'',product_id
 const blankOne=(await db.query('select be_encode_sale($1::jsonb) id',[JSON.stringify(noId)])).rows[0].id;
 await assert.rejects(()=>db.query('select be_encode_sale($1::jsonb)',[JSON.stringify(noId)]));
 const blankTwo=(await db.query('select be_encode_sale($1::jsonb) id',[JSON.stringify({...noId,last_name:'Autre client',submission_id:'10000000-0000-4000-8000-000000000012'})])).rows[0].id;
-let blankRows=(await db.query("select * from be_sale_entries where mega_id is null")).rows;
+let blankRows=(await db.query("select * from be_sale_entries where mega_id is null and energy='Telecom'")).rows;
 assert.equal(blankRows.length,2);assert.ok(blankRows.every(r=>r.energy==='Telecom'&&r.product==='Mega telecom'&&r.status==='Signé'));
 portal=(await db.query('select be_production_read() data')).rows[0].data;
 let blankCards=portal.contracts.filter(c=>[blankOne,blankTwo].includes(c.entry_id));assert.equal(blankCards.length,2);assert.notEqual(blankCards[0].client_id,blankCards[1].client_id);assert.ok(blankCards.every(c=>c.mega_id===''&&c.product_kind==='telecom'));
