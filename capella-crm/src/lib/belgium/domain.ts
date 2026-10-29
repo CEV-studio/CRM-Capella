@@ -20,7 +20,7 @@ export function dateValue(v:unknown):string|null {
  throw new Error(`Date non reconnue : ${s}`);
 }
 export function money(v:unknown){if(v===null||v===undefined||v==='')throw new Error('Montant manquant');const n=typeof v==='number'?v:Number(text(v).replace(/[\s€\u202f]/g,'').replace(',','.'));if(!Number.isFinite(n))throw new Error(`Montant invalide : ${v}`);return Math.round(n*100);}
-export function classify(s:string){const n=norm(s);return n.includes('resili')?'Résilié':n.includes('annul')?'Annulé':n.includes('rejet')?'Rejeté':n==='incomplete'?'Incomplet':n==='contrateffectif'?'Effectif':n.includes('salledattente')?'Salle d’attente':n.includes('attente')&&n.includes('valid')?'En attente':'En cours';}
+export function classify(s:string){const n=norm(s);return n.includes('resili')||n==='contrattermine'?'Résilié':n.includes('annul')?'Annulé':n.includes('rejet')?'Rejeté':n==='incomplete'?'Incomplet':n==='contrateffectif'?'Effectif':n.includes('salledattente')?'Salle d’attente':n.includes('attente')&&n.includes('valid')?'En attente':'En cours';}
 export function statusLabel(value:string){return value==='En attente'||classify(value)==='En attente'?'En attente de signature client':value;}
 export function addMonths(s:string,n:number){const d=new Date(s+'T00:00:00Z');const day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+n);const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return d.toISOString().slice(0,10);}
 export const energyCode=(energy:unknown)=>norm(energy)==='gaz'?'GAZ':'ELEC';
