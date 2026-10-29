@@ -74,7 +74,7 @@ export function validateQualityAnswers(value: unknown, questions:readonly Qualit
     const raw=answers[String(q.id)];
     if (!raw || typeof raw!=="object" || Array.isArray(raw)) return false;
     const a=raw as QualityAnswer;
-    if (!["score","grave","na"].includes(a.kind) || typeof a.comment!=="string" || typeof a.reason!=="string" || a.comment.length>3000 || a.reason.length>2000) return false;
+    if (!["score","grave","na"].includes(a.kind) || typeof a.comment!=="string" || typeof a.reason!=="string") return false;
     if (a.kind === "grave") { if (!q.grave || a.score !== null || !a.comment?.trim()) return false; }
     else if (a.kind === "na") { if (!naQuestionIds.includes(q.id) || a.score !== null || !a.reason?.trim()) return false; }
     else if (!Number.isInteger(a.score) || a.score! < 0 || a.score! > 4) return false;
