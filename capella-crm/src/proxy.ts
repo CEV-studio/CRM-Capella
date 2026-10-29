@@ -62,7 +62,7 @@ export default async function proxy(request: NextRequest) {
     if(['qualite','be_centre','be_agent'].includes(profile?.role||'')){
       const qualityRoute = profile?.role === 'qualite' &&
         (path === '/qualite' || path.startsWith('/qualite/') || path === '/api/qualite');
-      const allowed=qualityRoute || path==="/belgique"&&(request.method==="GET"||request.method==="POST") || profile?.role==='be_agent'&&path==='/belgique/encoder'&&(request.method==='GET'||request.method==='POST') || path==="/changer-mot-de-passe" || path==="/deconnexion";
+      const allowed=qualityRoute || path==="/belgique"&&(request.method==="GET"||request.method==="POST") || path==="/api/belgique/clients/export"&&request.method==="GET" || profile?.role==='be_agent'&&path==='/belgique/encoder'&&(request.method==='GET'||request.method==='POST') || path==="/changer-mot-de-passe" || path==="/deconnexion";
       if(!allowed){
         if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});
         const url=request.nextUrl.clone();url.pathname=profile?.role === 'qualite' ? '/qualite' : '/belgique';url.search="";return NextResponse.redirect(url);
