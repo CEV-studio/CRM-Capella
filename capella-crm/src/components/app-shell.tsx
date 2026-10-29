@@ -32,6 +32,7 @@ const PARTNER_NAV = [
   ]),
 ];
 const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/ventes",label:"Appels à contrôler",icon:FileCheck2,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>p.role==='be_agent'}])];
+const AGENT_NAV = [section("Mes ventes", "/belgique?tab=clients", Users, [{ href: "/belgique?tab=clients", label: "Mes ventes", icon: Users }, { href: "/belgique/encoder", label: "Encoder une vente", icon: FileCheck2 }])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
   section("Suivi commercial", "/journee", Users, [
@@ -122,13 +123,13 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   const gere = peutGererLocal(profile);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const visible = (i: NavItem) => (!i.adminOnly || profile.role === "admin") && (!i.needs || i.needs(profile));
-  const navigation = ['qualite','be_centre','be_agent'].includes(profile.role) ? QUALITY_NAV : profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? ADMIN_NAV : COMMERCIAL_NAV;
+  const navigation = profile.role === 'be_agent' ? AGENT_NAV : ['qualite','be_centre'].includes(profile.role) ? QUALITY_NAV : profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? ADMIN_NAV : COMMERCIAL_NAV;
   const sections = navigation.filter(s => s.items.some(visible));
   const toggle = (title: string, defaultOpen: boolean) => setOpenSections(current => ({ ...current, [title]: !(current[title] ?? defaultOpen) }));
 
   return <div className="crm-shell flex min-h-screen bg-[#f6f8fb]">
     <aside className="hidden w-64 shrink-0 flex-col border-r border-navy-100 bg-[#f6f8fb] text-navy-900 md:flex">
-      <Link href="/" className="flex justify-center border-b border-navy-100 bg-white px-5 py-5" aria-label="Accueil Capella Energy">
+      <Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="flex justify-center border-b border-navy-100 bg-white px-5 py-5" aria-label="Accueil Capella Energy">
         <Logotype className="w-[190px]" />
       </Link>
       <nav className="scroll-slim flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -160,7 +161,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
     </aside>
 
     <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between border-b border-navy-100 bg-[#f6f8fb] px-4 py-2.5 md:hidden">
-      <Link href="/"><Logotype className="w-36" /></Link>
+      <Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"}><Logotype className="w-36" /></Link>
       <Link href="/deconnexion" prefetch={false} className="inline-flex items-center gap-1.5 text-xs text-navy-600"><LogOut size={14} /> Quitter</Link>
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
