@@ -47,40 +47,28 @@ const moneyCompact = (value: number) => new Intl.NumberFormat("fr-FR", {
 }).format(value);
 
 function Mensuel({ mois }: { mois: MoisStats[] }) {
-  const maximum = Math.max(1, ...mois.map((row) => row.france + row.belgique));
-  return <div role="img" aria-label="Chiffre d’affaires mensuel signé France et MEGA Belgique">
-    <div className="flex h-56 items-end gap-2 sm:gap-3">
-      {mois.map((row) => {
-        const franceHeight = (row.france / maximum) * 100;
-        const belgiqueHeight = (row.belgique / maximum) * 100;
-        return <div key={row.mois} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
-          <span className="truncate text-[9px] font-medium text-grey-brand sm:text-[10px]" title={fmtEuros(row.france + row.belgique)}>
-            {(row.france + row.belgique) ? moneyCompact(row.france + row.belgique) : ""}
-          </span>
-          <div className="flex h-36 w-full max-w-12 items-end overflow-hidden rounded-t-md bg-navy-50" title={`France : ${fmtEuros(row.france)} · Belgique : ${fmtEuros(row.belgique)}`}>
-            <div className="flex h-full w-full flex-col justify-end">
-              <div className="w-full bg-navy-800" style={{ height: `${franceHeight}%` }} />
-              <div className="w-full bg-star-500" style={{ height: `${belgiqueHeight}%` }} />
-            </div>
-          </div>
-          <span className="text-[9px] font-medium uppercase text-grey-brand sm:text-[10px]">{MOIS[row.mois - 1].slice(0, 3)}</span>
-        </div>;
-      })}
-    </div>
-    <div className="mt-5 flex flex-wrap gap-5 border-t border-navy-100 pt-4 text-xs text-navy-600">
-      <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm bg-navy-800" /> Courtage pro France</span>
-      <span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm bg-star-500" /> MEGA énergie Belgique</span>
-    </div>
+  const max = Math.max(1, ...mois.map(row => row.france + row.belgique));
+  const width = 1000, height = 210, left = 38, right = 16, top = 14, bottom = 30;
+  const x = (i: number) => left + i * (width - left - right) / Math.max(1, mois.length - 1);
+  const y = (value: number) => top + (height - top - bottom) * (1 - value / max);
+  const points = mois.map((row, i) => `${x(i)},${y(row.france + row.belgique)}`).join(" ");
+  return <div>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Évolution mensuelle du chiffre d’affaires France et Belgique" className="h-52 w-full overflow-visible" preserveAspectRatio="none">
+      {[0, .25, .5, .75, 1].map(f => <line key={f} x1={left} x2={width-right} y1={y(max*f)} y2={y(max*f)} stroke="#dce5ee" strokeDasharray="4 5" />)}
+      <polyline points={points} fill="none" stroke="#087DD1" strokeWidth="3" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      {mois.map((row,i) => <g key={row.mois}><circle cx={x(i)} cy={y(row.france + row.belgique)} r="4" fill="#009B72"><title>{`${MOIS[row.mois - 1]} : ${fmtEuros(row.france + row.belgique)} · France : ${fmtEuros(row.france)} · Belgique : ${fmtEuros(row.belgique)}`}</title></circle><text x={x(i)} y={height-4} textAnchor="middle" fill="#60758A" fontSize="12">{MOIS[row.mois - 1].slice(0, 3)}</text></g>)}
+    </svg>
+    <div className="mt-3 flex flex-wrap gap-5 border-t border-navy-100 pt-4 text-xs text-navy-600"><span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-sky-capella-500" /> France + Belgique</span></div>
   </div>;
 }
 
 function Indicateur({ label, value, note, icon: Icon }: { label: string; value: string; note: string; icon: typeof Euro }) {
-  return <article className="min-h-36 rounded-2xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)]">
+  return <article className="min-h-28 rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)]">
     <div className="flex items-start justify-between gap-3">
       <div className="text-sm font-medium text-grey-brand">{label}</div>
       <Icon size={18} strokeWidth={1.7} className="shrink-0 text-energy-500" aria-hidden />
     </div>
-    <div className="mt-3 font-display text-3xl font-semibold tracking-tight text-navy-900">{value}</div>
+    <div className="mt-3 font-display text-2xl font-semibold tracking-tight text-navy-900">{value}</div>
     
   </article>;
 }
@@ -107,7 +95,7 @@ export function AdminHome(props: AdminHomeProps) {
       
     </section>
 
-    <section aria-label="Chiffre d’affaires mensuel" className="mb-10 rounded-2xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] sm:p-6">
+    <section aria-label="Chiffre d’affaires mensuel" className="mb-10 rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="font-display text-lg font-semibold text-navy-900">Évolution du chiffre d’affaires</h2><p className="mt-1 text-sm text-grey-brand">Tous les comptes · mois par mois · {props.annee}</p></div>
         <span className="inline-flex items-center gap-2 text-xs text-grey-brand"><BarChart3 size={15} /> CA signé / validé + prévision MEGA</span>
@@ -120,10 +108,10 @@ export function AdminHome(props: AdminHomeProps) {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((category) => {
           const Icon = category.icon;
-          return <article key={category.title} className="rounded-2xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] transition-all hover:-translate-y-0.5 hover:border-sky-capella-200 hover:shadow-[0_10px_26px_rgba(7,30,61,0.10)]">
+          return <article key={category.title} className="rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] transition-all hover:-translate-y-0.5 hover:border-sky-capella-200 hover:shadow-[0_10px_26px_rgba(7,30,61,0.10)]">
             <Link href={category.href} className="group flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-capella-50 text-sky-capella-600"><Icon size={21} strokeWidth={1.7} /></span>
-              <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2 font-display font-semibold text-navy-900">{category.title}<ArrowUpRight size={16} className="text-navy-300 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span><span className="mt-1 block text-sm leading-5 text-grey-brand">{category.description}</span></span>
+              <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2 font-display font-semibold text-navy-900">{category.title}<ArrowUpRight size={16} className="text-navy-300 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span></span>
             </Link>
             <ul className="mt-4 space-y-0.5 border-t border-navy-100 pt-3">
               {category.links.map(([href, label]) => <li key={href}><Link href={href} className="block rounded-lg px-2 py-2 text-sm text-navy-600 transition-colors hover:bg-navy-50 hover:text-neutral-950">{label}</Link></li>)}

@@ -128,8 +128,8 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   const toggle = (title: string, defaultOpen: boolean) => setOpenSections(current => ({ ...current, [title]: !(current[title] ?? defaultOpen) }));
 
   return <div className="crm-shell flex min-h-screen bg-surface">
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-navy-900 text-white md:flex">
-      <Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="flex justify-center border-b border-white/10 bg-white px-5 py-5" aria-label="Accueil Capella Energy">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-navy-100 bg-[#f8fafc] text-navy-700 md:flex">
+      <Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="flex justify-center border-b border-navy-100 bg-white px-5 py-5" aria-label="Accueil Capella Energy">
         <Logotype className="w-[190px]" />
       </Link>
       <nav className="scroll-slim flex-1 space-y-1 overflow-y-auto px-3 py-4">
@@ -139,23 +139,23 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
           const isActive=sectionActive(pathname,s);
           const isOpen=openSections[s.titre]??isActive;
           const Icon=s.icon;
-          const heading=<><Icon size={17} strokeWidth={1.8} className="shrink-0 text-sky-capella-300" aria-hidden/><span className="min-w-0 flex-1 text-left leading-5">{s.titre}</span>{isActive&&<span className="h-2 w-2 shrink-0 rounded-full bg-star-400" aria-label="Section actuelle"/>}</>;
+          const heading=<><Icon size={17} strokeWidth={1.8} className="shrink-0 text-navy-500" aria-hidden/><span className="min-w-0 flex-1 text-left leading-5">{s.titre}</span>{isActive&&<span className="h-2 w-2 shrink-0 rounded-full bg-star-400" aria-label="Section actuelle"/>}</>;
           return <div key={s.titre}>
-            {grouped?<button type="button" onClick={()=>toggle(s.titre,isActive)} aria-expanded={isOpen} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white ${isActive?'bg-sky-capella-600':'hover:bg-white/10'}`}>{heading}<ChevronDown size={15} className={`shrink-0 text-navy-200 ${isOpen?'rotate-180':''}`}/></button>:<Link href={items[0].href} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white ${isActive?'bg-sky-capella-600':'hover:bg-white/10'}`}>{heading}</Link>}
-            {grouped&&isOpen&&<ul className="mb-2 ml-5 mt-1 space-y-0.5 border-l border-navy-600 pl-3">
+            {grouped?<button type="button" onClick={()=>toggle(s.titre,isActive)} aria-expanded={isOpen} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${isActive?'bg-white text-navy-900 shadow-sm ring-1 ring-navy-100':'text-navy-600 hover:bg-white hover:text-navy-900'}`}>{heading}<ChevronDown size={15} className={`shrink-0 text-navy-200 ${isOpen?'rotate-180':''}`}/></button>:<Link href={items[0].href} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${isActive?'bg-white text-navy-900 shadow-sm ring-1 ring-navy-100':'text-navy-600 hover:bg-white hover:text-navy-900'}`}>{heading}</Link>}
+            {grouped&&isOpen&&<ul className="mb-2 ml-5 mt-1 space-y-0.5 border-l border-navy-200 pl-3">
               {items.map(item=>{
                 const itemActive=actif(pathname,item.href),ItemIcon=item.icon;
-                return <li key={item.href}><Link href={item.href} aria-current={itemActive?'page':undefined} className={`flex items-start gap-2 rounded-md px-2.5 py-2 text-[13px] transition-colors ${itemActive?'bg-white/15 font-semibold text-white':'text-navy-200 hover:bg-white/10 hover:text-white'}`}><ItemIcon size={14} className="mt-0.5 shrink-0 text-sky-capella-300"/><span className="min-w-0 flex-1 whitespace-normal leading-5">{item.label}</span>{itemActive&&<ChevronRight size={13} className="mt-1 shrink-0 text-star-300"/>}</Link></li>;
+                return <li key={item.href}><Link href={item.href} aria-current={itemActive?'page':undefined} className={`flex items-start gap-2 rounded-md px-2.5 py-2 text-[13px] transition-colors ${itemActive?'bg-sky-capella-50 font-semibold text-sky-capella-700':'text-navy-600 hover:bg-white hover:text-navy-900'}`}><ItemIcon size={14} className="mt-0.5 shrink-0 text-navy-400"/><span className="min-w-0 flex-1 whitespace-normal leading-5">{item.label}</span>{itemActive&&<ChevronRight size={13} className="mt-1 shrink-0 text-star-300"/>}</Link></li>;
               })}
             </ul>}
           </div>;
         })}
       </nav>
-      <div className="border-t border-white/10 px-4 py-4">
-        <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
+      <div className="border-t border-navy-100 px-4 py-4">
+        <div className="flex items-center gap-3 rounded-xl border border-navy-100 bg-white p-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-energy-500 font-display text-sm font-semibold text-white">{profile.full_name.slice(0, 1).toUpperCase()}</div>
-          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-white">{profile.full_name}</div><div className="truncate text-[11px] text-navy-200">{profile.role === "be_centre" ? "Centre Belgique" : profile.role === "be_agent" ? "Agent Belgique" : profile.role === "qualite" ? "Responsable qualité" : profile.role === "admin" ? "Administrateur" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
-          <Link href="/deconnexion" prefetch={false} className="rounded-lg p-1.5 text-navy-200 hover:bg-white/10 hover:text-white" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
+          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-navy-500">{profile.role === "be_centre" ? "Centre Belgique" : profile.role === "be_agent" ? "Agent Belgique" : profile.role === "qualite" ? "Responsable qualité" : profile.role === "admin" ? "Administrateur" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
+          <Link href="/deconnexion" prefetch={false} className="rounded-lg p-1.5 text-navy-500 hover:bg-navy-50 hover:text-navy-900" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
         </div>
       </div>
     </aside>

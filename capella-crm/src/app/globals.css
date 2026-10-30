@@ -154,3 +154,9 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 @media (prefers-reduced-motion: reduce) {
   .crm-shell *, .crm-shell *::before, .crm-shell *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Espace de travail clair, compact et graphique. */
+.crm-shell { background: #fff; }
+.crm-shell main table thead { background: #f8fafc !important; }
+.crm-shell main table thead th { font-weight: 600; }
+.crm-shell main tbody tr:hover { background: #f2f8fd; }
