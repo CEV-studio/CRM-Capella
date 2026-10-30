@@ -75,10 +75,10 @@ function Mensuel({ mois }: { mois: MoisStats[] }) {
 }
 
 function Indicateur({ label, value, note, icon: Icon }: { label: string; value: string; note: string; icon: typeof Euro }) {
-  return <article className="min-h-36 border border-navy-100 bg-white p-5">
+  return <article className="min-h-36 rounded-2xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)]">
     <div className="flex items-start justify-between gap-3">
       <div className="text-sm font-medium text-grey-brand">{label}</div>
-      <Icon size={18} strokeWidth={1.7} className="shrink-0 text-grey-brand" aria-hidden />
+      <Icon size={18} strokeWidth={1.7} className="shrink-0 text-energy-500" aria-hidden />
     </div>
     <div className="mt-3 font-display text-3xl font-semibold tracking-tight text-navy-900">{value}</div>
     
@@ -93,7 +93,7 @@ export function AdminHome(props: AdminHomeProps) {
         <h1 className="font-display text-3xl font-semibold tracking-tight text-navy-900">Bonjour {props.prenom}</h1>
         <p className="mt-2 text-sm text-grey-brand">Toute l’activité de Capella · année {props.annee}</p>
       </div>
-      <span className="inline-flex items-center gap-2 border border-navy-100 bg-white px-3 py-2 text-xs font-medium text-navy-600"><CheckCircle2 size={15} /> Vue administrateur complète</span>
+      <span className="inline-flex items-center gap-2 rounded-full border border-navy-100 bg-white px-3 py-2 text-xs font-medium text-navy-600"><CheckCircle2 size={15} /> Vue administrateur complète</span>
     </header>
 
     <section aria-label="Indicateurs globaux" className="mb-10">
@@ -107,7 +107,7 @@ export function AdminHome(props: AdminHomeProps) {
       
     </section>
 
-    <section aria-label="Chiffre d’affaires mensuel" className="mb-10 border border-navy-100 bg-white p-5 sm:p-6">
+    <section aria-label="Chiffre d’affaires mensuel" className="mb-10 rounded-2xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="font-display text-lg font-semibold text-navy-900">Évolution du chiffre d’affaires</h2><p className="mt-1 text-sm text-grey-brand">Tous les comptes · mois par mois · {props.annee}</p></div>
         <span className="inline-flex items-center gap-2 text-xs text-grey-brand"><BarChart3 size={15} /> CA signé / validé + prévision MEGA</span>
@@ -120,13 +120,13 @@ export function AdminHome(props: AdminHomeProps) {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((category) => {
           const Icon = category.icon;
-          return <article key={category.title} className="border border-navy-100 bg-white p-5 transition-colors hover:border-navy-300">
+          return <article key={category.title} className="rounded-2xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] transition-all hover:-translate-y-0.5 hover:border-sky-capella-200 hover:shadow-[0_10px_26px_rgba(7,30,61,0.10)]">
             <Link href={category.href} className="group flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center bg-navy-50 text-navy-800"><Icon size={21} strokeWidth={1.7} /></span>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-capella-50 text-sky-capella-600"><Icon size={21} strokeWidth={1.7} /></span>
               <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2 font-display font-semibold text-navy-900">{category.title}<ArrowUpRight size={16} className="text-navy-300 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span><span className="mt-1 block text-sm leading-5 text-grey-brand">{category.description}</span></span>
             </Link>
             <ul className="mt-4 space-y-0.5 border-t border-navy-100 pt-3">
-              {category.links.map(([href, label]) => <li key={href}><Link href={href} className="block px-2 py-2 text-sm text-navy-600 transition-colors hover:bg-navy-50 hover:text-neutral-950">{label}</Link></li>)}
+              {category.links.map(([href, label]) => <li key={href}><Link href={href} className="block rounded-lg px-2 py-2 text-sm text-navy-600 transition-colors hover:bg-navy-50 hover:text-neutral-950">{label}</Link></li>)}
             </ul>
           </article>;
         })}

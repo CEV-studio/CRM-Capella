@@ -6,7 +6,7 @@ export function Card({ className, children }: { className?: string; children: Re
   return (
     <div
       className={cn(
-        "rounded-xl border border-navy-100 bg-white",
+        "rounded-2xl border border-navy-100 bg-white shadow-[0_4px_18px_rgba(7,30,61,0.055)]",
         "transition-colors duration-150",
         className,
       )}
@@ -18,7 +18,7 @@ export function Card({ className, children }: { className?: string; children: Re
 
 export function CardHeader({ title, hint, action }: { title: string; hint?: string; action?: React.ReactNode }) {
   return (
-    <div className="relative flex items-start justify-between gap-4 border-b border-navy-100 bg-navy-50/70 px-5 py-4">
+    <div className="relative flex items-start justify-between gap-4 border-b border-navy-100 rounded-t-2xl bg-white px-5 py-4">
       <span className="absolute inset-y-3 left-0 w-[3px] bg-star-500" aria-hidden />
       <div>
         <h2 className="font-display text-base font-semibold text-navy-800">{title}</h2>
@@ -41,8 +41,8 @@ export function Button({ variant = "primary", className, ...props }: ButtonProps
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold",
-        "transition-colors duration-150 disabled:cursor-not-allowed",
+        "inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold",
+        "transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100",
         styles,
         className,
       )}
@@ -95,7 +95,7 @@ export function StageBadge({ label, color, className }: { label: string; color: 
 /** Tuile KPI : plus de profondeur, sans surcharger de couleur. */
 export function KpiTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <Card className="px-5 py-4">
+    <Card className="px-5 py-5">
       <div className="text-sm font-medium text-grey-brand">{label}</div>
       <div className="tabular mt-3 font-display text-2xl font-semibold text-navy-900">{value}</div>
       

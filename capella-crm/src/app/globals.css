@@ -65,9 +65,9 @@
   color-scheme: light;
   --crm-border: #D8E2EC;
   --crm-border-strong: #CBD8E6;
-  --crm-shadow-sm: none;
-  --crm-shadow-card: none;
-  --crm-shadow-hover: none;
+  --crm-shadow-sm: 0 1px 2px rgba(7, 30, 61, .05);
+  --crm-shadow-card: 0 4px 18px rgba(7, 30, 61, .055);
+  --crm-shadow-hover: 0 10px 26px rgba(7, 30, 61, .10);
   --crm-gradient-navy: #071E3D;
   --crm-gradient-accent: #087DD1;
 }
@@ -115,19 +115,17 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
   border: 1px solid rgba(198, 210, 226, .82);
   border-radius: 1rem;
   background: #fff;
-  box-shadow: none;
+  box-shadow: var(--crm-shadow-card);
 }
 .crm-page-header::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--color-star-500); }
-.crm-table-shell { overflow: hidden; border: 1px solid var(--crm-border); border-radius: var(--radius-card); background: white; box-shadow: none; }
+.crm-table-shell { overflow: hidden; border: 1px solid var(--crm-border); border-radius: var(--radius-card); background: white; box-shadow: var(--crm-shadow-sm); }
 
 /* Flat, compact workspace styling shared across all CRM sections. */
 .crm-shell main > header:not(.crm-page-header) { color: var(--color-navy-800); }
 .crm-shell main table thead { background: var(--color-navy-50) !important; color: var(--color-navy-800) !important; }
 .crm-shell main table thead th { color: var(--color-navy-700) !important; border-bottom: 1px solid var(--crm-border); }
 .crm-shell main table tbody tr:hover { background-color: var(--color-sky-capella-50); }
-.crm-shell main button:not([aria-label*="Replier"]):not([aria-label*="Déplier"]):not([aria-label="Se déconnecter"]) { box-shadow: none; }
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]), .crm-shell main select, .crm-shell main textarea { border-radius: .625rem; }
-.crm-shell .rounded-2xl, .crm-shell .rounded-xl { --tw-shadow: 0 0 #0000; }
 
 /* Align legacy utility colors with the Capella flat palette. */
 .crm-shell .text-neutral-900 { color: var(--color-navy-900) !important; }
@@ -140,8 +138,6 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell .border-neutral-300 { border-color: var(--color-navy-200) !important; }
 .crm-shell .bg-neutral-100 { background-color: var(--color-navy-50) !important; }
 .crm-shell .bg-neutral-200 { background-color: var(--color-sky-capella-100) !important; }
-.crm-shell main [class*="shadow"] { box-shadow: none !important; }
-.crm-shell main .bg-gradient-to-r { background-image: none !important; }
 
 /* Les actions principales passent au vert énergie ; l'ambre reste réservé
    aux créations et aux actions prioritaires explicitement signalées. */
@@ -150,3 +146,11 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell main label.bg-navy-800 { background-color: var(--color-energy-500) !important; }
 .crm-shell main .hover\:bg-navy-700:hover { background-color: var(--color-energy-600) !important; }
 .crm-shell main .border-navy-800 { border-color: var(--color-energy-500) !important; }
+
+/* Shared surfaces and accessible interaction states. */
+.crm-shell main table thead th { font-size: .7rem; letter-spacing: .04em; }
+.crm-shell main tbody tr { border-color: var(--crm-border); }
+.crm-shell main button:focus-visible, .crm-shell main a:focus-visible { outline: 2px solid var(--color-sky-capella-500); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .crm-shell *, .crm-shell *::before, .crm-shell *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+}
