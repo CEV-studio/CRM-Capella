@@ -85,6 +85,7 @@ const ADMIN_NAV = [
   section("Belgique", "/belgique", Building2, [
     { href: "/belgique", label: "Production", icon: Building2 },
     { href: "/belgique?tab=clients", label: "Base clients", icon: Users },
+    { href: "/belgique?tab=agents", label: "KPI agents", icon: BarChart3 },
   ]),
   section("Qualité des ventes", "/qualite", ShieldCheck, [
     { href: "/qualite", label: "Tableau qualité", icon: ShieldCheck },
@@ -107,7 +108,7 @@ function actif(pathname: string, href: string) {
   const [currentPath,currentQuery=""]=pathname.split("?");
   const actual=new URLSearchParams(currentQuery),expected=new URLSearchParams(href.split("?")[1]||"");
   if([...expected].some(([key,value])=>actual.get(key)!==value))return false;
-  if(href==="/belgique"&&actual.get("tab")==="clients")return false;
+  if(href==="/belgique"&&actual.has("tab"))return false;
   pathname=currentPath;
   if (cleanHref === "/") return pathname === "/";
   return pathname === cleanHref || pathname.startsWith(`${cleanHref}/`);
