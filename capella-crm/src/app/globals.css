@@ -6,39 +6,48 @@
    ================================================================ */
 
 @theme {
-  --color-navy-50:  #F2F5FA;
-  --color-navy-100: #E3EAF3;
-  --color-navy-200: #C6D2E2;
-  --color-navy-300: #97A8C1;
-  --color-navy-400: #60789A;
-  --color-navy-500: #375374;
-  --color-navy-600: #203B5D;
-  --color-navy-700: #152D4B;
-  --color-navy-800: #0D1B2E;
-  --color-navy-900: #08111E;
+  --color-navy-50:  #F1F5F9;
+  --color-navy-100: #E2EAF2;
+  --color-navy-200: #CBD8E6;
+  --color-navy-300: #9FB2C6;
+  --color-navy-400: #7088A0;
+  --color-navy-500: #49657F;
+  --color-navy-600: #294B69;
+  --color-navy-700: #163A61;
+  --color-navy-800: #10243E;
+  --color-navy-900: #071E3D;
 
-  --color-star-50:  #FFF5F0;
-  --color-star-100: #FFE7DB;
-  --color-star-200: #FFC8AF;
-  --color-star-300: #F9A27F;
-  --color-star-400: #F17D51;
-  --color-star-500: #E86030;
-  --color-star-600: #CB4A1E;
-  --color-star-700: #A63A16;
-  --color-star-800: #7E2C11;
-  --color-star-900: #5A1F0C;
+  --color-star-50:  #FFF7E6;
+  --color-star-100: #FFEDC2;
+  --color-star-200: #FFD27A;
+  --color-star-300: #FFB833;
+  --color-star-400: #F59E0B;
+  --color-star-500: #F59E0B;
+  --color-star-600: #EA6A00;
+  --color-star-700: #C75300;
+  --color-star-800: #994000;
+  --color-star-900: #713000;
 
-  --color-sky-capella-50: #F1F8FF;
-  --color-sky-capella-100: #DFEEFC;
-  --color-sky-capella-200: #BDDDF7;
-  --color-sky-capella-300: #8EC4EC;
-  --color-sky-capella-400: #67AFE2;
-  --color-sky-capella-500: #4F9BD8;
-  --color-sky-capella-600: #347FBC;
-  --color-sky-capella-700: #24679E;
+  --color-sky-capella-50: #EAF6FF;
+  --color-sky-capella-100: #CFEAFF;
+  --color-sky-capella-200: #9CD5FA;
+  --color-sky-capella-300: #61BAF0;
+  --color-sky-capella-400: #279DE3;
+  --color-sky-capella-500: #087DD1;
+  --color-sky-capella-600: #0669B2;
+  --color-sky-capella-700: #07578F;
 
-  --color-grey-brand: #7D899B;
-  --color-surface: #F6F8FB;
+  --color-energy-50:  #E8FFF7;
+  --color-energy-100: #C7F8E7;
+  --color-energy-200: #8EE9CE;
+  --color-energy-300: #4DD5AE;
+  --color-energy-400: #16B98C;
+  --color-energy-500: #009B72;
+  --color-energy-600: #007A59;
+  --color-energy-700: #006148;
+
+  --color-grey-brand: #60758A;
+  --color-surface: #F1F5F9;
   --color-surface-raised: #FFFFFF;
 
   --color-status-signe:   #C6EFCE;
@@ -54,13 +63,13 @@
 
 :root {
   color-scheme: light;
-  --crm-border: #DDE5F0;
-  --crm-border-strong: #C6D2E2;
+  --crm-border: #D8E2EC;
+  --crm-border-strong: #CBD8E6;
   --crm-shadow-sm: none;
   --crm-shadow-card: none;
   --crm-shadow-hover: none;
-  --crm-gradient-navy: #0D1B2E;
-  --crm-gradient-accent: #24679E;
+  --crm-gradient-navy: #071E3D;
+  --crm-gradient-accent: #087DD1;
 }
 
 body {
@@ -93,7 +102,7 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell main textarea:hover { border-color: var(--color-navy-300); }
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]):focus,
 .crm-shell main select:focus,
-.crm-shell main textarea:focus { border-color: var(--color-star-400); box-shadow: 0 0 0 3px rgba(232, 96, 48, .10); outline: none; }
+.crm-shell main textarea:focus { border-color: var(--color-sky-capella-500); box-shadow: 0 0 0 3px rgba(8, 125, 209, .14); outline: none; }
 .crm-shell main table { border-spacing: 0; }
 .crm-shell main tbody tr { transition: background-color .14s ease, box-shadow .14s ease; }
 .crm-shell main tbody tr:hover { background-color: rgba(223, 238, 252, .38); }
@@ -133,3 +142,11 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell .bg-neutral-200 { background-color: var(--color-sky-capella-100) !important; }
 .crm-shell main [class*="shadow"] { box-shadow: none !important; }
 .crm-shell main .bg-gradient-to-r { background-image: none !important; }
+
+/* Les actions principales passent au vert énergie ; l'ambre reste réservé
+   aux créations et aux actions prioritaires explicitement signalées. */
+.crm-shell main button.bg-navy-800,
+.crm-shell main a.bg-navy-800,
+.crm-shell main label.bg-navy-800 { background-color: var(--color-energy-500) !important; }
+.crm-shell main .hover\:bg-navy-700:hover { background-color: var(--color-energy-600) !important; }
+.crm-shell main .border-navy-800 { border-color: var(--color-energy-500) !important; }
