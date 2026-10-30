@@ -22,6 +22,10 @@ export async function creerCentre(_prev:ActionResult|null,form:FormData):Promise
   if(kind==='agent'&&(!agentRef||!/^[a-z0-9._-]{2,80}$/.test(agentRef)||agentRef==='non'))return {ok:false,message:'Identifiant agent MEGA requis (lettres, chiffres, point, tiret).'};
   if(kind==='agent'&&!names.includes(centre))return {ok:false,message:'Sélectionne un centre existant.'};
   if(agentRef==='houssamterazi'&&centre!=='Cimsourse')return {ok:false,message:'Houssam Terazi est rattaché à Cimsourse.'};
+  if(agentRef){
+   const {error:rosterError}=await db.from('be_sales_agents').upsert({centre,agent_ref:agentRef,display_name:name},{onConflict:'centre,agent_ref',ignoreDuplicates:true});
+   if(rosterError)return {ok:false,message:'Référencement de l’agent impossible.'};
+  }
   const motDePasse=password();await provisionCentre(db,{name,email,centre,password:motDePasse,agentRef});
   revalidatePath('/admin/centres');
   return {ok:true,message:`Compte créé : ${email} · ${centre}`,motDePasse};
