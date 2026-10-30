@@ -26,7 +26,7 @@ export async function PartnerHome({ prenom }: { prenom: string }) {
     { title: "Portefeuille clients", href: "/partenaires/portefeuille", icon: Building2 },
   ];
   return <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-9">
-    <header className="mb-8"><div className="mb-2 text-xs font-semibold uppercase tracking-[.13em] text-grey-brand">Tableau de bord apporteur</div><h1 className="font-display text-3xl font-semibold tracking-tight text-navy-900">Bonjour {prenom}</h1></header>
+    <header className="mb-8"><div className="mb-2 text-xs font-semibold uppercase tracking-[.13em] text-grey-brand">Tableau de bord apporteur</div><h1 className="font-display text-2xl font-semibold tracking-tight text-navy-900">Bonjour {prenom}</h1></header>
     <section aria-label="Mes indicateurs" className="mb-9">
       <h2 className="mb-3 font-display text-lg font-semibold text-navy-900">Mes chiffres clés</h2>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -35,12 +35,12 @@ export async function PartnerHome({ prenom }: { prenom: string }) {
           { label: "ACD signées", value: fmtNombre(liste.filter((d) => d.acd_status === "signee").length), icon: CheckCircle2, note: "Dossiers prêts pour cotation" },
           { label: "Cotations demandées", value: fmtNombre(quotes.length), icon: BriefcaseBusiness, note: "Toutes périodes" },
           { label: "Commissions signées", value: fmtEuros(commission), icon: CircleDollarSign, note: "Cotations avec date de signature" },
-        ].map(({ label, value, icon: Icon }) => <article key={label} className="border border-navy-100 bg-white p-5"><div className="flex items-center justify-between gap-3 text-sm text-grey-brand"><span>{label}</span><Icon size={17} className="text-grey-brand" /></div><div className="mt-3 font-display text-3xl font-semibold text-navy-900">{value}</div></article>)}
+        ].map(({ label, value, icon: Icon }) => <article key={label} className="rounded-xl border border-navy-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3 text-sm text-grey-brand"><span>{label}</span><Icon size={17} className="text-energy-500" /></div><div className="mt-3 font-display text-2xl font-semibold text-navy-900">{value}</div></article>)}
       </div>
     </section>
     <section aria-label="Mes catégories">
       <h2 className="mb-3 font-display text-lg font-semibold text-navy-900">Accéder à une section</h2>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{categories.map(({ title, href, icon: Icon }) => <Link key={href} href={href} className="group border border-navy-100 bg-white p-5 transition-colors hover:border-neutral-400"><div className="flex items-start gap-3"><span className="flex h-11 w-11 items-center justify-center bg-sky-capella-50 text-navy-800"><Icon size={21} /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between font-display font-semibold text-navy-900">{title}<ArrowUpRight size={16} className="text-neutral-400 group-hover:text-navy-900" /></span></span></div></Link>)}</div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{categories.map(({ title, href, icon: Icon }) => <Link key={href} href={href} className="group rounded-xl border border-navy-100 bg-white p-5 shadow-sm transition-colors hover:border-sky-capella-300"><div className="flex items-start gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-capella-50 text-sky-capella-600"><Icon size={21} /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between font-display font-semibold text-navy-900">{title}<ArrowUpRight size={16} className="text-neutral-400 group-hover:text-navy-900" /></span></span></div></Link>)}</div>
     </section>
   </main>;
 }

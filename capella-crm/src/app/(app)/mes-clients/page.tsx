@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { Building2, CalendarCheck2, Gauge, Search, WalletCards } from "lucide-react";
+import { Building2, Search } from "lucide-react";
+import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fmtDate, fmtEuros } from "@/lib/format";
@@ -102,32 +102,26 @@ export default async function MesClientsPage({ searchParams }: { searchParams: P
           <p className="mt-3 text-sm font-semibold text-navy-700">Aucun client signé pour le moment.</p>
         </div>
       ) : (
-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {clients.map((client) => {
-            const dossiers = affairesParClient.get(client.id) ?? [];
-            const compteurs = compteursParClient.get(client.id) ?? [];
-            const total = dossiers.reduce((s, a) => s + Number(a.commission ?? 0), 0);
-            const derniereSignature = dossiers.map((a) => a.date_signature).filter((d): d is string => Boolean(d)).sort().at(-1) ?? null;
-            const energies = [...new Set(compteurs.map((c) => c.type_energie === "gaz" ? "Gaz" : "Électricité"))];
-            const commercial = commerciaux.get(dossiers[0]?.commercial_id) ?? "—";
-            return (
-              <Link key={client.id} href={`/prospection/${client.id}`} className="group rounded-xl border border-navy-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-star-300 hover:shadow-md">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="truncate font-semibold text-navy-800 group-hover:text-star-600">{libelle(client)}</h2>
-                    <p className="mt-0.5 text-xs text-grey-brand">{client.ref} · {commercial}</p>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-800">Client signé</span>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-lg bg-navy-50 p-3"><div className="flex items-center gap-1.5 text-grey-brand"><WalletCards size={13}/>Affaires</div><div className="mt-1 font-bold text-navy-800">{dossiers.length} · {fmtEuros(total)}</div></div>
-                  <div className="rounded-lg bg-sky-capella-50 p-3"><div className="flex items-center gap-1.5 text-grey-brand"><Gauge size={13}/>Compteurs</div><div className="mt-1 font-bold text-navy-800">{compteurs.length} · {energies.join(" + ") || "—"}</div></div>
-                </div>
-                {derniereSignature ? <div className="mt-3 flex items-center gap-1.5 text-xs text-green-700"><CalendarCheck2 size={14}/>Dernière signature : {fmtDate(derniereSignature)}</div> : null}
-                {client.mail ? <div className="mt-2 truncate text-xs text-grey-brand">{client.mail}</div> : null}
-              </Link>
-            );
-          })}
+        <section className="overflow-x-auto rounded-xl border border-navy-100 bg-white" aria-label="Liste des clients">
+          <table className="w-full min-w-[800px] text-left text-sm">
+            <thead><tr>{["Client", "Commercial", "Affaires", "Compteurs", "Dernière signature", "Statut"].map(label => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead>
+            <tbody className="divide-y divide-navy-100">
+              {clients.map(client => {
+                const dossiers = affairesParClient.get(client.id) ?? [];
+                const compteurs = compteursParClient.get(client.id) ?? [];
+                const total = dossiers.reduce((sum, affaire) => sum + Number(affaire.commission ?? 0), 0);
+                const derniereSignature = dossiers.map(a => a.date_signature).filter((d): d is string => Boolean(d)).sort().at(-1) ?? null;
+                const energies = [...new Set(compteurs.map(c => c.type_energie === "gaz" ? "Gaz" : "Électricité"))];
+                const commercial = commerciaux.get(dossiers[0]?.commercial_id) ?? "—";
+                return <tr key={client.id}>
+                  <td className="px-4 py-3"><ProspectFichePopup prospectId={client.id} prospectLabel={libelle(client)} className="text-left font-semibold text-navy-900 hover:text-sky-capella-700">{libelle(client)}</ProspectFichePopup><div className="mt-1 text-xs text-grey-brand">{client.ref || "—"}{client.mail ? ` · ${client.mail}` : ""}</div></td>
+                  <td className="px-4 py-3">{commercial}</td><td className="px-4 py-3">{dossiers.length} · {fmtEuros(total)}</td>
+                  <td className="px-4 py-3">{compteurs.length} · {energies.join(" + ") || "—"}</td><td className="px-4 py-3">{derniereSignature ? fmtDate(derniereSignature) : "—"}</td>
+                  <td className="px-4 py-3"><span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800">Client signé</span></td>
+                </tr>;
+              })}
+            </tbody>
+          </table>
         </section>
       )}
     </main>

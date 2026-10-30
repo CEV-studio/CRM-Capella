@@ -160,3 +160,15 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell main table thead { background: #f8fafc !important; }
 .crm-shell main table thead th { font-weight: 600; }
 .crm-shell main tbody tr:hover { background: #f2f8fd; }
+
+/* Harmonisation des vues métier et adaptation aux petits écrans. */
+.crm-shell main { min-width: 0; }
+.crm-shell main table { width: 100%; }
+.crm-shell main table th { white-space: nowrap; }
+.crm-shell main table td { vertical-align: middle; }
+.crm-shell main :is(button, a):focus-visible { outline: 2px solid #087DD1; outline-offset: 2px; }
+.crm-shell main :is(input, select, textarea):disabled { background-color: #f1f5f9; opacity: .7; }
+@media (max-width: 640px) {
+  .crm-shell main.px-6 { padding-left: 1rem; padding-right: 1rem; }
+  .crm-shell main form { min-width: 0; }
+}

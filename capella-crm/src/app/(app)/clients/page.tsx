@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Clock3 } from "lucide-react";
+import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { CLIENT_STAGES, stageColor } from "@/lib/domain/stages";
@@ -146,7 +147,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           ) : (
             <div className="divide-y divide-navy-100">
               {clients.map((c) => (
-                <Link key={c.id} href={`/prospection/${c.id}`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-navy-50">
+                <ProspectFichePopup key={c.id} prospectId={c.id} prospectLabel={libelle(c)} className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-navy-50">
                   <div className="min-w-0">
                     <div className="font-semibold text-navy-800">{libelle(c)}</div>
                     <div className="text-xs text-grey-brand">{c.ref ?? ""}</div>
@@ -154,7 +155,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                     <ActionMeta action={c.next_action} date={c.next_action_date} />
                   </div>
                   <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold text-navy-800" style={{ backgroundColor: stageColor(c.stage, "prospect") }}>{c.stage}</span>
-                </Link>
+                </ProspectFichePopup>
               ))}
             </div>
           )}
