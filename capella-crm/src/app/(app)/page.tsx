@@ -42,41 +42,13 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
   if (profil.role === "apporteur") return <PartnerHome prenom={profil.full_name.split(" ")[0]} />;
   const filtres = await searchParams;
   const supabase = await createClient();
-  const semaine = bornesSemaine();
-  const profilsQuery = estAdmin
-    ? supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active", true).order("full_name")
-    : Promise.resolve({ data: [profil] as Pick<Profile, "id" | "full_name" | "commission_rate">[] });
-  const apporteursQuery = estAdmin ? chargerApporteurs() : Promise.resolve([] as Apporteur[]);
-
-  const [{ data: affairesBrutes }, { data: summary, error: summaryError }, { data: profils }, { data: evenementsBruts }, apporteurs, belgiumMetrics] = await Promise.all([
-    supabase.from("affaires").select("commercial_id, apporteur_id, stage, date_signature, date_relance, commission, raison_sociale").is("deleted_at", null),
-    supabase.rpc("crm_prospect_summary"),
-    profilsQuery,
-    estAdmin ? supabase.from("calendar_events").select("id, prospect_id, profile_id, title, start_at, end_at").eq("kind", "rdv").eq("status", "confirmed").gte("start_at", `${semaine.debut}T00:00:00Z`).lt("start_at", `${semaine.fin}T23:59:59Z`).order("start_at") : Promise.resolve({ data: [] as EvenementSemaine[] }),
-    apporteursQuery,
-    estAdmin ? loadBelgiumDashboardMetrics() : Promise.resolve(null),
-  ]);
-
-  const toutesAffaires = (affairesBrutes ?? []) as Affaire[];
-  const listeProfils = (profils ?? []) as Pick<Profile, "id" | "full_name" | "commission_rate">[];
-  const listeApporteurs = apporteurs;
-  const tauxCommercial = new Map(listeProfils.map((p) => [p.id, Number(p.commission_rate)]));
-  const tauxApporteur = new Map(listeApporteurs.map((a) => [a.id, Number(a.commission_rate)]));
-  const annees = anneesDisponibles(toutesAffaires);
-  const annee = Number(filtres.annee) || annees[0];
-  const mois = Number(filtres.mois) || undefined;
-  const affaires = filtrerAffaires(toutesAffaires, { annee, mois, commercialId: filtres.commercial, apporteurId: filtres.apporteur });
-  const kpi = calculerIndicateurs(affaires, tauxCommercial, tauxApporteur);
-  const parMois = commissionsParMois(affaires, annee, tauxCommercial);
-  const totalMois = parMois.reduce((t, l) => ({ nb: t.nb + l.nbSignees, ca: t.ca + l.caSigne, com: t.com + l.commissions }), { nb: 0, ca: 0, com: 0 });
-
-  const affairesParEtape = new Map<string, number>();
-  for (const a of affaires) affairesParEtape.set(a.stage, (affairesParEtape.get(a.stage) ?? 0) + 1);
-  if (summaryError || !summary) throw new Error(`Impossible de charger les indicateurs : ${summaryError?.message ?? "réponse vide"}`);
-  const prospectsParEtape = new Map(summary.stages.map(s => [s.stage, s.total]));
-  const owners = new Map(summary.owners.map(s => [s.assigned_to, s]));
-
   if (estAdmin) {
+    const [{data: affairesAdmin, error: affairesError}, belgiumMetrics] = await Promise.all([
+      supabase.from("affaires").select("stage,date_signature,commission").is("deleted_at", null),
+      loadBelgiumDashboardMetrics(),
+    ]);
+    if (affairesError) throw new Error(`Impossible de charger les dossiers : ${affairesError.message}`);
+    const toutesAffaires = affairesAdmin ?? [];
     const todayParis = dateParis(new Date());
     const anneeGlobale = Number(todayParis.slice(0, 4));
     const moisCourant = Number(todayParis.slice(5, 7));
@@ -88,7 +60,7 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
         .filter((affaire) => affaire.stage === "Signé" && affaire.date_signature?.slice(0, 7) === key)
         .reduce((total, affaire) => total + Number(affaire.commission || 0), 0);
     });
-    const belgique = belgiumMetrics!;
+    const belgique = belgiumMetrics;
     const caBelgiqueParMois = Array.from({ length: 12 }, (_, index) => {
       const scope = { view: "month", year: anneeGlobale, month: index + 1 } as const;
       const result = financialModel(belgique.contracts, belgique.statements, [], [], scope, todayParis);
@@ -115,6 +87,39 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
       mois={franceParMois.map((france, index) => ({ mois: index + 1, france, belgique: caBelgiqueParMois[index] }))}
     />;
   }
+  const semaine = bornesSemaine();
+  const profilsQuery = estAdmin
+    ? supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active", true).order("full_name")
+    : Promise.resolve({ data: [profil] as Pick<Profile, "id" | "full_name" | "commission_rate">[] });
+  const apporteursQuery = estAdmin ? chargerApporteurs() : Promise.resolve([] as Apporteur[]);
+
+  const [{ data: affairesBrutes }, { data: summary, error: summaryError }, { data: profils }, { data: evenementsBruts }, apporteurs] = await Promise.all([
+    supabase.from("affaires").select("commercial_id, apporteur_id, stage, date_signature, date_relance, commission, raison_sociale").is("deleted_at", null),
+    supabase.rpc("crm_prospect_summary"),
+    profilsQuery,
+    estAdmin ? supabase.from("calendar_events").select("id, prospect_id, profile_id, title, start_at, end_at").eq("kind", "rdv").eq("status", "confirmed").gte("start_at", `${semaine.debut}T00:00:00Z`).lt("start_at", `${semaine.fin}T23:59:59Z`).order("start_at") : Promise.resolve({ data: [] as EvenementSemaine[] }),
+    apporteursQuery,
+  ]);
+
+  const toutesAffaires = (affairesBrutes ?? []) as Affaire[];
+  const listeProfils = (profils ?? []) as Pick<Profile, "id" | "full_name" | "commission_rate">[];
+  const listeApporteurs = apporteurs;
+  const tauxCommercial = new Map(listeProfils.map((p) => [p.id, Number(p.commission_rate)]));
+  const tauxApporteur = new Map(listeApporteurs.map((a) => [a.id, Number(a.commission_rate)]));
+  const annees = anneesDisponibles(toutesAffaires);
+  const annee = Number(filtres.annee) || annees[0];
+  const mois = Number(filtres.mois) || undefined;
+  const affaires = filtrerAffaires(toutesAffaires, { annee, mois, commercialId: filtres.commercial, apporteurId: filtres.apporteur });
+  const kpi = calculerIndicateurs(affaires, tauxCommercial, tauxApporteur);
+  const parMois = commissionsParMois(affaires, annee, tauxCommercial);
+  const totalMois = parMois.reduce((t, l) => ({ nb: t.nb + l.nbSignees, ca: t.ca + l.caSigne, com: t.com + l.commissions }), { nb: 0, ca: 0, com: 0 });
+
+  const affairesParEtape = new Map<string, number>();
+  for (const a of affaires) affairesParEtape.set(a.stage, (affairesParEtape.get(a.stage) ?? 0) + 1);
+  if (summaryError || !summary) throw new Error(`Impossible de charger les indicateurs : ${summaryError?.message ?? "réponse vide"}`);
+  const prospectsParEtape = new Map(summary.stages.map(s => [s.stage, s.total]));
+  const owners = new Map(summary.owners.map(s => [s.assigned_to, s]));
+
   const relancesProspection = summary.upcoming;
   const periode = mois ? `${MOIS[mois - 1]} ${annee}` : `Année ${annee}`;
   const evenementsSemaine = ((evenementsBruts ?? []) as EvenementSemaine[]).filter((e) => { const d=dateParis(e.start_at); return d>=semaine.debut&&d<semaine.fin; });

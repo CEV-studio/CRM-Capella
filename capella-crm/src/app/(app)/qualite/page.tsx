@@ -8,6 +8,7 @@ import { aggregateQualityScores, type QualityStatus } from '@/lib/quality';
 
 export const dynamic='force-dynamic';
 export const metadata={title:'Contrôles qualité — Capella CRM'};
+type QualityListReview = Pick<QualityReview, 'id'|'controller_id'|'controller_name'|'reviewed_at'|'activity_name'|'agent_name'|'sale_reference'|'score_percent'|'status'>;
 const statuses:QualityStatus[]=['Conforme','À consolider','Insuffisant','Non conforme — faute grave'];
 function parisBoundary(day:string,end=false){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return null;
@@ -20,13 +21,13 @@ function parisBoundary(day:string,end=false){
 
 export default async function QualityPage({searchParams}:{searchParams:Promise<{status?:string;from?:string;to?:string;activity?:string;agent?:string;sale?:string;controller?:string}>}){
  const profile=await requireProfile();if(!['admin','qualite'].includes(profile.role))redirect('/?motif=acces-refuse');
- const params=await searchParams;const db=await createClient();const rows:QualityReview[]=[];
- for(let offset=0;;offset+=1000){let query=db.from('quality_reviews').select('*').order('reviewed_at',{ascending:false}).range(offset,offset+999);
+ const params=await searchParams;const db=await createClient();const rows:QualityListReview[]=[];
+ for(let offset=0;;offset+=1000){let query=db.from('quality_reviews').select('id,controller_id,controller_name,reviewed_at,activity_name,agent_name,sale_reference,score_percent,status').order('reviewed_at',{ascending:false}).range(offset,offset+999);
   if(statuses.includes(params.status as QualityStatus))query=query.eq('status',params.status as QualityStatus);
   if(params.from&&parisBoundary(params.from))query=query.gte('reviewed_at',parisBoundary(params.from)!);if(params.to&&parisBoundary(params.to,true))query=query.lte('reviewed_at',parisBoundary(params.to,true)!);
   if(params.activity)query=query.ilike('activity_name',`%${params.activity}%`);if(params.agent)query=query.ilike('agent_name',`%${params.agent}%`);if(params.sale)query=query.ilike('sale_reference',`%${params.sale}%`);
   if(profile.role==='admin'&&params.controller)query=query.eq('controller_id',params.controller);
-  const {data,error}=await query;if(error)throw new Error(`Contrôles qualité : ${error.message}`);rows.push(...(data||[]) as QualityReview[]);if(!data||data.length<1000)break;
+  const {data,error}=await query;if(error)throw new Error(`Contrôles qualité : ${error.message}`);rows.push(...(data||[]) as QualityListReview[]);if(!data||data.length<1000)break;
  }
  const aggregates=aggregateQualityScores(rows);const averageReview=rows.length?rows.reduce((sum,r)=>sum+Number(r.score_percent),0)/rows.length:null;
  const grave=rows.filter(r=>r.status==='Non conforme — faute grave').length;
@@ -47,7 +48,7 @@ export default async function QualityPage({searchParams}:{searchParams:Promise<{
  }
  const managerKpis=qualityManagers.map(manager=>({id:manager.id,name:manager.full_name,active:manager.is_active,...(activityByController.get(manager.id)||{count:0,last:''})})).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'fr'));
  const adminControlCount=managerKpis.reduce((total,manager)=>total+manager.count,0);
- const controllerGroups=new Map<string,{id:string;name:string;reviews:QualityReview[]}>();
+ const controllerGroups=new Map<string,{id:string;name:string;reviews:QualityListReview[]}>();
  for(const review of rows){const group=controllerGroups.get(review.controller_id)||{id:review.controller_id,name:review.controller_name,reviews:[]};group.reviews.push(review);controllerGroups.set(review.controller_id,group);}
  const controllerStats=[...controllerGroups.values()].map(group=>{const sales=aggregateQualityScores(group.reviews);return {id:group.id,name:group.name,controls:group.reviews.length,sales:sales.saleCount,controlAverage:group.reviews.reduce((sum,r)=>sum+Number(r.score_percent),0)/group.reviews.length,saleAverage:sales.averageSaleScore,grave:group.reviews.filter(r=>r.status==='Non conforme — faute grave').length,last:group.reviews.reduce((latest,r)=>r.reviewed_at>latest?r.reviewed_at:latest,'')};}).sort((a,b)=>b.controls-a.controls);
  return <main className="mx-auto max-w-[1500px] space-y-6 px-6 py-8"><header className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="font-display text-2xl font-bold text-navy-900">Qualité des ventes</h1></div><Link href="/qualite/ventes" className="rounded-lg bg-navy-800 px-4 py-2.5 text-sm font-semibold text-white">Appels à contrôler</Link></header>
