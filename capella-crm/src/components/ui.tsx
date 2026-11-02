@@ -6,7 +6,7 @@ export function Card({ className, children }: { className?: string; children: Re
   return (
     <div
       className={cn(
-        "rounded-2xl border border-navy-100 bg-white shadow-[0_4px_18px_rgba(7,30,61,0.055)]",
+        "crm-panel rounded-xl border border-navy-100 bg-white shadow-[0_4px_18px_rgba(7,30,61,0.055)]",
         "transition-colors duration-150",
         className,
       )}
@@ -18,7 +18,7 @@ export function Card({ className, children }: { className?: string; children: Re
 
 export function CardHeader({ title, hint, action }: { title: string; hint?: string; action?: React.ReactNode }) {
   return (
-    <div className="relative flex items-start justify-between gap-4 border-b border-navy-100 rounded-t-2xl bg-white px-5 py-4">
+    <div className="crm-panel-heading relative flex items-start justify-between gap-4 rounded-t-xl border-b border-navy-100 bg-white px-5 py-4">
       <span className="absolute inset-y-3 left-0 w-[3px] bg-star-500" aria-hidden />
       <div>
         <h2 className="font-display text-base font-semibold text-navy-800">{title}</h2>
@@ -41,7 +41,7 @@ export function Button({ variant = "primary", className, ...props }: ButtonProps
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold",
+        "crm-button inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold",
         "transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100",
         styles,
         className,

@@ -147,8 +147,8 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   const toggle = (title: string, defaultOpen: boolean) => setOpenSections(current => ({ ...current, [title]: !(current[title] ?? defaultOpen) }));
 
   return <div className="crm-shell flex min-h-screen bg-surface">
-    <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-navy-100 bg-[#f8fafc] text-navy-700 transition-[width] duration-200 md:flex ${collapsed ? "w-[68px]" : "w-64"}`}>
-      <div className={`flex min-h-[76px] items-center border-b border-navy-100 bg-white ${collapsed ? "flex-col justify-center gap-1 py-2" : "justify-between gap-2 px-3 py-4"}`}>
+    <aside className={`crm-sidebar sticky top-0 hidden h-screen shrink-0 flex-col border-r border-navy-100 bg-[#f8fafc] text-navy-700 transition-[width] duration-200 md:flex ${collapsed ? "w-[68px]" : "w-64"}`}>
+      <div className={`crm-sidebar-brand flex min-h-[76px] items-center border-b border-navy-100 bg-white ${collapsed ? "flex-col justify-center gap-1 py-2" : "justify-between gap-2 px-3 py-4"}`}>
         <Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="flex min-w-0 justify-center" aria-label="Accueil Capella Energy">
           {collapsed ? <CapellaStar className="h-7 w-7" /> : <Logotype className="w-[170px]" />}
         </Link>
@@ -180,7 +180,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
         })}
       </nav>
       {collapsed ? <div className="flex flex-col items-center gap-2 border-t border-navy-100 py-4"><div title={profile.full_name} aria-label={profile.full_name} className="flex h-9 w-9 items-center justify-center rounded-full bg-energy-500 text-sm font-semibold text-white">{profile.full_name.slice(0,1).toUpperCase()}</div><Link href="/deconnexion" prefetch={false} className="rounded-lg p-2 text-navy-500 hover:bg-white" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden/></Link></div> :       <div className="border-t border-navy-100 px-4 py-4">
-        <div className="flex items-center gap-3 rounded-xl border border-navy-100 bg-white p-3">
+        <div className="crm-sidebar-user flex items-center gap-3 rounded-xl border border-navy-100 bg-white p-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-energy-500 font-display text-sm font-semibold text-white">{profile.full_name.slice(0, 1).toUpperCase()}</div>
           <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-navy-500">{profile.role === "be_centre" ? "Centre Belgique" : profile.role === "be_agent" ? "Agent Belgique" : profile.role === "qualite" ? "Responsable qualité" : profile.role === "admin" ? "Administrateur" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
           <Link href="/deconnexion" prefetch={false} className="rounded-lg p-1.5 text-navy-500 hover:bg-navy-50 hover:text-navy-900" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
@@ -194,7 +194,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       <Link href="/deconnexion" prefetch={false} className="inline-flex items-center gap-1.5 text-xs text-navy-100"><LogOut size={14} /> Quitter</Link>
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
-      <div className="flex min-h-14 items-center justify-between border-b border-navy-100 bg-white/95 px-4 sm:px-6"><span className="text-sm font-semibold text-navy-700">{sections.find(s => sectionActive(pathname, s))?.titre ?? "Capella Energy"}</span>{!['qualite','be_centre','be_agent'].includes(profile.role)&&<NotificationBell />}</div>
+      <div className="crm-workspace-bar flex min-h-14 items-center justify-between border-b border-navy-100 bg-white/95 px-4 sm:px-6"><span className="text-sm font-semibold text-navy-700">{sections.find(s => sectionActive(pathname, s))?.titre ?? "Capella Energy"}</span>{!['qualite','be_centre','be_agent'].includes(profile.role)&&<NotificationBell />}</div>
       <nav className="flex items-start gap-2 overflow-x-auto border-b border-navy-100 bg-white p-3 md:hidden">{sections.map(s=>{
         const items=s.items.filter(visible),active=sectionActive(pathname,s);
         return items.length>1?<details key={s.titre} className="shrink-0 rounded-lg bg-navy-50"><summary className={`cursor-pointer whitespace-nowrap px-3 py-2 text-xs font-semibold ${active?'bg-sky-capella-100':''}`}>{s.titre}</summary><ul className="w-60 space-y-1 p-2">{items.map(item=><li key={item.href}><Link href={item.href} aria-current={actif(pathname,item.href)?'page':undefined} className={`block rounded-md px-3 py-2 text-xs leading-5 ${actif(pathname,item.href)?'bg-sky-capella-100 font-semibold':'hover:bg-white'}`}>{item.label}</Link></li>)}</ul></details>:<Link key={s.titre} href={items[0].href} className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs ${active?'bg-sky-capella-100 font-semibold':'bg-navy-50'}`}>{s.titre}</Link>;
