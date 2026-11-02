@@ -19,3 +19,13 @@ assert.deepEqual(cancellations.cancelled.map(c=>c.key),['pre','observed'],'raw c
 assert.deepEqual(cancellations.terminated.map(c=>c.key),['ended'],'MEGA Terminé alone defines the clawback production bucket without requiring confirmed dates');
 assert.equal(cancellations.cancelled.some(c=>cancellations.terminated.includes(c)),false);
 console.log('PASS: supplier client cancellations vs terminated clawbacks, no activation/payment inference, other cancellation reasons excluded.');
+
+assert.equal(domain.productionPeriod('2026-10-31','2026-11-14'),'2026-10-01');
+assert.equal(domain.productionPeriod('2026-10-01','2026-11-15'),'2026-11-01');
+assert.equal(domain.productionPeriod('2026-10-31','2026-10-31'),'2026-10-01');
+assert.equal(domain.productionPeriod('2026-12-31','2027-01-14'),'2026-12-01');
+assert.equal(domain.productionPeriod('2026-12-31','2027-01-15'),'2027-01-01');
+assert.equal(domain.productionPeriod('2026-09-01','2026-11-02'),'2026-11-01');
+assert.equal(domain.productionPeriod(null,'2026-11-02'),'2026-11-01');
+assert.equal(domain.productionPeriod('2026-10-01',null),null);
+console.log('PASS: registration month cutoff through M+1 day 14 inclusive, day 15, missing dates and year rollover');

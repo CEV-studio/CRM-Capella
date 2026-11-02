@@ -162,4 +162,13 @@ await assert.rejects(()=>db.query('select be_encode_sale($1::jsonb)',[JSON.strin
 assert.ok((await db.query('select be_production_read() data')).rows[0].data.contracts.some(c=>c.entry_id===blankOne),'existing sale survives product deactivation');
 await asUser(outsider);assert.equal((await db.query('select * from be_client_comments where mega_id=$1',['CRM:'+blankOne])).rows.length,0);
 console.log('PASS: identifiers optional, anonymous CRM clients remain distinct, comments stay scoped, telecom and future products, inactive catalogue enforcement and retry protection.');
+await asUser(admin);
+const cutoffRows=[14,15].map(day=>({...rows[0],key:`MEGA:880${day}:541449020000073142:ELEC`,mega_id:`880${day}`,registered_date:'2026-10-31',effect_date:`2026-11-${day}`,period:'2026-11-01',period_confirmed:false,clawback_end:`2027-02-${day}`}));
+await imp(cutoffRows,'2026-11-15');
+assert.equal((await db.query('select data from be_contracts where key=$1',[cutoffRows[0].key])).rows[0].data.period,'2026-10-01');
+assert.equal((await db.query('select data from be_contracts where key=$1',[cutoffRows[1].key])).rows[0].data.period,'2026-11-01');
+await imp(cutoffRows.map(c=>({...c,effect_date:'2026-11-20',period:'2026-11-01'})),'2026-11-20');
+const retainedCutoff=(await db.query('select data from be_contracts where key=$1',[cutoffRows[0].key])).rows[0].data;
+assert.equal(retainedCutoff.period,'2026-10-01');assert.equal(retainedCutoff.effect_date,'2026-11-14');
+console.log('PASS: database imports enforce day-14 cutoff and preserve first observed activation on later reports.');
 await db.close();console.log('PASS: parsing, dual EAN, periods, month-end clawback, atomic imports, no duplicates, stale reports, immutable invoices, payment states, admin-only RLS.');

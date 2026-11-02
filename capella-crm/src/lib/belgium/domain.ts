@@ -26,6 +26,13 @@ export function addMonths(s:string,n:number){const d=new Date(s+'T00:00:00Z');co
 export const energyCode=(energy:unknown)=>norm(energy)==='gaz'?'GAZ':'ELEC';
 export const keyOf=(id:unknown,ean:unknown,energy:unknown='Elec')=>`MEGA:${text(id)}:${text(ean)}:${energyCode(energy)}`;
 export const monthOf=(date:string|null)=>date?date.slice(0,7)+'-01':null;
+export function productionPeriod(registered:string|null,effective:string|null):string|null {
+ if(!effective)return null;
+ const registrationMonth=monthOf(registered);
+ if(registrationMonth&&effective>=registrationMonth&&effective<=addMonths(registrationMonth,1).slice(0,7)+'-14')return registrationMonth;
+ return monthOf(effective);
+}
+
 export const euros=(cents:number)=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(cents/100);
 export function parseRows(rows:unknown[][],kind:'report'|'statement',reportDate:string,statementPeriod:string): (Contract|Statement)[] {
  const hi=rows.findIndex(r=>r.some(c=>['id','idmega'].includes(norm(c)))&&r.some(c=>norm(c)==='ean'));
@@ -60,7 +67,7 @@ export function parseRows(rows:unknown[][],kind:'report'|'statement',reportDate:
  const registered_date=dateValue(get('Inscription','DateInscription','Date d’inscription'));
  const observed=dateValue(get('Effet observé (provisoire)','Start Date'));
  const effect_date=observed||(status_class==='Effectif'?reportDate:null);
- const period=monthOf(dateValue(get('Période commissionnement','Période de commissionnement')))||monthOf(effect_date);
+ const period=monthOf(dateValue(get('Période commissionnement','Période de commissionnement')))||productionPeriod(registered_date,effect_date);
  const payment=text(get('Type de paiement','Domiciliation','Domiciliation (Mega)'));
  const complete=norm(payment).includes('complete');const active=status_class==='Effectif';
  return {key,supplier:'MEGA',mega_id:id,ean,reference:text(get('Référence contrat','ContratNbr','Numéro de contrat','Référence contrat Mega')).replace(/[',]/g,''),client:text(get('Client'))||[text(get('nom','Nom client')),text(get('prenom','Prénom client'))].filter(Boolean).join(' '),agent,centre,energy,status,status_class,registered_date,effect_date,period,period_confirmed:false,payment,agent_reference:text(get('Référence agent','Userfield_Agent'))||agent,report_date:reportDate,clawback_end:dateValue(get('Fin clawback estimée'))||(effect_date?addMonths(effect_date,3):null),gross_cents:active?6500+(complete?1000:0):0,centre_cents:active?3000+(complete?500:0):0};
