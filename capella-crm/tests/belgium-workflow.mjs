@@ -68,6 +68,16 @@ await asUser(centreUser);
 let portal=(await db.query('select be_production_read() data')).rows[0].data;
 assert.equal(portal.contracts.length,2);assert.ok(portal.contracts.every(c=>c.centre==='Cimsourse'));
 assert.ok(portal.history.every(h=>portal.contracts.some(c=>c.key===h.contract_key)));
+const light=(await db.query('select be_production_read_scoped(false) data')).rows[0].data;
+assert.deepEqual(light.contracts,portal.contracts);assert.deepEqual(light.tracking,portal.tracking);assert.deepEqual(light.history,[]);
+assert.deepEqual((await db.query('select be_production_read_scoped(true) data')).rows[0].data,portal);
+const target=portal.contracts[0];const clientId=target.client_id||target.mega_id||target.key;
+const focused=(await db.query('select be_production_read_scoped(false,$1) data',[clientId])).rows[0].data;
+const focusedKeys=new Set(portal.contracts.filter(c=>(c.client_id||c.mega_id||c.key)===clientId).map(c=>c.key));
+assert.deepEqual(focused.history,portal.history.filter(h=>focusedKeys.has(h.contract_key)));
+assert.deepEqual((await db.query("select be_production_read_scoped(false,'other-client') data")).rows[0].data.history,[]);
+
+
 assert.equal((await db.query('select * from be_contracts')).rows.length,0);
 assert.equal((await db.query('select * from be_deductions')).rows.length,0);
 await assert.rejects(()=>db.query("select be_record_deduction($1,'centre','HACK',current_date,100)",[pending.key]));
@@ -110,7 +120,7 @@ const note=(await db.query("select * from be_client_comments where mega_id='9990
 await db.query("select be_save_comment($1,'99901','TILIRA','Client rappelé')",[note.id]);
 assert.equal((await db.query('select * from be_comment_history where comment_id=$1',[note.id])).rows.length,2);
 await assert.rejects(()=>db.query("delete from be_comment_history"));
-await asUser(outsider);assert.equal((await db.query('select * from be_sale_entries')).rows.length,0);assert.equal((await db.query("select * from be_client_comments where mega_id='99901'")).rows.length,0);
+await asUser(outsider);assert.deepEqual((await db.query('select be_production_read_scoped(false) data')).rows[0].data.contracts,[]);assert.equal((await db.query('select * from be_sale_entries')).rows.length,0);assert.equal((await db.query("select * from be_client_comments where mega_id='99901'")).rows.length,0);
 await assert.rejects(()=>db.query("select be_save_comment($1,'99901','TILIRA','Intrusion')",[note.id]));
 await asUser(quality);assert.equal((await db.query("select * from be_client_comments where mega_id='99901'")).rows.length,1);await assert.rejects(()=>db.query('select be_encode_sale($1::jsonb)',[JSON.stringify({...sale,mega_id:'99902'})]));
 await assert.rejects(()=>db.query("select be_save_comment($1,'99901','TILIRA','Rewrite other author')",[note.id]));
@@ -121,6 +131,10 @@ const reported={...rows[1],key:'MEGA:99901:541449020000073180:ELEC',mega_id:'999
 await imp([reported],'2026-10-26','report','matching-signed-sale');
 await asUser(encoder);portal=(await db.query('select be_production_read() data')).rows[0].data;
 const reconciled=portal.contracts.filter(c=>c.mega_id==='99901');assert.equal(reconciled.length,1);assert.equal(reconciled[0].status_class,'Effectif');assert.equal(reconciled[0].owner_id,encoder);assert.equal(reconciled[0].email,sale.email);assert.equal(reconciled[0].entry_id,saleId);
+const agentFocused=(await db.query('select be_production_read_scoped(false,$1) data',['99901'])).rows[0].data;
+assert.deepEqual(agentFocused.history,portal.history.filter(h=>h.contract_key===reconciled[0].key));
+assert.ok(agentFocused.contracts.every(c=>c.owner_id===encoder));
+
 // Entries without MEGA identifiers are linked only on unique name, phone, energy, centre and agent.
 const energyProduct=(await db.query("select id from be_products where kind='energy' and supplier='MEGA' limit 1")).rows[0].id;
 const withoutId={...sale,mega_id:'',ean:'',contract_reference:'',product_id:energyProduct,first_name:'Benoit',last_name:'Unique',phone:'0470123456',submission_id:'10000000-0000-4000-8000-000000000021',comment:''};

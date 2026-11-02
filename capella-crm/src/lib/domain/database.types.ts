@@ -175,6 +175,7 @@ export interface Database {
       can_manage:{ Args:Record<never,never>; Returns:boolean };
       be_record_deduction:{Args:{p_key:string;p_side:string;p_reference:string;p_date:string;p_amount:number};Returns:string};
       be_production_read:{ Args:Record<never,never>; Returns:unknown };
+      be_production_read_scoped:{ Args:{p_include_history?:boolean;p_history_client?:string|null}; Returns:unknown };
       current_role_name:{ Args:Record<never,never>; Returns:string };
       can_access_email_account:{ Args:{ p_account:string; p_send?:boolean }; Returns:boolean };
     };
