@@ -11,10 +11,11 @@ import { clientDirectory,type ProductionContract,type ProductionHistory } from '
 import { isQualityEligibleSale } from '@/lib/quality';
 export async function BelgiumClients({contracts,history,tracking,params,actor}:{contracts:ProductionContract[];history:ProductionHistory[];tracking:CycleTracking[];params:Record<string,string|undefined>;actor:Profile}){
  const clients=clientDirectory(contracts,params);const clientIndex=clients.findIndex(c=>c.id===params.client);const page=clientIndex>=0?Math.floor(clientIndex/30)+1:Math.max(1,Math.min(Math.ceil(clients.length/30)||1,Number(params.page)||1));const visible=clients.slice((page-1)*30,page*30);
+ const selected = visible.find(client => client.id === params.client);
  const db=await createClient();
  async function scopedRows(table:'be_client_comments'|'be_comment_history'){
-  const rows:(import('@/lib/belgium/comments').ClientComment|import('@/lib/belgium/comments').CommentRevision)[]=[];if(!visible.length)return rows;
-  for(let offset=0;;offset+=1000){const {data,error}=await db.from(table).select('*').in('mega_id',visible.map(c=>c.id)).order('created_at',{ascending:false}).order('id').range(offset,offset+999);if(error)throw new Error('Lecture des commentaires impossible.');rows.push(...data);if(data.length<1000)break;}
+  const rows:(import('@/lib/belgium/comments').ClientComment|import('@/lib/belgium/comments').CommentRevision)[]=[];if(!selected)return rows;
+  for(let offset=0;;offset+=1000){const {data,error}=await db.from(table).select('*').eq('mega_id',selected.id).order('created_at',{ascending:false}).order('id').range(offset,offset+999);if(error)throw new Error('Lecture des commentaires impossible.');rows.push(...data);if(data.length<1000)break;}
   return rows;
  }
  const [comments,revisions]=await Promise.all([scopedRows('be_client_comments'),scopedRows('be_comment_history')]);

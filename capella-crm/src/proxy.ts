@@ -57,8 +57,13 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Read the role once per request; the same value guards restricted routes,
+  // partner routes and the ACD generator without repeating database calls.
+  const { data: profile } = userId && !isPublic
+    ? await supabase.from("profiles").select("role,is_active").eq("id",userId).maybeSingle()
+    : { data: null };
+
   if(userId && !isPublic){
-    const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",userId).maybeSingle();
     if(['qualite','be_centre','be_agent'].includes(profile?.role||'')){
       const qualityRoute = profile?.role === 'qualite' &&
         (path === '/qualite' || path.startsWith('/qualite/') || path === '/api/qualite');
@@ -73,7 +78,6 @@ export default async function proxy(request: NextRequest) {
   // A partner cannot use the legacy prospecting/commission/API routes.
   const partnerAllowed = ["/partenaires", "/notifications", "/api/partenaires", "/api/notifications", "/pieces", "/changer-mot-de-passe", "/deconnexion"].some(prefix=>path===prefix||path.startsWith(prefix+"/"));
   if (userId && !isPublic && !partnerAllowed) {
-    const {data:profile}=await supabase.from("profiles").select("role,is_active").eq("id",userId).maybeSingle();
     if(profile?.role === "apporteur") {
       {
         if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});
@@ -93,12 +97,6 @@ export default async function proxy(request: NextRequest) {
     const internalCall = Boolean(internalSecret) && givenSecret === internalSecret;
 
     if (!internalCall) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .maybeSingle();
-
       if (profile?.role !== "admin") {
         return new NextResponse("Accès réservé à l'administrateur", { status: 403 });
       }
