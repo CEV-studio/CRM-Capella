@@ -9,7 +9,8 @@ import type { Statement } from '@/lib/belgium/domain';
 export const dynamic='force-dynamic';
 export const metadata={title:'Belgique · Production — Capella CRM'};
 export default async function BelgiumPage({searchParams}:{searchParams:Promise<Record<string,string|undefined>>}){
- const {profile,contracts,tracking,last_report,history}=await loadBelgiumProduction();const params=await searchParams;
+ const params=await searchParams;
+ const {profile,contracts,tracking,last_report,history}=await loadBelgiumProduction({historyClient:params.client});
  if(['billing','cycles','imports'].includes(params.tab||'')){
   if(profile.role==='admin')redirect('/comptabilite/belgique?'+new URLSearchParams(Object.entries(params).filter((p):p is [string,string]=>typeof p[1]==='string')));
   redirect('/belgique');
