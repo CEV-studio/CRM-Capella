@@ -144,6 +144,8 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   const visible = (i: NavItem) => (!i.adminOnly || profile.role === "admin") && (!i.needs || i.needs(profile));
   const navigation = profile.role === 'be_agent' ? AGENT_NAV : ['qualite','be_centre'].includes(profile.role) ? QUALITY_NAV : profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? ADMIN_NAV : COMMERCIAL_NAV;
   const sections = navigation.filter(s => s.items.some(visible));
+  const currentSection = sections.find(s => sectionActive(pathname, s));
+  const currentItem = currentSection?.items.filter(visible).find(item => actif(pathname, item.href));
   const toggle = (title: string, defaultOpen: boolean) => setOpenSections(current => ({ ...current, [title]: !(current[title] ?? defaultOpen) }));
 
   return <div className="crm-shell flex min-h-screen bg-surface">
@@ -194,7 +196,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       <Link href="/deconnexion" prefetch={false} className="inline-flex items-center gap-1.5 text-xs text-navy-100"><LogOut size={14} /> Quitter</Link>
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
-      <div className="crm-workspace-bar flex min-h-14 items-center justify-between border-b border-navy-100 bg-white/95 px-4 sm:px-6"><span className="text-sm font-semibold text-navy-700">{sections.find(s => sectionActive(pathname, s))?.titre ?? "Capella Energy"}</span>{!['qualite','be_centre','be_agent'].includes(profile.role)&&<NotificationBell />}</div>
+      <div className="crm-workspace-bar flex min-h-14 items-center justify-between border-b border-navy-100 bg-white/95 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-2 text-sm"><Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="hidden font-medium text-navy-500 hover:text-navy-900 sm:inline">Capella CRM</Link><span className="hidden text-navy-300 sm:inline" aria-hidden>/</span><span className="truncate font-semibold text-navy-800">{currentSection?.titre ?? "Accueil"}</span>{currentItem && currentItem.label !== currentSection?.titre && <><span className="text-navy-300" aria-hidden>/</span><span className="truncate text-navy-600">{currentItem.label}</span></>}</div>{!['qualite','be_centre','be_agent'].includes(profile.role)&&<NotificationBell />}</div>
       <nav className="flex items-start gap-2 overflow-x-auto border-b border-navy-100 bg-white p-3 md:hidden">{sections.map(s=>{
         const items=s.items.filter(visible),active=sectionActive(pathname,s);
         return items.length>1?<details key={s.titre} className="shrink-0 rounded-lg bg-navy-50"><summary className={`cursor-pointer whitespace-nowrap px-3 py-2 text-xs font-semibold ${active?'bg-sky-capella-100':''}`}>{s.titre}</summary><ul className="w-60 space-y-1 p-2">{items.map(item=><li key={item.href}><Link href={item.href} aria-current={actif(pathname,item.href)?'page':undefined} className={`block rounded-md px-3 py-2 text-xs leading-5 ${actif(pathname,item.href)?'bg-sky-capella-100 font-semibold':'hover:bg-white'}`}>{item.label}</Link></li>)}</ul></details>:<Link key={s.titre} href={items[0].href} className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs ${active?'bg-sky-capella-100 font-semibold':'bg-navy-50'}`}>{s.titre}</Link>;
