@@ -75,7 +75,7 @@ function Indicateur({ label, value, note, icon: Icon }: { label: string; value: 
 
 export function AdminHome(props: AdminHomeProps) {
   return <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-9">
-    <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-navy-200 pb-5">
       <div>
         <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.13em] text-grey-brand"><BarChart3 size={15} /> Tableau de bord global</div>
         <h1 className="font-display text-3xl font-semibold tracking-tight text-navy-900">Bonjour {props.prenom}</h1>
@@ -84,7 +84,7 @@ export function AdminHome(props: AdminHomeProps) {
       <span className="inline-flex items-center gap-2 rounded-full border border-navy-100 bg-white px-3 py-2 text-xs font-medium text-navy-600"><CheckCircle2 size={15} /> Vue administrateur complète</span>
     </header>
 
-    <section aria-label="Indicateurs globaux" className="mb-10">
+    <section aria-label="Indicateurs globaux" className="mb-6">
       <div className="mb-3 flex items-center gap-2"><ClipboardList size={17} className="text-grey-brand" /><h2 className="font-display text-lg font-semibold text-navy-900">Les chiffres clés</h2></div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Indicateur label={`CA global généré en ${props.annee}`} value={fmtEuros(props.caGlobalAnnuel)} note="France pro signé + MEGA énergie Belgique" icon={Euro} />
@@ -95,29 +95,23 @@ export function AdminHome(props: AdminHomeProps) {
       
     </section>
 
-    <section aria-label="Chiffre d’affaires mensuel" className="crm-home-section mb-10 rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] sm:p-6">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="font-display text-lg font-semibold text-navy-900">Évolution du chiffre d’affaires</h2><p className="mt-1 text-sm text-grey-brand">Tous les comptes · mois par mois · {props.annee}</p></div>
-        <span className="inline-flex items-center gap-2 text-xs text-grey-brand"><BarChart3 size={15} /> CA signé / validé + prévision MEGA</span>
-      </div>
-      <Mensuel mois={props.mois} />
-    </section>
-
+    <div className="mb-8 grid gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
+      <section aria-label="Chiffre d’affaires mensuel" className="crm-home-section min-w-0 rounded-xl border border-navy-100 bg-white p-5 sm:p-6">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display text-lg font-semibold text-navy-900">Évolution du chiffre d’affaires</h2><p className="mt-1 text-sm text-grey-brand">France et Belgique · {props.annee}</p></div><span className="rounded-md border border-navy-200 bg-white px-2.5 py-1 text-xs font-semibold text-navy-600">{props.annee}</span></div>
+        <Mensuel mois={props.mois}/>
+      </section>
+      <section aria-label="Accès directs" className="crm-home-section rounded-xl border border-navy-100 bg-white p-5">
+        <div className="flex items-center justify-between border-b border-navy-100 pb-4"><h2 className="font-display text-lg font-semibold text-navy-900">Accès directs</h2><span className="text-xs font-medium text-grey-brand">Espace de travail</span></div>
+        <div className="mt-2 divide-y divide-navy-100">{categories.map(category=>{const Icon=category.icon;return <Link key={category.title} href={category.href} className="group flex items-center gap-3 py-3 text-sm font-semibold text-navy-800 hover:text-energy-700"><span className="crm-home-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"><Icon size={17}/></span><span className="min-w-0 flex-1">{category.title}</span><ArrowUpRight size={15} className="text-navy-400 group-hover:text-energy-700"/></Link>})}</div>
+      </section>
+    </div>
     <section aria-label="Sections principales">
-      <div className="mb-4"><h2 className="font-display text-lg font-semibold text-navy-900">Accéder à une section</h2></div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {categories.map((category) => {
-          const Icon = category.icon;
-          return <article key={category.title} className="crm-home-section rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] transition-all hover:-translate-y-0.5 hover:border-sky-capella-200 hover:shadow-[0_10px_26px_rgba(7,30,61,0.10)]">
-            <Link href={category.href} className="group flex items-start gap-3">
-              <span className="crm-home-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-capella-50 text-sky-capella-600"><Icon size={21} strokeWidth={1.7} /></span>
-              <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2 font-display font-semibold text-navy-900">{category.title}<ArrowUpRight size={16} className="text-navy-300 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span></span>
-            </Link>
-            <ul className="mt-4 space-y-0.5 border-t border-navy-100 pt-3">
-              {category.links.map(([href, label]) => <li key={href}><Link href={href} className="block rounded-lg px-2 py-2 text-sm text-navy-600 transition-colors hover:bg-navy-50 hover:text-neutral-950">{label}</Link></li>)}
-            </ul>
-          </article>;
-        })}
+      <div className="mb-4 flex items-center justify-between"><h2 className="font-display text-lg font-semibold text-navy-900">Espaces de travail</h2><span className="text-xs font-medium text-grey-brand">{categories.length} espaces</span></div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {categories.map(category=>{const Icon=category.icon;return <article key={category.title} className="crm-home-section flex min-w-0 flex-col rounded-xl border border-navy-100 bg-white p-5">
+          <Link href={category.href} className="group flex items-center gap-3 border-b border-navy-100 pb-4"><span className="crm-home-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"><Icon size={19}/></span><span className="min-w-0 flex-1 font-display font-semibold text-navy-900">{category.title}</span><ArrowUpRight size={16} className="text-navy-400 group-hover:text-energy-700"/></Link>
+          <ul className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">{category.links.map(([href,label])=><li key={href}><Link href={href} className="block rounded-md px-2 py-2 text-sm text-navy-600 hover:bg-navy-50 hover:text-navy-900">{label}</Link></li>)}</ul>
+        </article>})}
       </div>
     </section>
   </main>;
