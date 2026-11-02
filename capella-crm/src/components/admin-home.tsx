@@ -63,7 +63,7 @@ function Mensuel({ mois }: { mois: MoisStats[] }) {
 }
 
 function Indicateur({ label, value, note, icon: Icon }: { label: string; value: string; note: string; icon: typeof Euro }) {
-  return <article className="min-h-28 rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)]">
+  return <article className="crm-home-kpi min-h-28 rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)]">
     <div className="flex items-start justify-between gap-3">
       <div className="text-sm font-medium text-grey-brand">{label}</div>
       <Icon size={18} strokeWidth={1.7} className="shrink-0 text-energy-500" aria-hidden />
@@ -95,7 +95,7 @@ export function AdminHome(props: AdminHomeProps) {
       
     </section>
 
-    <section aria-label="Chiffre d’affaires mensuel" className="mb-10 rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] sm:p-6">
+    <section aria-label="Chiffre d’affaires mensuel" className="crm-home-section mb-10 rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="font-display text-lg font-semibold text-navy-900">Évolution du chiffre d’affaires</h2><p className="mt-1 text-sm text-grey-brand">Tous les comptes · mois par mois · {props.annee}</p></div>
         <span className="inline-flex items-center gap-2 text-xs text-grey-brand"><BarChart3 size={15} /> CA signé / validé + prévision MEGA</span>
@@ -108,9 +108,9 @@ export function AdminHome(props: AdminHomeProps) {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((category) => {
           const Icon = category.icon;
-          return <article key={category.title} className="rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] transition-all hover:-translate-y-0.5 hover:border-sky-capella-200 hover:shadow-[0_10px_26px_rgba(7,30,61,0.10)]">
+          return <article key={category.title} className="crm-home-section rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)] transition-all hover:-translate-y-0.5 hover:border-sky-capella-200 hover:shadow-[0_10px_26px_rgba(7,30,61,0.10)]">
             <Link href={category.href} className="group flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-capella-50 text-sky-capella-600"><Icon size={21} strokeWidth={1.7} /></span>
+              <span className="crm-home-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-capella-50 text-sky-capella-600"><Icon size={21} strokeWidth={1.7} /></span>
               <span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2 font-display font-semibold text-navy-900">{category.title}<ArrowUpRight size={16} className="text-navy-300 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span></span>
             </Link>
             <ul className="mt-4 space-y-0.5 border-t border-navy-100 pt-3">
