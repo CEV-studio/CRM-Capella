@@ -55,8 +55,8 @@ function Mensuel({ mois }: { mois: MoisStats[] }) {
   return <div>
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Évolution mensuelle du chiffre d’affaires France et Belgique" className="h-52 w-full overflow-visible" preserveAspectRatio="none">
       {[0, .25, .5, .75, 1].map(f => <line key={f} x1={left} x2={width-right} y1={y(max*f)} y2={y(max*f)} stroke="#dce5ee" strokeDasharray="4 5" />)}
-      <polyline points={points} fill="none" stroke="#087DD1" strokeWidth="3" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-      {mois.map((row,i) => <g key={row.mois}><circle cx={x(i)} cy={y(row.france + row.belgique)} r="4" fill="#009B72"><title>{`${MOIS[row.mois - 1]} : ${fmtEuros(row.france + row.belgique)} · France : ${fmtEuros(row.france)} · Belgique : ${fmtEuros(row.belgique)}`}</title></circle><text x={x(i)} y={height-4} textAnchor="middle" fill="#60758A" fontSize="12">{MOIS[row.mois - 1].slice(0, 3)}</text></g>)}
+      <polyline points={points} fill="none" stroke="#1E3155" strokeWidth="3" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      {mois.map((row,i) => <g key={row.mois}><circle cx={x(i)} cy={y(row.france + row.belgique)} r="4" fill="#E86030"><title>{`${MOIS[row.mois - 1]} : ${fmtEuros(row.france + row.belgique)} · France : ${fmtEuros(row.france)} · Belgique : ${fmtEuros(row.belgique)}`}</title></circle><text x={x(i)} y={height-4} textAnchor="middle" fill="#37485C" fontSize="12">{MOIS[row.mois - 1].slice(0, 3)}</text></g>)}
     </svg>
     <div className="mt-3 flex flex-wrap gap-5 border-t border-navy-100 pt-4 text-xs text-navy-600"><span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-full bg-sky-capella-500" /> France + Belgique</span></div>
   </div>;
@@ -66,7 +66,7 @@ function Indicateur({ label, value, note, icon: Icon }: { label: string; value: 
   return <article className="crm-home-kpi min-h-28 rounded-xl border border-navy-100 bg-white p-5 shadow-[0_4px_18px_rgba(7,30,61,0.055)]">
     <div className="flex items-start justify-between gap-3">
       <div className="text-sm font-medium text-grey-brand">{label}</div>
-      <Icon size={18} strokeWidth={1.7} className="shrink-0 text-energy-500" aria-hidden />
+      <Icon size={18} strokeWidth={1.7} className="shrink-0 text-navy-700" aria-hidden />
     </div>
     <div className="mt-3 font-display text-2xl font-semibold tracking-tight text-navy-900">{value}</div>
     
@@ -102,14 +102,14 @@ export function AdminHome(props: AdminHomeProps) {
       </section>
       <section aria-label="Accès directs" className="crm-home-section rounded-xl border border-navy-100 bg-white p-5">
         <div className="flex items-center justify-between border-b border-navy-100 pb-4"><h2 className="font-display text-lg font-semibold text-navy-900">Accès directs</h2><span className="text-xs font-medium text-grey-brand">Espace de travail</span></div>
-        <div className="mt-2 divide-y divide-navy-100">{categories.map(category=>{const Icon=category.icon;return <Link key={category.title} href={category.href} className="group flex items-center gap-3 py-3 text-sm font-semibold text-navy-800 hover:text-energy-700"><span className="crm-home-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"><Icon size={17}/></span><span className="min-w-0 flex-1">{category.title}</span><ArrowUpRight size={15} className="text-navy-400 group-hover:text-energy-700"/></Link>})}</div>
+        <div className="mt-2 divide-y divide-navy-100">{categories.map(category=>{const Icon=category.icon;return <Link key={category.title} href={category.href} className="group flex items-center gap-3 py-3 text-sm font-semibold text-navy-800 hover:text-star-700"><span className="crm-home-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"><Icon size={17}/></span><span className="min-w-0 flex-1">{category.title}</span><ArrowUpRight size={15} className="text-navy-400 group-hover:text-star-700"/></Link>})}</div>
       </section>
     </div>
     <section aria-label="Sections principales">
       <div className="mb-4 flex items-center justify-between"><h2 className="font-display text-lg font-semibold text-navy-900">Espaces de travail</h2><span className="text-xs font-medium text-grey-brand">{categories.length} espaces</span></div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {categories.map(category=>{const Icon=category.icon;return <article key={category.title} className="crm-home-section flex min-w-0 flex-col rounded-xl border border-navy-100 bg-white p-5">
-          <Link href={category.href} className="group flex items-center gap-3 border-b border-navy-100 pb-4"><span className="crm-home-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"><Icon size={19}/></span><span className="min-w-0 flex-1 font-display font-semibold text-navy-900">{category.title}</span><ArrowUpRight size={16} className="text-navy-400 group-hover:text-energy-700"/></Link>
+          <Link href={category.href} className="group flex items-center gap-3 border-b border-navy-100 pb-4"><span className="crm-home-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"><Icon size={19}/></span><span className="min-w-0 flex-1 font-display font-semibold text-navy-900">{category.title}</span><ArrowUpRight size={16} className="text-navy-400 group-hover:text-star-700"/></Link>
           <ul className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">{category.links.map(([href,label])=><li key={href}><Link href={href} className="block rounded-md px-2 py-2 text-sm text-navy-600 hover:bg-navy-50 hover:text-navy-900">{label}</Link></li>)}</ul>
         </article>})}
       </div>

@@ -181,9 +181,9 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
           </div>;
         })}
       </nav>
-      {collapsed ? <div className="flex flex-col items-center gap-2 border-t border-navy-100 py-4"><div title={profile.full_name} aria-label={profile.full_name} className="flex h-9 w-9 items-center justify-center rounded-full bg-energy-500 text-sm font-semibold text-white">{profile.full_name.slice(0,1).toUpperCase()}</div><Link href="/deconnexion" prefetch={false} className="rounded-lg p-2 text-navy-500 hover:bg-white" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden/></Link></div> :       <div className="border-t border-navy-100 px-4 py-4">
+      {collapsed ? <div className="crm-sidebar-footer flex flex-col items-center gap-2 border-t border-navy-100 py-4"><div title={profile.full_name} aria-label={profile.full_name} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-sm font-semibold text-white">{profile.full_name.slice(0,1).toUpperCase()}</div><Link href="/deconnexion" prefetch={false} className="rounded-lg p-2 text-navy-500 hover:bg-white" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden/></Link></div> :       <div className="crm-sidebar-footer border-t border-navy-100 px-4 py-4">
         <div className="crm-sidebar-user flex items-center gap-3 rounded-xl border border-navy-100 bg-white p-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-energy-500 font-display text-sm font-semibold text-white">{profile.full_name.slice(0, 1).toUpperCase()}</div>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-700 font-display text-sm font-semibold text-white">{profile.full_name.slice(0, 1).toUpperCase()}</div>
           <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-navy-500">{profile.role === "be_centre" ? "Centre Belgique" : profile.role === "be_agent" ? "Agent Belgique" : profile.role === "qualite" ? "Responsable qualité" : profile.role === "admin" ? "Administrateur" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
           <Link href="/deconnexion" prefetch={false} className="rounded-lg p-1.5 text-navy-500 hover:bg-navy-50 hover:text-navy-900" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
         </div>
@@ -192,7 +192,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
     </aside>
 
     <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between border-b border-white/10 bg-navy-900 px-4 py-2.5 text-white md:hidden">
-      <Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"}><Logotype className="w-36" /></Link>
+      <Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="rounded bg-[#F5F3EE] px-2 py-1"><Logotype className="w-36" /></Link>
       <Link href="/deconnexion" prefetch={false} className="inline-flex items-center gap-1.5 text-xs text-navy-100"><LogOut size={14} /> Quitter</Link>
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
