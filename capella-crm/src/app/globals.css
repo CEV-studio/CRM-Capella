@@ -6,36 +6,36 @@
    ================================================================ */
 
 @theme {
-  --color-navy-50:  #F1F5F9;
-  --color-navy-100: #E2EAF2;
-  --color-navy-200: #CBD8E6;
-  --color-navy-300: #9FB2C6;
-  --color-navy-400: #7088A0;
-  --color-navy-500: #49657F;
-  --color-navy-600: #294B69;
-  --color-navy-700: #163A61;
-  --color-navy-800: #10243E;
-  --color-navy-900: #071E3D;
+  --color-navy-50:  #F5F3EE;
+  --color-navy-100: #E0DED8;
+  --color-navy-200: #C8C5BC;
+  --color-navy-300: #A5A39D;
+  --color-navy-400: #7C838C;
+  --color-navy-500: #5E6874;
+  --color-navy-600: #37485C;
+  --color-navy-700: #1E3155;
+  --color-navy-800: #162440;
+  --color-navy-900: #0D1B2E;
 
-  --color-star-50:  #FFF7E6;
-  --color-star-100: #FFEDC2;
-  --color-star-200: #FFD27A;
-  --color-star-300: #FFB833;
-  --color-star-400: #F59E0B;
-  --color-star-500: #F59E0B;
-  --color-star-600: #EA6A00;
-  --color-star-700: #C75300;
-  --color-star-800: #994000;
-  --color-star-900: #713000;
+  --color-star-50:  #FBEDE5;
+  --color-star-100: #F7DBCA;
+  --color-star-200: #F0A96B;
+  --color-star-300: #F08050;
+  --color-star-400: #E86030;
+  --color-star-500: #E86030;
+  --color-star-600: #A83A18;
+  --color-star-700: #A83A18;
+  --color-star-800: #803018;
+  --color-star-900: #602313;
 
-  --color-sky-capella-50: #EAF6FF;
-  --color-sky-capella-100: #CFEAFF;
-  --color-sky-capella-200: #9CD5FA;
-  --color-sky-capella-300: #61BAF0;
-  --color-sky-capella-400: #279DE3;
-  --color-sky-capella-500: #087DD1;
-  --color-sky-capella-600: #0669B2;
-  --color-sky-capella-700: #07578F;
+  --color-sky-capella-50: #F5F3EE;
+  --color-sky-capella-100: #E0DED8;
+  --color-sky-capella-200: #C8C5BC;
+  --color-sky-capella-300: #A5A39D;
+  --color-sky-capella-400: #1E3155;
+  --color-sky-capella-500: #1E3155;
+  --color-sky-capella-600: #162440;
+  --color-sky-capella-700: #0D1B2E;
 
   --color-energy-50:  #E8FFF7;
   --color-energy-100: #C7F8E7;
@@ -47,8 +47,8 @@
   --color-energy-700: #006148;
 
   --color-grey-brand: #596775;
-  --color-surface: #E7EAED;
-  --color-surface-raised: #FFFFFF;
+  --color-surface: #F5F3EE;
+  --color-surface-raised: #F5F3EE;
 
   --color-status-signe:   #C6EFCE;
   --color-status-avance:  #E3F5EE;
@@ -68,8 +68,8 @@
   --crm-shadow-sm: 0 1px 2px rgba(7, 30, 61, .05);
   --crm-shadow-card: 0 1px 2px rgba(18, 30, 43, .07), 0 10px 24px rgba(18, 30, 43, .08);
   --crm-shadow-hover: 0 10px 26px rgba(7, 30, 61, .10);
-  --crm-gradient-navy: #071E3D;
-  --crm-gradient-accent: #087DD1;
+  --crm-gradient-navy: #0D1B2E;
+  --crm-gradient-accent: #1E3155;
 }
 
 body {
@@ -139,14 +139,6 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell .bg-neutral-100 { background-color: var(--color-navy-50) !important; }
 .crm-shell .bg-neutral-200 { background-color: var(--color-sky-capella-100) !important; }
 
-/* Les actions principales passent au vert énergie ; l'ambre reste réservé
-   aux créations et aux actions prioritaires explicitement signalées. */
-.crm-shell main button.bg-navy-800,
-.crm-shell main a.bg-navy-800,
-.crm-shell main label.bg-navy-800 { background-color: var(--color-energy-500) !important; }
-.crm-shell main .hover\:bg-navy-700:hover { background-color: var(--color-energy-600) !important; }
-.crm-shell main .border-navy-800 { border-color: var(--color-energy-500) !important; }
-
 /* Shared surfaces and accessible interaction states. */
 .crm-shell main table thead th { font-size: .7rem; letter-spacing: .04em; }
 .crm-shell main tbody tr { border-color: var(--crm-border); }
@@ -166,64 +158,52 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell main table { width: 100%; }
 .crm-shell main table th { white-space: nowrap; }
 .crm-shell main table td { vertical-align: middle; }
-.crm-shell main :is(button, a):focus-visible { outline: 2px solid #087DD1; outline-offset: 2px; }
+.crm-shell main :is(button, a):focus-visible { outline: 2px solid #1E3155; outline-offset: 2px; }
 .crm-shell main :is(input, select, textarea):disabled { background-color: #f1f5f9; opacity: .7; }
 @media (max-width: 640px) {
   .crm-shell main.px-6 { padding-left: 1rem; padding-right: 1rem; }
   .crm-shell main form { min-width: 0; }
 }
 
-/* Workspace hardware: graphite type, aluminium surfaces, precise edges. */
-.crm-shell {
-  background: linear-gradient(145deg, #dfe4e8 0%, #edf0f2 48%, #e4e8eb 100%);
-  color: #1b2b3b;
-}
-.crm-sidebar {
-  background: linear-gradient(160deg, #e3e7eb 0%, #d8dee3 100%) !important;
-  border-right: 1px solid #abb5be !important;
-  box-shadow: inset -1px 0 rgba(255,255,255,.72), 3px 0 12px rgba(28,40,52,.045);
-}
-.crm-sidebar-brand { background: linear-gradient(#fafbfc, #e9edf0) !important; border-color: #bdc6cd !important; }
-.crm-sidebar nav { scrollbar-color: #aeb8c1 transparent; }
-.crm-sidebar nav > div > button, .crm-sidebar nav > div > a { border-radius: .55rem; }
-.crm-sidebar nav > div > button:hover, .crm-sidebar nav > div > a:hover { box-shadow: inset 0 0 0 1px #c1cad2; }
-.crm-sidebar-user { border-color: #bac4cc !important; background: rgba(244,247,249,.74) !important; box-shadow: inset 0 1px rgba(255,255,255,.9), 0 2px 5px rgba(30,42,55,.06); }
-.crm-workspace-bar {
-  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(237,241,244,.98)) !important;
-  border-bottom: 1px solid #bfc8d0 !important;
-  box-shadow: inset 0 1px #fff, 0 3px 12px rgba(25,38,52,.05);
-}
-.crm-shell main { color: #1b2b3b; }
-.crm-shell main .crm-panel {
-  background: linear-gradient(180deg, #fff, #fbfcfd);
-  border: 1px solid #c4ccd4;
-  box-shadow: inset 0 1px rgba(255,255,255,.95), 0 2px 4px rgba(22,34,48,.06), 0 12px 26px rgba(22,34,48,.065);
-}
-.crm-shell main .crm-panel-heading { background: linear-gradient(180deg,#f8fafb,#edf0f2); border-color:#cbd2d9; }
-.crm-shell main .crm-panel-heading::after { content: ""; position:absolute; inset:auto 0 0; height:1px; background:rgba(255,255,255,.8); }
-.crm-shell main table thead { background: #dce2e7 !important; }
-.crm-shell main table thead th { color:#2f4253 !important; border-bottom:1px solid #aebac4; font-size:.69rem; letter-spacing:.055em; font-weight:700; }
-.crm-shell main table tbody tr { border-color:#d2d9df; }
-.crm-shell main table tbody tr:hover { background-color:#edf4f6; }
-.crm-shell main input:not([type="checkbox"]):not([type="radio"]), .crm-shell main select, .crm-shell main textarea {
-  border-color:#b8c3cb; box-shadow: inset 0 1px 2px rgba(24,38,50,.045); background-color:#fff;
-}
-.crm-shell main input:not([type="checkbox"]):not([type="radio"]):focus, .crm-shell main select:focus, .crm-shell main textarea:focus {
-  border-color:#007a59; box-shadow:0 0 0 3px rgba(0,122,89,.14); outline:none;
-}
-.crm-shell main .crm-button { border:1px solid rgba(15,33,47,.16); box-shadow:inset 0 1px rgba(255,255,255,.30), 0 2px 4px rgba(17,29,40,.12); }
-.crm-shell main .crm-button:active { transform:translateY(1px); box-shadow:inset 0 2px 4px rgba(17,29,40,.13); }
-.crm-home-kpi { background:linear-gradient(160deg,#ffffff 4%,#f2f5f7 100%) !important; border-color:#bec8d1 !important; box-shadow:inset 0 1px #fff,0 3px 8px rgba(24,38,52,.08),0 12px 24px rgba(24,38,52,.05) !important; }
-.crm-home-section { background:linear-gradient(160deg,#ffffff 0%,#f5f7f8 100%) !important; border-color:#c3cbd2 !important; box-shadow:inset 0 1px #fff,0 3px 12px rgba(24,38,52,.07) !important; }
-.crm-home-icon { background:linear-gradient(145deg,#e5ebee,#d4dde2) !important; box-shadow:inset 0 1px #fff,0 1px 3px rgba(31,45,58,.12); color:#126b62 !important; }
-/* Apply the same edge treatment to legacy screens using their own cards. */
-.crm-shell main :is(section, article, div).rounded-xl.border.bg-white,
-.crm-shell main :is(section, article, div).rounded-2xl.border.bg-white {
-  border-color: #c7cfd6;
-  box-shadow: inset 0 1px rgba(255,255,255,.9), 0 2px 5px rgba(24,38,52,.055), 0 9px 20px rgba(24,38,52,.04);
-}
-.crm-shell main > header h1 { color:#142a3d; letter-spacing:-.025em; }
-.crm-table-shell { border-color:#bbc5ce; box-shadow:inset 0 1px #fff,0 3px 10px rgba(24,38,52,.06); }
-@media (prefers-reduced-motion: reduce) {
-  .crm-sidebar { transition: none; }
-}
+
+/* Charte Capella : surfaces navy, fonds chauds et accent orange. */
+.crm-shell { background: #0D1B2E; color: #0D1B2E; }
+.crm-sidebar { background: #0D1B2E !important; border-color: #1E3155 !important; box-shadow: none; }
+.crm-sidebar-brand { background: #F5F3EE !important; border-color: #1E3155 !important; }
+.crm-sidebar nav > div > :is(button,a) { color: #F5F3EE !important; }
+.crm-sidebar nav > div > :is(button,a) svg { color: #C8C5BC !important; }
+.crm-sidebar nav > div > :is(button,a):hover,
+.crm-sidebar nav > div > :is(button,a).bg-white { background: #1E3155 !important; color: #F5F3EE !important; }
+.crm-sidebar nav ul { border-color: #1E3155; }
+.crm-sidebar nav ul a { color: #C8C5BC !important; }
+.crm-sidebar nav ul a svg { color: #C8C5BC !important; }
+.crm-sidebar nav ul a:hover, .crm-sidebar nav ul a[aria-current="page"] { background: #1E3155 !important; color: #F5F3EE !important; }
+.crm-sidebar-user { background: #162440 !important; border-color: #1E3155 !important; box-shadow: none; }
+.crm-sidebar-user .text-navy-900 { color: #F5F3EE !important; }
+.crm-sidebar-user .text-navy-500 { color: #C8C5BC !important; }
+.crm-workspace-bar { position:relative; background: #0D1B2E !important; border: 0 !important; box-shadow: none; color: #F5F3EE; }
+.crm-workspace-bar::after { content:""; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#E86030,#162440); }
+.crm-workspace-bar :is(.text-navy-500,.text-navy-600,.text-navy-700,.text-navy-800) { color:#F5F3EE; }
+.crm-workspace-bar .text-navy-300 { color:#C8C5BC; }
+.crm-workspace-bar button { color:#F5F3EE; }
+.crm-shell main { background:#F5F3EE; color:#0D1B2E; }
+.crm-shell main .crm-panel, .crm-home-kpi, .crm-home-section { background:#F5F3EE !important; border:1px solid #C8C5BC !important; box-shadow:0 3px 12px rgba(13,27,46,.08) !important; }
+.crm-shell main .crm-panel-heading { background:#F5F3EE; border-color:#C8C5BC; }
+.crm-shell main table thead { background:#162440 !important; }
+.crm-shell main table thead th { color:#F5F3EE !important; border-color:#1E3155; }
+.crm-shell main tbody tr:hover { background-color:#E0DED8; }
+.crm-shell main input:not([type="checkbox"]):not([type="radio"]), .crm-shell main select, .crm-shell main textarea { background-color:#F5F3EE; border-color:#C8C5BC; }
+.crm-shell main input:not([type="checkbox"]):not([type="radio"]):focus, .crm-shell main select:focus, .crm-shell main textarea:focus { border-color:#1E3155; box-shadow:0 0 0 3px rgba(30,49,85,.16); outline:none; }
+.crm-shell main .crm-button { border:1px solid #1E3155; box-shadow:none; }
+.crm-home-icon { background:#E0DED8 !important; color:#1E3155 !important; box-shadow:none; }
+.crm-shell main :is(button,a):focus-visible { outline:2px solid #1E3155; outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { .crm-sidebar { transition:none; } }
+
+.crm-workspace-bar a.bg-white { color:#0D1B2E !important; background:#F5F3EE; }
+.crm-sidebar-footer { border-color:#1E3155; }
+.crm-sidebar-footer > a { color:#C8C5BC; }
+.crm-sidebar-footer > a:hover { background:#1E3155; color:#F5F3EE; }
+.crm-shell main :is(button,a).bg-star-500.text-white { color:#0D1B2E; }
+.crm-shell main :is(button,a).bg-star-500.text-white:hover { color:#F5F3EE; }
+.crm-shell main .bg-white { background-color:#F5F3EE; }
+.crm-shell main .crm-page-header, .crm-table-shell { background:#F5F3EE; }
