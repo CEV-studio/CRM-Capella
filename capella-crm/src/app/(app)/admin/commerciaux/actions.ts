@@ -149,7 +149,7 @@ export async function modifierTaux(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireManage();
+  await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   const taux = Number(String(formData.get("commission_rate") ?? "").replace(",", "."));

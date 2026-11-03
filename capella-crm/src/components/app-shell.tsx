@@ -47,9 +47,6 @@ const COMMERCIAL_NAV = [
   section("Prospection", "/prospection", Search, [
     { href: "/prospection", label: "Prospection", icon: Search },
   ]),
-  section("Comptabilité / KPI", "/commissions", CircleDollarSign, [
-    { href: "/commissions", label: "Mes commissions", icon: CircleDollarSign },
-  ]),
   section("Mon espace", "/email", Mail, [
     { href: "/email", label: "Mon email", icon: Mail },
   ]),

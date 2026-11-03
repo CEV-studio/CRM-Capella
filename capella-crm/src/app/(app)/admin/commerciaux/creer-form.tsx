@@ -10,7 +10,7 @@ import { Button, Field, Input } from "@/components/ui";
  * Le mot de passe provisoire s'affiche une seule fois, à l'écran :
  * il n'est envoyé par aucun email. Jeremy le transmet lui-même.
  */
-export function CreerCommercialForm() {
+export function CreerCommercialForm({ estAdmin }: { estAdmin: boolean }) {
   const [etat, action, enCours] = useActionState<ActionResult | null, FormData>(
     creerCommercial,
     null,
@@ -33,7 +33,7 @@ export function CreerCommercialForm() {
         <Field label="Email">
           <Input name="email" type="email" required placeholder="aly@capellaenergy.fr" />
         </Field>
-        <Field label="Commission %">
+        {estAdmin ? <Field label="Commission %">
           <Input
             name="commission_rate"
             type="number"
@@ -43,7 +43,7 @@ export function CreerCommercialForm() {
             defaultValue={50}
             required
           />
-        </Field>
+        </Field> : <input type="hidden" name="commission_rate" value="50" />}
         <Button type="submit" disabled={enCours} className="h-10">
           {enCours ? "Création…" : "Créer le compte"}
         </Button>

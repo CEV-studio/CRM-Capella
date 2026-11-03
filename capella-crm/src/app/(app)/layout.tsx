@@ -18,5 +18,8 @@ export default async function AppLayout({
     redirect("/changer-mot-de-passe");
   }
 
-  return <AppShell profile={profile}>{children}</AppShell>;
+  const shellProfile = profile.role === 'commercial' || profile.role === 'manager'
+    ? { ...profile, commission_rate: 0 }
+    : profile;
+  return <AppShell profile={shellProfile}>{children}</AppShell>;
 }
