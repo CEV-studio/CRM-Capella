@@ -2,11 +2,11 @@ import type { CycleTracking, SupplierBilling } from '@/lib/belgium/domain';
 import type { Contract, Statement, Invoice, ImportRun as BelgiumImportRun } from "@/lib/belgium/domain";
 import type { Dossier, Quote } from "@/lib/partners/types";
 /** Types manuels de la base Supabase — miroir des migrations. */
-export type Role = "admin" | "commercial" | "apporteur" | "qualite" | "be_centre" | "be_agent";
+export type Role = "admin" | "commercial" | "manager" | "apporteur" | "qualite" | "be_centre" | "be_agent";
 export type PaymentStatus = "À payer" | "Payé" | "En attente";
 export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 
-export type Profile = { id:string; full_name:string; email:string; role:Role; commission_rate:number; is_active:boolean; must_change_password:boolean; can_export:boolean; can_view_all:boolean; can_manage_team:boolean; created_at:string; updated_at:string };
+export type Profile = { id:string; full_name:string; email:string; role:Role; commission_rate:number; is_active:boolean; must_change_password:boolean; can_export:boolean; can_view_all:boolean; can_manage_team:boolean; manager_id:string|null; created_at:string; updated_at:string };
 export type QualityReview = { id:string; activity_name:string; rubric_key:string; agent_name:string; sale_reference:string; sale_key:string|null; identification:Record<string,string>; condition_context:Record<string,boolean>; answers:Record<string,import('@/lib/quality').QualityAnswer>; score_sum:number; applicable_count:number; score_percent:number; status:import('@/lib/quality').QualityStatus; grave_faults:Array<{question_id:number;criterion:string;comment:string}>; call_quality_note:string|null; comments:string|null; controller_id:string; controller_name:string; reviewed_at:string; created_at:string };
 export type Source = { id:string; name:string; kind:"call_center"|"apporteur"|"fichier"|"web"|"autre"; is_active:boolean; created_at:string };
 export type Apporteur = { id:string; name:string; contact:string|null; commission_rate:number; payment_status:PaymentStatus; is_active:boolean; created_at:string; updated_at:string };
