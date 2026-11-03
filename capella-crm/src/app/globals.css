@@ -207,3 +207,34 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell main :is(button,a).bg-star-500.text-white:hover { color:#F5F3EE; }
 .crm-shell main .bg-white { background-color:#F5F3EE; }
 .crm-shell main .crm-page-header, .crm-table-shell { background:#F5F3EE; }
+
+/* Une interface graphique, structurée et lisible pour les usages quotidiens. */
+.crm-shell { --crm-ink:#111827; --crm-paper:#fffef8; --crm-accent:#ffcc46; }
+.crm-shell main { background:#f8f4e9; }
+.crm-home-hero {
+  border:2px solid var(--crm-ink);
+  border-radius:16px;
+  background-color:#ffcc46;
+  background-image:radial-gradient(rgba(13,27,46,.13) 1px, transparent 1px);
+  background-size:20px 20px;
+  box-shadow:5px 5px 0 var(--crm-ink);
+}
+.crm-home-eyebrow { border-radius:7px; background:#0D1B2E; color:#ffcc46; }
+.crm-shell main .crm-panel, .crm-home-kpi, .crm-home-section {
+  background:var(--crm-paper) !important;
+  border:2px solid var(--crm-ink) !important;
+  box-shadow:4px 4px 0 var(--crm-ink) !important;
+}
+.crm-home-kpi:nth-child(2) { background:#ffdf7b !important; }
+.crm-home-kpi:nth-child(3) { background:#e6f4e8 !important; }
+.crm-home-kpi:nth-child(4) { background:#ffe6d7 !important; }
+.crm-home-kpi .font-display { font-size:1.8rem; font-weight:700; }
+.crm-shell main .crm-panel-heading { background:#f7e7ba; border-bottom:2px solid var(--crm-ink); }
+.crm-home-icon { background:#ffcc46 !important; color:#0D1B2E !important; border:2px solid #0D1B2E; }
+.crm-shell main .crm-button { border:2px solid #0D1B2E; box-shadow:3px 3px 0 #0D1B2E; font-weight:700; }
+.crm-shell main .crm-button:hover { transform:translate(-1px,-1px); box-shadow:4px 4px 0 #0D1B2E; }
+.crm-shell main table thead { background:#0D1B2E !important; }
+.crm-shell main table thead th { font-weight:700; }
+.crm-shell main input:not([type="checkbox"]):not([type="radio"]), .crm-shell main select, .crm-shell main textarea { background-color:#fffef8; border-color:#66717d; }
+.crm-workspace-bar::after { height:4px; background:#ffcc46; }
+@media (prefers-reduced-motion:reduce) { .crm-shell main .crm-button:hover { transform:none; } }

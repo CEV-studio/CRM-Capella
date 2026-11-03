@@ -75,10 +75,10 @@ function Indicateur({ label, value, note, icon: Icon }: { label: string; value: 
 
 export function AdminHome(props: AdminHomeProps) {
   return <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-9">
-    <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-navy-200 pb-5">
+    <header className="crm-home-hero mb-6 flex flex-wrap items-end justify-between gap-4 px-6 py-6 sm:px-8 sm:py-8">
       <div>
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.13em] text-grey-brand"><BarChart3 size={15} /> Tableau de bord global</div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-navy-900">Bonjour {props.prenom}</h1>
+        <div className="crm-home-eyebrow mb-3 inline-flex items-center gap-2 px-3 py-2 text-xs font-bold uppercase tracking-[.13em]"><BarChart3 size={15} /> Tableau de bord global</div>
+        <h1 className="font-display text-4xl font-bold tracking-tight text-navy-900 sm:text-5xl">Bonjour {props.prenom}<span className="text-star-600">.</span></h1>
         <p className="mt-2 text-sm text-grey-brand">Toute l’activité de Capella · année {props.annee}</p>
       </div>
       <span className="inline-flex items-center gap-2 rounded-full border border-navy-100 bg-white px-3 py-2 text-xs font-medium text-navy-600"><CheckCircle2 size={15} /> Vue administrateur complète</span>
