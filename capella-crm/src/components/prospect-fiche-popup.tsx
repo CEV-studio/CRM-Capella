@@ -32,8 +32,8 @@ export function ProspectFichePopup({ prospectId, prospectLabel, children, classN
 
   const modal = open ? (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-navy-900/40 p-0 backdrop-blur-[2px] sm:p-4" role="dialog" aria-modal="true" aria-label={`Fiche prospect — ${prospectLabel}`} onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-      <div className="flex h-[100dvh] w-full max-w-[1500px] flex-col overflow-hidden rounded-none sm:h-[94dvh] sm:rounded-2xl border border-white/20 bg-white shadow-2xl">
-        <header className="flex shrink-0 items-center justify-between border-b border-navy-100 bg-white px-4 py-3 sm:px-6">
+      <div className="crm-modal-panel flex h-[100dvh] w-full max-w-[1500px] flex-col overflow-hidden rounded-none sm:h-[94dvh] sm:rounded-2xl border border-white/20 bg-white shadow-2xl">
+        <header className="crm-modal-header flex shrink-0 items-center justify-between border-b border-navy-100 bg-white px-4 py-3 sm:px-6">
           <h2 className="min-w-0 truncate font-display text-base font-semibold text-navy-900">Fiche prospect — {prospectLabel}</h2>
           <button ref={closeButton} type="button" onClick={() => setOpen(false)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-navy-200 bg-white text-navy-600 shadow-sm hover:bg-navy-50" aria-label="Fermer"><X size={17}/></button>
         </header>
