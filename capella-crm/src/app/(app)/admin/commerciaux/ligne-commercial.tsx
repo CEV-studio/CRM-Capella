@@ -3,7 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import {
   modifierRole,
-  affecterManager,
+  affecterEquipe,
   basculerActivation,
   modifierPermissions,
   modifierTaux,
@@ -17,15 +17,15 @@ import { ProfilCorbeilleButton } from "@/components/profil-corbeille-button";
 export function LigneCommercial({
   profil,
   estMoi,
-  managers,
+  equipes,
   estAdmin,
 }: {
   profil: Profile;
   estMoi: boolean;
-  managers: Pick<Profile, 'id'|'full_name'>[];
+  equipes: {id:string;name:string}[];
   estAdmin: boolean;
 }) {
-  const [etatManager,actionManager]=useActionState<ActionResult|null,FormData>(affecterManager,null);
+  const [etatManager,actionManager]=useActionState<ActionResult|null,FormData>(affecterEquipe,null);
   const [etatRole,actionRole]=useActionState<ActionResult|null,FormData>(modifierRole,null);
   const [etatTaux, actionTaux, tauxEnCours] = useActionState<ActionResult | null, FormData>(
     modifierTaux,
@@ -85,7 +85,7 @@ export function LigneCommercial({
         </div>
 
         {profil.role!=="admin"&&estAdmin?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="manager">Manager</option><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
-        {estAdmin&&profil.role==='commercial'?<form action={actionManager} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><label className="text-sm">Manager <select name="manager_id" defaultValue={profil.manager_id??''} className="rounded border p-2 text-sm"><option value="">Aucun</option>{managers.map(m=><option key={m.id} value={m.id}>{m.full_name}</option>)}</select></label><Button type="submit" variant="ghost">Attribuer</Button></form>:null}
+        {estAdmin&&profil.role==='commercial'?<form action={actionManager} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><label className="text-sm">Équipe <select name="partner_team_id" defaultValue={profil.partner_team_id??''} className="rounded border p-2 text-sm"><option value="">Aucune</option>{equipes.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></label><Button type="submit" variant="ghost">Attribuer</Button></form>:null}
         {estAdmin && <form action={actionTaux} className="flex items-center gap-1.5">
           <input type="hidden" name="id" value={profil.id} />
           <Input

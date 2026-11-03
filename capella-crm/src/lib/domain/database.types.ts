@@ -6,7 +6,8 @@ export type Role = "admin" | "commercial" | "manager" | "apporteur" | "qualite" 
 export type PaymentStatus = "À payer" | "Payé" | "En attente";
 export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 
-export type Profile = { id:string; full_name:string; email:string; role:Role; commission_rate:number; is_active:boolean; must_change_password:boolean; can_export:boolean; can_view_all:boolean; can_manage_team:boolean; manager_id:string|null; archived_at:string|null; created_at:string; updated_at:string };
+export type Profile = { id:string; full_name:string; email:string; role:Role; commission_rate:number; is_active:boolean; must_change_password:boolean; can_export:boolean; can_view_all:boolean; can_manage_team:boolean; manager_id:string|null; partner_team_id:string|null; archived_at:string|null; created_at:string; updated_at:string };
+export type PartnerTeam = { id:string; name:string; partner_name:string|null; manager_id:string|null; is_active:boolean; created_at:string };
 export type QualityReview = { id:string; activity_name:string; rubric_key:string; agent_name:string; sale_reference:string; sale_key:string|null; identification:Record<string,string>; condition_context:Record<string,boolean>; answers:Record<string,import('@/lib/quality').QualityAnswer>; score_sum:number; applicable_count:number; max_score:number; score_percent:number; status:import('@/lib/quality').QualityStatus; grave_faults:Array<{question_id:number;criterion:string;comment:string}>; call_quality_note:string|null; comments:string|null; controller_id:string; controller_name:string; reviewed_at:string; created_at:string };
 export type Source = { id:string; name:string; kind:"call_center"|"apporteur"|"fichier"|"web"|"autre"; is_active:boolean; created_at:string };
 export type Apporteur = { id:string; name:string; contact:string|null; commission_rate:number; payment_status:PaymentStatus; is_active:boolean; created_at:string; updated_at:string };
@@ -113,6 +114,7 @@ export type ProspectSummary = {
 export interface Database {
   public: {
     Tables: {
+      partner_teams:Table<PartnerTeam>;
       be_products:Table<import('@/lib/belgium/products').SaleProduct>;
       be_client_comments:Table<import('@/lib/belgium/comments').ClientComment>;
       be_comment_history:Table<import('@/lib/belgium/comments').CommentRevision>;
@@ -160,6 +162,7 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      partner_team_stats:{Args:Record<never,never>;Returns:{team_id:string;membres:number;prospects_actifs:number;dossiers_en_cours:number;dossiers_valides:number}[]};
       be_encode_sale:{Args:{p_data:Record<string,string>};Returns:string};
       be_save_comment:{Args:{p_id:string|null;p_mega:string;p_centre:string;p_body:string};Returns:string};
       be_import:{Args:{p_kind:string;p_source:string;p_date:string;p_fingerprint:string;p_rows:unknown[]};Returns:{id:string;added:number;changed:number;unchanged:number}};
