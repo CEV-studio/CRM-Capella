@@ -38,7 +38,12 @@ export default async function QualityPage({searchParams}:{searchParams:Promise<{
   const {data:managers,error:managersError}=await db.from('profiles').select('id,full_name,is_active').eq('role','qualite').order('full_name');
   if(managersError)throw new Error(`Responsables qualité : ${managersError.message}`);
   qualityManagers=managers||[];
-  for(let offset=0;;offset+=1000){let query=db.from('quality_reviews').select('controller_id,controller_name,reviewed_at').order('reviewed_at',{ascending:false}).range(offset,offset+999);
+  // Sans filtre métier, les lignes déjà chargées couvrent exactement la même
+  // période que les compteurs d'activité : évite une deuxième lecture complète.
+  const canReuseRows=!statuses.includes(params.status as QualityStatus)&&!params.activity&&!params.agent&&!params.sale&&!params.controller;
+  if(canReuseRows){
+   for(const review of rows){const current=activityByController.get(review.controller_id);activityByController.set(review.controller_id,{count:(current?.count||0)+1,last:current?.last||review.reviewed_at});}
+  }else for(let offset=0;;offset+=1000){let query=db.from('quality_reviews').select('controller_id,controller_name,reviewed_at').order('reviewed_at',{ascending:false}).range(offset,offset+999);
    if(params.from&&parisBoundary(params.from))query=query.gte('reviewed_at',parisBoundary(params.from)!);
    if(params.to&&parisBoundary(params.to,true))query=query.lte('reviewed_at',parisBoundary(params.to,true)!);
    const {data,error}=await query;if(error)throw new Error(`Activité qualité : ${error.message}`);
