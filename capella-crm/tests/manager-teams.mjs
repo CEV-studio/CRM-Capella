@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { PGlite } from '@electric-sql/pglite';
+
+const db = new PGlite();
+await db.exec(`create schema auth;
+ create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+ create table public.profiles(id uuid primary key, role text not null constraint profiles_role_check check(role in ('admin','commercial','apporteur','qualite','be_centre','be_agent')), commission_rate numeric default 0, is_active boolean default true, can_export boolean default false, can_view_all boolean default false, can_manage_team boolean default false);
+ create function public.is_admin() returns boolean language sql as $$select coalesce((select role='admin' from public.profiles where id=auth.uid()),false)$$;
+ create function public.can_manage() returns boolean language sql as $$select coalesce((select role='admin' or can_manage_team from public.profiles where id=auth.uid()),false)$$;`);
+await db.exec(readFileSync('supabase/migrations/20261103182334_manager_teams.sql','utf8'));
+await db.exec(`create trigger protect before update on public.profiles for each row execute function public.tg_protect_profile_privileges();
+ insert into public.profiles(id,role) values ('00000000-0000-0000-0000-000000000001','admin'),('00000000-0000-0000-0000-000000000002','manager'),('00000000-0000-0000-0000-000000000003','commercial');
+ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+ update public.profiles set manager_id='00000000-0000-0000-0000-000000000002' where id='00000000-0000-0000-0000-000000000003';
+ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
+ update public.profiles set manager_id=null,role='admin' where id='00000000-0000-0000-0000-000000000003';`);
+const {rows}=await db.query(`select role,manager_id from public.profiles where id='00000000-0000-0000-0000-000000000003'`);
+assert.equal(rows[0].role,'commercial');assert.equal(rows[0].manager_id,'00000000-0000-0000-0000-000000000002');
+await assert.rejects(db.exec(`select set_config('request.jwt.claim.sub','',false); update public.profiles set can_view_all=true where role='manager'`));
+console.log('PASS: manager permissions constrained and assignment protected.');
+await db.close();
