@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import {
   modifierRole,
+  affecterManager,
   basculerActivation,
   modifierPermissions,
   modifierTaux,
@@ -15,10 +16,15 @@ import type { Profile } from "@/lib/domain/database.types";
 export function LigneCommercial({
   profil,
   estMoi,
+  managers,
+  estAdmin,
 }: {
   profil: Profile;
   estMoi: boolean;
+  managers: Pick<Profile, 'id'|'full_name'>[];
+  estAdmin: boolean;
 }) {
+  const [etatManager,actionManager]=useActionState<ActionResult|null,FormData>(affecterManager,null);
   const [etatRole,actionRole]=useActionState<ActionResult|null,FormData>(modifierRole,null);
   const [etatTaux, actionTaux, tauxEnCours] = useActionState<ActionResult | null, FormData>(
     modifierTaux,
@@ -39,7 +45,7 @@ export function LigneCommercial({
   const [copie, setCopie] = useState(false);
   const formPerm = useRef<HTMLFormElement>(null);
 
-  const message = etatRole ?? etatPerm ?? etatMdp ?? etatActif ?? etatTaux;
+  const message = etatManager ?? etatRole ?? etatPerm ?? etatMdp ?? etatActif ?? etatTaux;
 
   // L'admin fondateur a déjà tous les droits : pas de cases pour lui.
   const montrerPermissions = profil.role === "commercial" && profil.is_active;
@@ -77,7 +83,8 @@ export function LigneCommercial({
           <div className="text-xs text-grey-brand">{profil.email}</div>
         </div>
 
-        {profil.role!=="admin"?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
+        {profil.role!=="admin"&&estAdmin?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="manager">Manager</option><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
+        {estAdmin&&profil.role==='commercial'?<form action={actionManager} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><label className="text-sm">Manager <select name="manager_id" defaultValue={profil.manager_id??''} className="rounded border p-2 text-sm"><option value="">Aucun</option>{managers.map(m=><option key={m.id} value={m.id}>{m.full_name}</option>)}</select></label><Button type="submit" variant="ghost">Attribuer</Button></form>:null}
         <form action={actionTaux} className="flex items-center gap-1.5">
           <input type="hidden" name="id" value={profil.id} />
           <Input
