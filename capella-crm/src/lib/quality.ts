@@ -1,4 +1,4 @@
-export type AnswerKind = "score" | "grave" | "na";
+export type AnswerKind = "score" | "grave" | "na"; // grave is retained only for historical reviews
 export type QualityAnswer = { kind: AnswerKind; score: number | null; comment: string; reason: string };
 export type QualityStatus = "Conforme" | "À consolider" | "Insuffisant" | "Non conforme — faute grave";
 export const QUALITY_ELIGIBLE_SALE_STATUSES = ['Signé', 'Effectif', 'Salle d’attente'] as const;
@@ -6,7 +6,7 @@ export const isQualityEligibleSale = (status:string) => QUALITY_ELIGIBLE_SALE_ST
 
 // Formulations et repères repris de la grille fournie. Les éléments que cette grille
 // renvoie à une « liste de la grille actuelle » restent signalés comme tels.
-export const MEGA_QUALITY_QUESTIONS = [
+export const MEGA_QUALITY_QUESTIONS_V1 = [
   { id:8, criterion:"Identité agent + entreprise mentionnées", grave:true, guidance:"4 si les deux sont clairement mentionnées ; dégrader selon omission / imprécision. FG si l’identité de l’agent et celle de l’entreprise ne sont pas mentionnées, conformément au critère actuel." },
   { id:9, criterion:"Nom du prospect mentionné", grave:true, guidance:"4 si mentionné correctement ; dégrader si tardif ou approximatif. FG si absent." },
   { id:10, criterion:"Nature commerciale expliquée : économies sur contrat(s) énergie", grave:true, guidance:"4 si l’objet est clair ; dégrader selon clarté / complétude. FG si non expliqué." },
@@ -26,14 +26,40 @@ export const MEGA_QUALITY_QUESTIONS = [
   { id:24, criterion:"Aucune déclaration négative sur concurrents ni information erronée", grave:false, guidance:"4 si aucune ; 3/2 si imprécision immédiatement corrigée sans effet ; 1 si propos négatif ou erreur importante ; 0 si propos négatif et/ou information erronée non corrigée. Conserver tout seuil « faute grave » uniquement s’il existe dans la règle MEGA applicable." },
   { id:25, criterion:"Plus de cinq objections : clôture de l’appel", grave:false, conditional:"N/A si le prospect n’a pas formulé plus de cinq objections.", guidance:"Si plus de cinq objections : 4 si clôture appropriée ; dégrader si tardive ou mal amenée ; 0 si l’appel se poursuit. Si le seuil n’est pas atteint : N/A." },
 ] as const;
+// Barème v2 : mêmes critères, six niveaux chiffrés et aucun choix « faute grave ».
+// Les précisions propres à chaque question complètent les ancrages communs 0–5.
+const V2_GUIDANCE:Record<number,string> = {
+ 8:'5 si l’agent et l’entreprise sont clairement identifiés ; 0 si les deux sont omis.',
+ 9:'5 si le nom du prospect est correctement mentionné ; 0 s’il n’est jamais mentionné.',
+ 10:'5 si la nature commerciale et l’objet énergie sont clairement expliqués ; 0 s’ils sont absents.',
+ 11:'5 si l’appel est interrompu dans chacun des cas concernés ; 0 si une interruption requise est omise.',
+ 12:'5 si la simulation est réalisée et envoyée directement ; 0 si aucune simulation n’est réalisée.',
+ 13:'5 si la consommation annuelle est clairement demandée ; 0 si elle n’est pas demandée.',
+ 14:'Si la consommation est indisponible : 5 si l’enquête est complète, 0 si elle n’est pas utilisée.',
+ 15:'5 si tous les éléments applicables de l’offre sont présentés ; 0 si l’offre n’est pas présentée.',
+ 16:'5 si l’accord libre et la réceptivité sont clairs ; 0 en l’absence d’accord ou en cas de contrainte.',
+ 17:'5 si les informations et la date de début sont traitées correctement ; 0 si rien n’est vérifié.',
+ 18:'5 si la collecte est complète et proportionnée ; 0 si les informations requises ne sont pas recueillies.',
+ 19:'5 si les options de paiement et de facturation sont proposées et expliquées ; 0 si elles ne le sont pas.',
+ 20:'5 si tous les éléments de l’e-mail sont vérifiés avec le prospect ; 0 si aucune vérification n’est faite.',
+ 21:'5 si le prospect comprend le contrat et le changement de fournisseur ; 0 s’il ne le sait pas.',
+ 22:'5 si toutes les étapes applicables sont expliquées ; 0 si aucune ne l’est.',
+ 23:'5 si l’écoute et les réponses sont adaptées ; 0 si les besoins et préoccupations sont ignorés.',
+ 24:'5 si les informations sont exactes et aucun concurrent n’est dénigré ; 0 si des erreurs ou propos négatifs ne sont pas corrigés.',
+ 25:'Si plus de cinq objections : 5 si l’appel est clos de façon appropriée ; 0 s’il se poursuit.',
+};
+export const MEGA_QUALITY_QUESTIONS = MEGA_QUALITY_QUESTIONS_V1.map(q=>({
+ ...q,grave:false,guidance:V2_GUIDANCE[q.id],
+}));
 export type QualityQuestion = typeof MEGA_QUALITY_QUESTIONS[number];
 export const QUALITY_RUBRICS = {
-  mega_call_v1:{key:'mega_call_v1',label:'Appels MEGA',questions:MEGA_QUALITY_QUESTIONS,conditionRules:[{questionId:14,field:'q14_consumption_available',naWhen:true},{questionId:25,field:'q25_more_than_five_objections',naWhen:false}] as const},
+ mega_call_v2:{key:'mega_call_v2',label:'Appels MEGA · barème 0–5',questions:MEGA_QUALITY_QUESTIONS,maxScore:5,conditionRules:[{questionId:14,field:'q14_consumption_available',naWhen:true},{questionId:25,field:'q25_more_than_five_objections',naWhen:false}] as const},
 } as const;
 export type QualityRubricKey=keyof typeof QUALITY_RUBRICS;
 
 export const MEGA_QUALITY_SCALE = [
-  [4,"Conforme et complet"],[3,"Conforme avec un détail mineur"],[2,"Partiellement conforme"],[1,"Très insuffisant"],[0,"Non réalisé ou non conforme"],
+ [5,'Conforme et complet'],[4,'Conforme avec un détail mineur'],[3,'Partiellement conforme'],
+ [2,'Insuffisant'],[1,'Très insuffisant'],[0,'Non réalisé ou non conforme'],
 ] as const;
 
 export type QualityScoreRow = { id:string; activity_name:string; agent_name:string; sale_reference:string; score_percent:number };
@@ -56,28 +82,23 @@ export function aggregateQualityScores<T extends QualityScoreRow>(rows:T[]) {
   };
 }
 
-export function calculateQuality(answers: Record<string, QualityAnswer>, questions:readonly QualityQuestion[]=MEGA_QUALITY_QUESTIONS) {
-  // Une faute grave reste un critère applicable, mais sa note demeure null ;
-  // seul N/A retire un critère du dénominateur défini par la grille.
-  const applicable = questions.filter(q => answers[String(q.id)]?.kind !== "na");
-  const sum = applicable.reduce((total,q) => total + (answers[String(q.id)]?.score ?? 0),0);
-  const percentage = applicable.length ? (sum / (4 * applicable.length)) * 100 : null;
-  const graveFaults = questions.filter(q => q.grave && answers[String(q.id)]?.kind === "grave").map(q => ({ question_id:q.id, criterion:q.criterion, comment:answers[String(q.id)]?.comment ?? "" }));
-  const status: QualityStatus | null = graveFaults.length ? "Non conforme — faute grave" : percentage === null ? null : percentage >= 90 ? "Conforme" : percentage >= 75 ? "À consolider" : "Insuffisant";
-  return { score_sum:sum, applicable_count:applicable.length, score_percent:percentage, status, grave_faults:graveFaults };
+export function calculateQuality(answers:Record<string,QualityAnswer>,questions:readonly QualityQuestion[]=MEGA_QUALITY_QUESTIONS) {
+ const applicable=questions.filter(q=>answers[String(q.id)]?.kind!=="na");
+ const sum=applicable.reduce((total,q)=>total+(answers[String(q.id)]?.score??0),0);
+ const percentage=applicable.length?(sum/(5*applicable.length))*100:null;
+ const status:QualityStatus|null=percentage===null?null:percentage>=90?"Conforme":percentage>=75?"À consolider":"Insuffisant";
+ return {score_sum:sum,applicable_count:applicable.length,score_percent:percentage,status,grave_faults:[]};
 }
 
-export function validateQualityAnswers(value: unknown, questions:readonly QualityQuestion[]=MEGA_QUALITY_QUESTIONS, naQuestionIds:readonly number[]=[14,25]): value is Record<string, QualityAnswer> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const answers=value as Record<string, QualityAnswer>;
-  for (const q of questions) {
-    const raw=answers[String(q.id)];
-    if (!raw || typeof raw!=="object" || Array.isArray(raw)) return false;
-    const a=raw as QualityAnswer;
-    if (!["score","grave","na"].includes(a.kind) || typeof a.comment!=="string" || typeof a.reason!=="string") return false;
-    if (a.kind === "grave") { if (!q.grave || a.score !== null || !a.comment?.trim()) return false; }
-    else if (a.kind === "na") { if (!naQuestionIds.includes(q.id) || a.score !== null || !a.reason?.trim()) return false; }
-    else if (!Number.isInteger(a.score) || a.score! < 0 || a.score! > 4) return false;
-  }
-  return Object.keys(answers).every(key => questions.some(q => String(q.id)===key));
+export function validateQualityAnswers(value:unknown,questions:readonly QualityQuestion[]=MEGA_QUALITY_QUESTIONS,naQuestionIds:readonly number[]=[14,25]):value is Record<string,QualityAnswer> {
+ if(!value||typeof value!=="object"||Array.isArray(value))return false;
+ const answers=value as Record<string,QualityAnswer>;
+ for(const q of questions){
+  const a=answers[String(q.id)];
+  if(!a||typeof a!=="object"||Array.isArray(a)||typeof a.comment!=="string"||typeof a.reason!=="string")return false;
+  if(a.kind==="na"){
+   if(!naQuestionIds.includes(q.id)||a.score!==null||!a.reason.trim())return false;
+  }else if(a.kind!=="score"||!Number.isInteger(a.score)||a.score!<0||a.score!>5)return false;
+ }
+ return Object.keys(answers).every(key=>questions.some(q=>String(q.id)===key));
 }

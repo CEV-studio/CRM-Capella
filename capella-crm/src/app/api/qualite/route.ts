@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   const rubricKey=typeof input.rubric_key==='string'?input.rubric_key:'';
   if(!Object.prototype.hasOwnProperty.call(QUALITY_RUBRICS,rubricKey))return NextResponse.json({error:"Ce barème n’est pas configuré."},{status:400});
   const rubric=QUALITY_RUBRICS[rubricKey as QualityRubricKey];
-  if (!validateQualityAnswers(input.answers,rubric.questions,rubric.conditionRules.map(rule=>rule.questionId))) return NextResponse.json({error:"Répondez à chaque question et renseignez les motifs et justificatifs requis."},{status:400});
+  if (!validateQualityAnswers(input.answers,rubric.questions,rubric.conditionRules.map(rule=>rule.questionId))) return NextResponse.json({error:"Notez chaque critère de 0 à 5 et renseignez les motifs non applicables."},{status:400});
   const conditions=input.conditions;
   if(!conditions||typeof conditions!=='object'||rubric.conditionRules.some(rule=>typeof (conditions as Record<string,unknown>)[rule.field]!=='boolean'))return NextResponse.json({error:"Précisez les conditions d’application du barème."},{status:400});
   const conditionValues=conditions as Record<string,boolean>;
@@ -26,15 +26,14 @@ export async function POST(request: NextRequest) {
   const sale=production.contracts.find(c=>c.key===saleKey&&c.supplier==='MEGA'&&['Elec','Gaz'].includes(c.energy)&&isQualityEligibleSale(c.status_class));
   if(!sale)return NextResponse.json({error:"Cette vente n’est plus accessible dans la base clients."},{status:404});
   const note=typeof input.call_quality_note==='string'?input.call_quality_note.trim():'';
+  if(!['1','2','3','4','5'].includes(note))return NextResponse.json({error:'Note Q26 requise (1 à 5).'},{status:400});
   const comments=typeof input.comments==='string'?input.comments.trim():'';
-  // Les formulaires déjà ouverts avant le passage à l'échelle 1–5 envoient
-  // encore une appréciation libre en Q26. La conserver telle quelle.
   const score=calculateQuality(input.answers,rubric.questions);
   if(score.score_percent===null||score.status===null)return NextResponse.json({error:"Aucun critère applicable au calcul."},{status:400});
   const db=await createClient();
   const {data,error}=await db.from('quality_reviews').insert({
     activity_name:'MEGA',rubric_key:rubric.key,agent_name:sale.agent_reference||sale.agent,sale_reference:sale.key,sale_key:sale.key,
-    identification:{},condition_context:conditionValues,answers:input.answers,score_sum:score.score_sum,applicable_count:score.applicable_count,
+    identification:{},condition_context:conditionValues,answers:input.answers,score_sum:score.score_sum,applicable_count:score.applicable_count,max_score:rubric.maxScore,
     score_percent:Number(score.score_percent.toFixed(4)),status:score.status,grave_faults:score.grave_faults,
     call_quality_note:note||null,comments:comments||null,controller_id:profile.id,controller_name:profile.full_name,
   }).select('id').single();
