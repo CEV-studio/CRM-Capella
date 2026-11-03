@@ -2,7 +2,7 @@
 
 import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { requireManage } from "@/lib/auth";
+import { requireAdmin, requireManage } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ActionResult } from "@/lib/action-result";
 
@@ -28,7 +28,7 @@ export async function creerCommercial(
   formData: FormData,
 ): Promise<ActionResult> {
   const actor = await requireManage();
-  const role = formData.get("role") === "qualite" ? "qualite" : formData.get("role") === "apporteur" ? "apporteur" : "commercial";
+  const role = formData.get("role") === "manager" ? "manager" : formData.get("role") === "qualite" ? "qualite" : formData.get("role") === "apporteur" ? "apporteur" : "commercial";
   if(role !== "commercial" && actor.role !== "admin")return {ok:false,message:"Seul l’administrateur peut créer un apporteur."};
 
   const nom = String(formData.get("full_name") ?? "").trim();
@@ -205,7 +205,18 @@ export async function modifierPermissions(
 export async function modifierRole(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
  const p=await requireManage();if(p.role!=="admin")return {ok:false,message:"Réservé à l’administrateur."};
  const id=String(formData.get("id")??"");const role=formData.get("role");
- if(id===p.id||!['commercial','apporteur','qualite'].includes(String(role)))return {ok:false,message:"Modification interdite."};
- const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'apporteur'|'qualite',...(role==='qualite'?{commission_rate:0}:{}),can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin").not("role","in","(be_centre,be_agent)");
+ if(id===p.id||!['commercial','manager','apporteur','qualite'].includes(String(role)))return {ok:false,message:"Modification interdite."};
+ const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'manager'|'apporteur'|'qualite',...(role==='qualite'?{commission_rate:0}:{}),...(role!=='commercial'?{manager_id:null}:{}),can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin").not("role","in","(be_centre,be_agent)");
  revalidatePath("/admin/commerciaux");return {ok:!error,message:error?.message??"Rôle mis à jour."};
+}
+
+export async function affecterManager(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
+ await requireAdmin();
+ const id=String(formData.get('id')??'');const managerId=String(formData.get('manager_id')??'');
+ const db=createAdminClient();
+ if(!id||id===managerId)return {ok:false,message:'Affectation invalide.'};
+ if(managerId){const {data:manager,error}=await db.from('profiles').select('id').eq('id',managerId).eq('role','manager').eq('is_active',true).maybeSingle();if(error||!manager)return {ok:false,message:'Manager actif introuvable.'};}
+ const {data,error}=await db.from('profiles').update({manager_id:managerId||null}).eq('id',id).eq('role','commercial').select('id').maybeSingle();
+ if(error||!data)return {ok:false,message:error?.message??'Commercial introuvable.'};
+ revalidatePath('/admin/commerciaux');revalidatePath('/equipe');return {ok:true,message:'Manager attribué.'};
 }
