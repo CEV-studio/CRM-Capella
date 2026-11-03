@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { PGlite } from '@electric-sql/pglite';
+
+const db=new PGlite();
+await db.exec(`create schema auth;
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+create table public.profiles(id uuid primary key, role text not null, commission_rate numeric default 0, is_active boolean default true, can_export boolean default false, can_view_all boolean default false, can_manage_team boolean default false, manager_id uuid);
+create function public.is_admin() returns boolean language sql as $$select coalesce((select role='admin' from public.profiles where id=auth.uid()),false)$$;
+create function public.can_manage() returns boolean language sql as $$select coalesce((select role='admin' or can_manage_team from public.profiles where id=auth.uid()),false)$$;`);
+await db.exec(readFileSync('supabase/migrations/20261103210208_archive_profiles.sql','utf8'));
+await db.exec(`create trigger protect before update on public.profiles for each row execute function public.tg_protect_profile_privileges();
+insert into public.profiles(id,role) values ('00000000-0000-0000-0000-000000000001','admin'),('00000000-0000-0000-0000-000000000002','commercial');
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+update public.profiles set archived_at=now(),is_active=false where id='00000000-0000-0000-0000-000000000002';
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+update public.profiles set archived_at=null,is_active=true where id='00000000-0000-0000-0000-000000000002';`);
+const {rows}=await db.query(`select archived_at,is_active from public.profiles where id='00000000-0000-0000-0000-000000000002'`);
+assert.ok(rows[0].archived_at);assert.equal(rows[0].is_active,false);
+await db.exec(`select set_config('request.jwt.claim.sub','',false)`);
+await assert.rejects(db.exec(`update public.profiles set is_active=true where id='00000000-0000-0000-0000-000000000002'`));
+await db.exec(`update public.profiles set archived_at=null where id='00000000-0000-0000-0000-000000000002'`);
+const restored=await db.query(`select archived_at,is_active from public.profiles where id='00000000-0000-0000-0000-000000000002'`);
+assert.equal(restored.rows[0].archived_at,null);assert.equal(restored.rows[0].is_active,false);
+console.log('PASS: archive cannot be bypassed and restored account remains inactive.');await db.close();

@@ -12,6 +12,7 @@ import {
 import type { ActionResult } from "@/lib/action-result";
 import { Button, Input } from "@/components/ui";
 import type { Profile } from "@/lib/domain/database.types";
+import { ProfilCorbeilleButton } from "@/components/profil-corbeille-button";
 
 export function LigneCommercial({
   profil,
@@ -126,6 +127,7 @@ export function LigneCommercial({
             </Button>
           </form>
         )}
+        {estAdmin && profil.role !== 'admin' && <ProfilCorbeilleButton id={profil.id} nom={profil.full_name} />}
       </div>
 
       {montrerPermissions ? (
