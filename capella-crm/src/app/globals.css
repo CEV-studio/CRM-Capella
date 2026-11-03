@@ -238,3 +238,52 @@ h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing
 .crm-shell main input:not([type="checkbox"]):not([type="radio"]), .crm-shell main select, .crm-shell main textarea { background-color:#fffef8; border-color:#66717d; }
 .crm-workspace-bar::after { height:4px; background:#ffcc46; }
 @media (prefers-reduced-motion:reduce) { .crm-shell main .crm-button:hover { transform:none; } }
+
+/* Même langage visuel dans les espaces commerciaux, Belgique, ADV et qualité. */
+.crm-shell main > header:not(.crm-home-hero):not(.crm-page-header),
+.crm-popup main > header:not(.crm-page-header) {
+  border:2px solid #111827;
+  border-radius:14px;
+  background-color:#ffdf7b;
+  background-image:radial-gradient(rgba(13,27,46,.1) 1px,transparent 1px);
+  background-size:20px 20px;
+  padding:1.25rem 1.5rem;
+  box-shadow:4px 4px 0 #111827;
+}
+.crm-shell main > header h1, .crm-popup main > header h1 { font-weight:700; letter-spacing:-.025em; }
+.crm-shell main :is(section,article,div).rounded-xl.border.border-navy-100.bg-white,
+.crm-shell main :is(section,article,div).rounded-2xl.border.border-navy-100.bg-white,
+.crm-popup main :is(section,article,div).rounded-xl.border.border-navy-100.bg-white,
+.crm-popup main :is(section,article,div).rounded-2xl.border.border-navy-100.bg-white {
+  background:#fffef8;
+  border:2px solid #111827;
+  box-shadow:3px 3px 0 #111827;
+}
+.crm-shell main .crm-table-shell, .crm-popup main .crm-table-shell {
+  background:#fffef8;
+  border:2px solid #111827;
+  box-shadow:4px 4px 0 #111827;
+}
+.crm-shell main :is(nav,form).rounded-xl.border.bg-white { background:#fffef8; border:2px solid #111827; box-shadow:3px 3px 0 #111827; }
+.crm-shell main :is(button,a).bg-navy-800.text-white,
+.crm-shell main :is(button,a).bg-star-500.text-white,
+.crm-popup main :is(button,a).bg-navy-800.text-white,
+.crm-popup main :is(button,a).bg-star-500.text-white {
+  border:2px solid #111827;
+  box-shadow:3px 3px 0 #111827;
+  font-weight:700;
+}
+.crm-sidebar { border-right:3px solid #ffcc46 !important; }
+.crm-sidebar nav ul a[aria-current="page"] { box-shadow:inset 3px 0 #ffcc46; }
+.crm-sidebar-brand { border-bottom:3px solid #ffcc46 !important; }
+.crm-shell dialog, .crm-modal-panel { border:2px solid #111827 !important; box-shadow:6px 6px 0 #111827 !important; }
+.crm-shell dialog > div:first-child, .crm-modal-header { background:#ffdf7b !important; border-bottom:2px solid #111827 !important; }
+.crm-popup { min-height:100vh; background:#f8f4e9; color:#0D1B2E; }
+.crm-popup main { background:#f8f4e9; }
+.crm-popup main .crm-panel { background:#fffef8 !important; border:2px solid #111827 !important; box-shadow:4px 4px 0 #111827 !important; }
+.crm-popup main .crm-panel-heading { background:#f7e7ba; border-bottom:2px solid #111827; }
+.crm-login { background:#0D1B2E; background-image:radial-gradient(rgba(255,204,70,.18) 1px,transparent 1px); background-size:22px 22px; }
+.crm-login-card { background:#fffef8; border:2px solid #111827; box-shadow:6px 6px 0 #ffcc46; }
+@media (max-width:640px) {
+  .crm-shell main > header:not(.crm-home-hero):not(.crm-page-header), .crm-popup main > header:not(.crm-page-header) { padding:1rem; }
+}
