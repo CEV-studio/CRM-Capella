@@ -28,8 +28,9 @@ export async function creerCommercial(
   formData: FormData,
 ): Promise<ActionResult> {
   const actor = await requireManage();
-  const role = formData.get("role") === "manager" ? "manager" : formData.get("role") === "qualite" ? "qualite" : formData.get("role") === "apporteur" ? "apporteur" : "commercial";
-  if(role !== "commercial" && actor.role !== "admin")return {ok:false,message:"Seul l’administrateur peut créer un apporteur."};
+  const isLeader = formData.get("role") === "leader";
+  const role = isLeader || formData.get("role") === "manager" ? "manager" : formData.get("role") === "qualite" ? "qualite" : formData.get("role") === "apporteur" ? "apporteur" : "commercial";
+  if((role !== "commercial" || isLeader) && actor.role !== "admin")return {ok:false,message:"Seul l’administrateur peut créer un apporteur."};
 
   const nom = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -69,8 +70,8 @@ export async function creerCommercial(
     };
   }
 
-  if(role !== "commercial" && created.user){
-    const {error:roleError}=await admin.from("profiles").update({role,can_export:false,can_view_all:false,can_manage_team:false}).eq("id",created.user.id);
+  if((role !== "commercial" || isLeader) && created.user){
+    const {error:roleError}=await admin.from("profiles").update({role,hierarchy_title:isLeader?"Leader":null,can_export:false,can_view_all:false,can_manage_team:false}).eq("id",created.user.id);
     if(roleError){await admin.auth.admin.deleteUser(created.user.id);return {ok:false,message:`Création annulée : ${roleError.message}`};}
   }
   revalidatePath("/admin/commerciaux");
@@ -204,10 +205,17 @@ export async function modifierPermissions(
 
 export async function modifierRole(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
  const p=await requireManage();if(p.role!=="admin")return {ok:false,message:"Réservé à l’administrateur."};
- const id=String(formData.get("id")??"");const role=formData.get("role");
- if(id===p.id||!['commercial','manager','apporteur','qualite'].includes(String(role)))return {ok:false,message:"Modification interdite."};
- const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'manager'|'apporteur'|'qualite',...(role==='qualite'?{commission_rate:0}:{}),...(role!=='commercial'?{manager_id:null,partner_team_id:null}:{}),can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin").not("role","in","(be_centre,be_agent)");
- revalidatePath("/admin/commerciaux");return {ok:!error,message:error?.message??"Rôle mis à jour."};
+ const id=String(formData.get("id")??"");const choix=String(formData.get("role")??"");
+ if(id===p.id||!['commercial','leader','manager','apporteur','qualite'].includes(choix))return {ok:false,message:"Modification interdite."};
+ const db=createAdminClient();
+ const {data:cible,error:lecture}=await db.from('profiles').select('role').eq('id',id).is('archived_at',null).maybeSingle();
+ if(lecture||!cible||!['commercial','manager','apporteur','qualite'].includes(cible.role))return {ok:false,message:"Profil introuvable ou modification interdite."};
+ const role=choix==='leader'?'manager':choix as 'commercial'|'manager'|'apporteur'|'qualite';
+ const hierarchy_title:'Leader'|null=choix==='leader'?'Leader':null;
+ const patch=cible.role===role?{hierarchy_title}:{role,hierarchy_title,...(role==='qualite'?{commission_rate:0}:{}),...(role!=='commercial'?{manager_id:null,partner_team_id:null}:{}),can_export:false,can_view_all:false,can_manage_team:false};
+ const {data,error}=await db.from('profiles').update(patch).eq('id',id).eq('role',cible.role).is('archived_at',null).select('id').maybeSingle();
+ revalidatePath('/admin/commerciaux');revalidatePath('/admin/equipes');revalidatePath('/equipe');
+ return {ok:!error&&!!data,message:error?.message??(data?'Profil mis à jour.':'Profil modifié entre-temps, veuillez réessayer.')};
 }
 
 export async function affecterEquipe(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
