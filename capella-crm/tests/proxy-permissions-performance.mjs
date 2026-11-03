@@ -13,6 +13,7 @@ for(const r of ['admin','commercial']){role=r;const t=await visit('/prospection'
 role='apporteur';let t=await visit('/prospection');assert.equal(t.result.status,307);assert.equal(t.result.url.pathname,'/partenaires/opportunites');assert.equal(t.calls,1);
 role='qualite';t=await visit('/prospection');assert.equal(t.result.url.pathname,'/qualite');assert.equal(t.calls,1);t=await visit('/qualite');assert.equal(t.result.status,200);assert.equal(t.calls,1);
 role='be_agent';t=await visit('/belgique/encoder');assert.equal(t.result.status,200);assert.equal(t.calls,1);t=await visit('/api/qualite');assert.equal(t.result.status,403);assert.equal(t.calls,1);
+role='manager';t=await visit('/equipe');assert.equal(t.result.status,200);t=await visit('/prospection');assert.equal(t.result.status,200);t=await visit('/api/acd/example');assert.equal(t.result.status,403);t=await visit('/changer-mot-de-passe');assert.equal(t.result.status,200);
 role='commercial';t=await visit('/api/acd/example');assert.equal(t.result.status,403);assert.equal(t.calls,1);role='admin';t=await visit('/api/acd/example');assert.equal(t.result.status,200);assert.equal(t.calls,1);
 authenticated=false;t=await visit('/prospection');assert.equal(t.result.status,307);assert.equal(t.calls,0);
 console.log('PASS: navigation and protected routes use one role query; role restrictions preserved.');
