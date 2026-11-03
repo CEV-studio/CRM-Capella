@@ -206,17 +206,17 @@ export async function modifierRole(_prev:ActionResult|null,formData:FormData):Pr
  const p=await requireManage();if(p.role!=="admin")return {ok:false,message:"Réservé à l’administrateur."};
  const id=String(formData.get("id")??"");const role=formData.get("role");
  if(id===p.id||!['commercial','manager','apporteur','qualite'].includes(String(role)))return {ok:false,message:"Modification interdite."};
- const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'manager'|'apporteur'|'qualite',...(role==='qualite'?{commission_rate:0}:{}),...(role!=='commercial'?{manager_id:null}:{}),can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin").not("role","in","(be_centre,be_agent)");
+ const db=createAdminClient();const {error}=await db.from("profiles").update({role:role as 'commercial'|'manager'|'apporteur'|'qualite',...(role==='qualite'?{commission_rate:0}:{}),...(role!=='commercial'?{manager_id:null,partner_team_id:null}:{}),can_export:false,can_view_all:false,can_manage_team:false}).eq("id",id).neq("role","admin").not("role","in","(be_centre,be_agent)");
  revalidatePath("/admin/commerciaux");return {ok:!error,message:error?.message??"Rôle mis à jour."};
 }
 
-export async function affecterManager(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
+export async function affecterEquipe(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
  await requireAdmin();
- const id=String(formData.get('id')??'');const managerId=String(formData.get('manager_id')??'');
+ const id=String(formData.get('id')??'');const teamId=String(formData.get('partner_team_id')??'');
  const db=createAdminClient();
- if(!id||id===managerId)return {ok:false,message:'Affectation invalide.'};
- if(managerId){const {data:manager,error}=await db.from('profiles').select('id').eq('id',managerId).eq('role','manager').eq('is_active',true).maybeSingle();if(error||!manager)return {ok:false,message:'Manager actif introuvable.'};}
- const {data,error}=await db.from('profiles').update({manager_id:managerId||null}).eq('id',id).eq('role','commercial').select('id').maybeSingle();
+ if(!id)return {ok:false,message:'Affectation invalide.'};
+ if(teamId){const {data:team,error}=await db.from('partner_teams').select('id').eq('id',teamId).eq('is_active',true).maybeSingle();if(error||!team)return {ok:false,message:'Équipe active introuvable.'};}
+ const {data,error}=await db.from('profiles').update({partner_team_id:teamId||null,manager_id:null}).eq('id',id).eq('role','commercial').is('archived_at',null).select('id').maybeSingle();
  if(error||!data)return {ok:false,message:error?.message??'Commercial introuvable.'};
- revalidatePath('/admin/commerciaux');revalidatePath('/equipe');return {ok:true,message:'Manager attribué.'};
+ revalidatePath('/admin/commerciaux');revalidatePath('/admin/equipes');revalidatePath('/equipe');return {ok:true,message:'Équipe attribuée.'};
 }

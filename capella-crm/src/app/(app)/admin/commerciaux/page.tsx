@@ -24,6 +24,7 @@ export default async function CommerciauxPage() {
     .order("full_name");
 
   const profils = (data ?? []) as Profile[];
+  const {data:equipes} = moi.role === 'admin' ? await supabase.from('partner_teams').select('id,name').eq('is_active',true).order('name') : {data:[]};
   const actifs = profils.filter((p) => p.is_active);
 
   return (
@@ -40,6 +41,7 @@ export default async function CommerciauxPage() {
 
       {moi.role==='admin'&&<Link href="/admin/centres" className="mb-6 inline-block rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">Créer ou gérer un compte centre</Link>}
       {moi.role==='admin'&&<Link href="/admin/profils-supprimes" className="mb-6 ml-3 inline-block rounded-xl border border-navy-200 bg-white px-4 py-3 text-sm font-semibold">Profils supprimés</Link>}
+      {moi.role==='admin'&&<Link href="/admin/equipes" className="mb-6 ml-3 inline-block rounded-xl border border-navy-200 bg-white px-4 py-3 text-sm font-semibold">Équipes partenaires</Link>}
 
       <Card className="mb-6">
         <CardHeader
@@ -65,7 +67,7 @@ export default async function CommerciauxPage() {
         ) : (
           <ul className="divide-y divide-navy-100">
             {profils.map((p) => (
-              <LigneCommercial key={p.id} profil={moi.role === 'admin' ? p : {...p, commission_rate: 0}} estMoi={p.id === moi.id} estAdmin={moi.role === 'admin'} managers={profils.filter(m=>m.role==='manager'&&m.is_active)} />
+              <LigneCommercial key={p.id} profil={moi.role === 'admin' ? p : {...p, commission_rate: 0}} estMoi={p.id === moi.id} estAdmin={moi.role === 'admin'} equipes={equipes??[]} />
             ))}
           </ul>
         )}
