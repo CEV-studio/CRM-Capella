@@ -32,7 +32,8 @@ function libelle(client: Client) {
 }
 
 export default async function MesClientsPage({ searchParams }: { searchParams: Promise<Recherche> }) {
-  await requireProfile();
+  const profile = await requireProfile();
+  const showFinancial = profile.role !== 'commercial' && profile.role !== 'manager';
   const filtres = await searchParams;
   const supabase = await createClient();
   const db = supabase;
@@ -115,7 +116,7 @@ export default async function MesClientsPage({ searchParams }: { searchParams: P
                 const commercial = commerciaux.get(dossiers[0]?.commercial_id) ?? "—";
                 return <tr key={client.id}>
                   <td className="px-4 py-3"><ProspectFichePopup prospectId={client.id} prospectLabel={libelle(client)} className="text-left font-semibold text-navy-900 hover:text-sky-capella-700">{libelle(client)}</ProspectFichePopup><div className="mt-1 text-xs text-grey-brand">{client.ref || "—"}{client.mail ? ` · ${client.mail}` : ""}</div></td>
-                  <td className="px-4 py-3">{commercial}</td><td className="px-4 py-3">{dossiers.length} · {fmtEuros(total)}</td>
+                  <td className="px-4 py-3">{commercial}</td><td className="px-4 py-3">{dossiers.length}{showFinancial ? ` · ${fmtEuros(total)}` : ''}</td>
                   <td className="px-4 py-3">{compteurs.length} · {energies.join(" + ") || "—"}</td><td className="px-4 py-3">{derniereSignature ? fmtDate(derniereSignature) : "—"}</td>
                   <td className="px-4 py-3"><span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800">Client signé</span></td>
                 </tr>;

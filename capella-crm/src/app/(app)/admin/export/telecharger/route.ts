@@ -99,7 +99,8 @@ function valeur(v: unknown): string {
 }
 
 export async function GET() {
-  await requireExport();
+  const profile = await requireExport();
+  const hideFinancial = profile.role === 'commercial' || profile.role === 'manager';
   // Client de session (RLS) et NON clé de service : chacun n'exporte que ce
   // qu'il a le droit de voir. L'admin voit tout via ses politiques ;
   // un commercial « peut exporter » n'obtient que ses propres lignes.
@@ -122,6 +123,7 @@ export async function GET() {
   const fichiers: FichierZip[] = [];
 
   for (const def of TABLES) {
+    const colonnes = hideFinancial ? def.colonnes.filter(([champ]) => !['commission','commission_rate','payment_status'].includes(champ)) : def.colonnes;
     let requete = admin.from(def.table).select("*").order(def.tri, { ascending: true });
     // Prospects et affaires : la corbeille n'est pas exportée.
     if (def.table === "prospects" || def.table === "affaires") {
@@ -138,7 +140,7 @@ export async function GET() {
     }
 
     const lignes = ((data ?? []) as Record<string, unknown>[]).map((l) =>
-      def.colonnes.map(([champ]) => {
+      colonnes.map(([champ]) => {
         switch (champ) {
           case "_commercial":
             return nomCommercial.get(String(l.assigned_to ?? l.commercial_id ?? "")) ?? "";
@@ -156,7 +158,7 @@ export async function GET() {
 
     fichiers.push({
       nom: def.fichier,
-      contenu: toCsv(def.colonnes.map(([, entete]) => entete), lignes),
+      contenu: toCsv(colonnes.map(([, entete]) => entete), lignes),
     });
   }
 

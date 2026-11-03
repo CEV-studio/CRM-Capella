@@ -1,4 +1,5 @@
 import { requireProfile } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader } from "@/components/ui";
 import { fmtEuros, fmtPourcent, MOIS, MOIS_COURTS } from "@/lib/format";
@@ -15,6 +16,7 @@ const TH = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wid
 
 export default async function CommissionsPage({ searchParams }: { searchParams: Promise<Recherche> }) {
   const profil = await requireProfile();
+  if (profil.role === "commercial" || profil.role === "manager") redirect("/?motif=acces-refuse");
   const estAdmin = profil.role === "admin";
   const filtres = await searchParams;
   const supabase = await createClient();

@@ -85,7 +85,7 @@ export function LigneCommercial({
 
         {profil.role!=="admin"&&estAdmin?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="manager">Manager</option><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
         {estAdmin&&profil.role==='commercial'?<form action={actionManager} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><label className="text-sm">Manager <select name="manager_id" defaultValue={profil.manager_id??''} className="rounded border p-2 text-sm"><option value="">Aucun</option>{managers.map(m=><option key={m.id} value={m.id}>{m.full_name}</option>)}</select></label><Button type="submit" variant="ghost">Attribuer</Button></form>:null}
-        <form action={actionTaux} className="flex items-center gap-1.5">
+        {estAdmin && <form action={actionTaux} className="flex items-center gap-1.5">
           <input type="hidden" name="id" value={profil.id} />
           <Input
             name="commission_rate"
@@ -101,7 +101,7 @@ export function LigneCommercial({
           <Button type="submit" variant="ghost" className="h-9" disabled={tauxEnCours}>
             {tauxEnCours ? "…" : "Enregistrer"}
           </Button>
-        </form>
+        </form>}
 
         <form action={actionMdp}>
           <input type="hidden" name="id" value={profil.id} />

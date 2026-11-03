@@ -44,7 +44,7 @@ export default async function CommerciauxPage() {
           title="Créer un compte"
           hint="Le mot de passe provisoire s'affiche à l'écran. Aucun email n'est envoyé : tu le transmets toi-même."
         />
-        <CreerCommercialForm />
+        <CreerCommercialForm estAdmin={moi.role === 'admin'} />
       </Card>
 
       <Card>
@@ -63,7 +63,7 @@ export default async function CommerciauxPage() {
         ) : (
           <ul className="divide-y divide-navy-100">
             {profils.map((p) => (
-              <LigneCommercial key={p.id} profil={p} estMoi={p.id === moi.id} estAdmin={moi.role === 'admin'} managers={profils.filter(m=>m.role==='manager'&&m.is_active)} />
+              <LigneCommercial key={p.id} profil={moi.role === 'admin' ? p : {...p, commission_rate: 0}} estMoi={p.id === moi.id} estAdmin={moi.role === 'admin'} managers={profils.filter(m=>m.role==='manager'&&m.is_active)} />
             ))}
           </ul>
         )}
