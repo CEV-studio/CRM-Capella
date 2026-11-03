@@ -18,6 +18,7 @@ export default async function CommerciauxPage() {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
+    .is("archived_at", null)
     .not("role", "in", "(be_centre,be_agent)")
     .order("is_active", { ascending: false })
     .order("full_name");
@@ -38,6 +39,7 @@ export default async function CommerciauxPage() {
       </header>
 
       {moi.role==='admin'&&<Link href="/admin/centres" className="mb-6 inline-block rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">Créer ou gérer un compte centre</Link>}
+      {moi.role==='admin'&&<Link href="/admin/profils-supprimes" className="mb-6 ml-3 inline-block rounded-xl border border-navy-200 bg-white px-4 py-3 text-sm font-semibold">Profils supprimés</Link>}
 
       <Card className="mb-6">
         <CardHeader
