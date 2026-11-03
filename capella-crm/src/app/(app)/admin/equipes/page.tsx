@@ -11,7 +11,7 @@ export default async function EquipesAdminPage(){
  await requireAdmin();const db=await createClient();
  const [teamsResult,profilesResult,statsResult]=await Promise.all([
   db.from('partner_teams').select('*').order('name'),
-  db.from('profiles').select('id,full_name,role,is_active,partner_team_id').is('archived_at',null).in('role',['commercial','manager']).order('full_name'),
+  db.from('profiles').select('id,full_name,role,hierarchy_title,is_active,partner_team_id').is('archived_at',null).in('role',['commercial','manager']).order('full_name'),
   db.rpc('partner_team_stats'),
  ]);
  if(teamsResult.error||profilesResult.error||statsResult.error)throw new Error('Impossible de charger les équipes.');

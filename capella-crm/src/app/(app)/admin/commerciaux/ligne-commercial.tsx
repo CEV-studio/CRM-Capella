@@ -64,6 +64,7 @@ export function LigneCommercial({
                 Admin
               </span>
             ) : null}
+            {profil.role === "manager" && profil.hierarchy_title === "Leader" && <span className="rounded-full bg-navy-800 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">Leader</span>}
             {!profil.is_active ? (
               <span
                 className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-navy-800"
@@ -84,7 +85,7 @@ export function LigneCommercial({
           <div className="text-xs text-grey-brand">{profil.email}</div>
         </div>
 
-        {profil.role!=="admin"&&estAdmin?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="manager">Manager</option><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
+        {profil.role!=="admin"&&estAdmin?<form action={actionRole} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><select name="role" defaultValue={profil.role === "manager" && profil.hierarchy_title === "Leader" ? "leader" : profil.role} className="rounded border p-2 text-sm"><option value="commercial">Commercial</option><option value="leader">Leader</option><option value="manager">Manager</option><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option></select><Button type="submit" variant="ghost">Changer le rôle</Button></form>:null}
         {estAdmin&&profil.role==='commercial'?<form action={actionManager} className="flex items-center gap-2"><input type="hidden" name="id" value={profil.id}/><label className="text-sm">Équipe <select name="partner_team_id" defaultValue={profil.partner_team_id??''} className="rounded border p-2 text-sm"><option value="">Aucune</option>{equipes.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></label><Button type="submit" variant="ghost">Attribuer</Button></form>:null}
         {estAdmin && <form action={actionTaux} className="flex items-center gap-1.5">
           <input type="hidden" name="id" value={profil.id} />
