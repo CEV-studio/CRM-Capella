@@ -115,24 +115,33 @@ export default async function ReservoirPage({
       </header>
 
       <div className="space-y-6">
-        <section aria-label="Dossiers disponibles par puissance" className="rounded-xl border border-navy-200 bg-white p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-navy-800">Dossiers par puissance</h2>
-            <Link href="/admin/reservoir#liste-reservoir" className="text-sm font-medium text-navy-700 underline">Voir tous les dossiers</Link>
+        <div id="liste-reservoir">
+        <TableauReservoir
+          key={`${kva}:${page}:${leads.map(l => l.id).join(",")}`}
+          leads={leads}
+          commerciaux={commerciaux}
+          total={totalReservoir ?? 0}
+          kva={kva}
+          puissancesKva={puissances}
+          inconnues={inconnues}
+        />
+
+        </div>
+
+        <nav aria-label="Pages du réservoir" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <span className="text-grey-brand">{leads.length} leads affichés sur {totalReservoir ?? 0} · Page {page} sur {totalPages}</span>
+          <div className="flex gap-2">
+            {page > 1 ? <Link href={lienPage(Math.min(page - 1, totalPages))} className="rounded-lg border border-navy-200 px-3 py-2">Précédent</Link> : null}
+            {page < totalPages ? <Link href={lienPage(page + 1)} className="rounded-lg border border-navy-200 px-3 py-2">Suivant</Link> : null}
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {[...puissances.map(([n, total]) => ({ value: String(n), label: `${n} kVA`, total })), { value: "inconnue", label: "Non renseignée", total: inconnues }].map((p) => (
-              <Link key={p.value} href={`/admin/reservoir?kva=${p.value}#liste-reservoir`}
-                aria-current={kva === p.value ? "page" : undefined}
-                className={`rounded-lg border p-4 transition-colors hover:border-star-500 ${kva === p.value ? "border-star-500 bg-star-50" : "border-navy-100 bg-navy-50"}`}>
-                <span className="block text-sm font-medium text-navy-700">{p.label}</span>
-                <span className="mt-1 block text-2xl font-bold tabular-nums text-navy-800">{p.total}</span>
-                <span className="text-xs text-grey-brand">disponibles</span>
-              </Link>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-grey-brand">Un dossier avec plusieurs puissances apparaît dans chaque catégorie correspondante.</p>
-        </section>
+        </nav>
+
+
+
+        <AttributionParPuissance
+          puissances={[...puissances.map(([n, total]) => ({ value: String(n), label: `${n} kVA`, disponibles: total })), { value: "inconnue", label: "Puissance non renseignée", disponibles: inconnues }]}
+          commerciaux={commerciaux}
+        />
 
         <ImportForm
           sources={listeSources
@@ -147,33 +156,6 @@ export default async function ReservoirPage({
         <NouveauChampPerso
           champs={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))}
         />
-
-        <AttributionParPuissance
-          puissances={[...puissances.map(([n, total]) => ({ value: String(n), label: `${n} kVA`, disponibles: total })), { value: "inconnue", label: "Puissance non renseignée", disponibles: inconnues }]}
-          commerciaux={commerciaux}
-        />
-
-        <div id="liste-reservoir">
-        <TableauReservoir
-          key={`${kva}:${page}:${leads.map(l => l.id).join(",")}`}
-          leads={leads}
-          commerciaux={commerciaux}
-          total={totalReservoir ?? 0}
-          kva={kva}
-          puissancesKva={puissances.map(([n]) => n)}
-        />
-
-        </div>
-
-        <nav aria-label="Pages du réservoir" className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <span className="text-grey-brand">{leads.length} leads affichés sur {totalReservoir ?? 0} · Page {page} sur {totalPages}</span>
-          <div className="flex gap-2">
-            {page > 1 ? <Link href={lienPage(Math.min(page - 1, totalPages))} className="rounded-lg border border-navy-200 px-3 py-2">Précédent</Link> : null}
-            {page < totalPages ? <Link href={lienPage(page + 1)} className="rounded-lg border border-navy-200 px-3 py-2">Suivant</Link> : null}
-          </div>
-        </nav>
-
-
 
         <Reattribution commerciaux={commerciaux} />
       </div>
