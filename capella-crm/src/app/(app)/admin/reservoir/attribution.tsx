@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   attribuerSelection,
-  attribuerSource,
+  attribuerPuissance,
   creerChampPersonnalise,
   creerSource,
   reattribuer,
@@ -140,16 +140,16 @@ export function NouveauChampPerso({
   );
 }
 
-/** Attribution d'un lot entier, par source. */
-export function AttributionParSource({
-  sources,
+/** Attribution d'un lot par puissance. */
+export function AttributionParPuissance({
+  puissances,
   commerciaux,
 }: {
-  sources: (Option & { disponibles: number })[];
+  puissances: (Option & { disponibles: number })[];
   commerciaux: Option[];
 }) {
   const [etat, action, enCours] = useActionState<ActionResult | null, FormData>(
-    attribuerSource,
+    attribuerPuissance,
     null,
   );
 
@@ -157,16 +157,16 @@ export function AttributionParSource({
     <Card>
       <CardHeader
         title="Attribuer un lot"
-        hint="Le plus rapide : tout un canal d'un coup, ou seulement les X premiers."
+        hint="Sélectionne une puissance pour attribuer des dossiers de toutes les sources."
       />
       <form action={action} className="space-y-4 px-5 py-4">
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Source">
-            <select name="source_id" required defaultValue="" className={SELECT}>
+          <Field label="Puissance">
+            <select name="puissance" required defaultValue="" className={SELECT}>
               <option value="" disabled>
-                — Choisis une source —
+                — Choisis une puissance —
               </option>
-              {sources.map((s) => (
+              {puissances.map((s) => (
                 <option key={s.value} value={s.value} disabled={s.disponibles === 0}>
                   {s.label} ({s.disponibles} dispo)
                 </option>
