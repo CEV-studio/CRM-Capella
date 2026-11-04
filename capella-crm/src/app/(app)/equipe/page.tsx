@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { requireProfile } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Card, KpiTile } from '@/components/ui';
@@ -11,16 +12,22 @@ type TeamMember = { id:string; full_name:string; is_active:boolean; partner_team
 type ProspectRow = { assigned_to:string; stage:string; next_action_date:string|null };
 type AffaireRow = { commercial_id:string; stage:string };
 
-export default async function EquipePage() {
+export default async function EquipePage({searchParams}:{searchParams:Promise<{team?:string}>}) {
   const profile = await requireProfile();
-  if (profile.role !== 'manager') redirect('/?motif=acces-refuse');
-  // Service client is restricted to the authenticated manager's assigned team.
+  if (!['manager','admin'].includes(profile.role)) redirect('/?motif=acces-refuse');
+  // Admins can select any team; managers remain restricted to their active teams.
+  const isAdmin=profile.role==='admin';
   const db = createAdminClient();
-  const {data:teams,error:teamsError}=await db.from('partner_teams').select('id,name').eq('manager_id',profile.id).eq('is_active',true).order('name');
+  let teamsQuery=db.from('partner_teams').select('id,name,is_active').order('name');
+  if(!isAdmin)teamsQuery=teamsQuery.eq('manager_id',profile.id).eq('is_active',true);
+  const {data:teams,error:teamsError}=await teamsQuery;
   if(teamsError)throw new Error('Impossible de charger les équipes.');
-  const teamIds=(teams??[]).map(team=>team.id);
+  const requestedTeam=(await searchParams).team;
+  const selectedTeam=isAdmin?((teams??[]).find(team=>team.id===requestedTeam)??(teams??[])[0]):undefined;
+  const teamIds=isAdmin?(selectedTeam?[selectedTeam.id]:[]):(teams??[]).map(team=>team.id);
   let membersQuery=db.from('profiles').select('id,full_name,is_active,partner_team_id').eq('role','commercial').is('archived_at',null).order('full_name');
-  membersQuery=teamIds.length?membersQuery.or(`partner_team_id.in.(${teamIds.join(',')}),and(partner_team_id.is.null,manager_id.eq.${profile.id})`):membersQuery.is('partner_team_id',null).eq('manager_id',profile.id);
+  if(isAdmin) membersQuery=selectedTeam?membersQuery.eq('partner_team_id',selectedTeam.id):membersQuery.eq('id',profile.id);
+  else membersQuery=teamIds.length?membersQuery.or(`partner_team_id.in.(${teamIds.join(',')}),and(partner_team_id.is.null,manager_id.eq.${profile.id})`):membersQuery.is('partner_team_id',null).eq('manager_id',profile.id);
   const { data: membres, error: teamError } = await membersQuery;
   if (teamError) throw new Error('Impossible de charger l’équipe.');
   const team = (membres ?? []) as TeamMember[];
@@ -53,13 +60,14 @@ export default async function EquipePage() {
   });
   const sum=(key:'actifs'|'retards'|'encours'|'valides')=>rows.reduce((total,row)=>total+row[key],0);
   return <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6">
-    <header className="mb-6"><div><p className="text-xs font-bold uppercase tracking-wider">Espace manager</p><h1 className="font-display text-3xl font-bold">Mon équipe</h1></div></header>
+    <header className="mb-6"><div><p className="text-xs font-bold uppercase tracking-wider">{isAdmin?'Administration':'Espace manager'}</p><h1 className="font-display text-3xl font-bold">{isAdmin?'KPI des équipes':'Mon équipe'}</h1></div></header>
+    {isAdmin&&<div className="mb-6 flex flex-wrap items-end gap-3"><form action="/equipe" className="flex items-end gap-2"><label className="grid gap-1 text-sm font-semibold">Équipe<select name="team" defaultValue={selectedTeam?.id??''} className="h-10 min-w-56 rounded-lg border border-navy-200 bg-white px-3" disabled={!teams?.length}>{!teams?.length&&<option value="">Aucune équipe</option>}{teams?.map(t=><option key={t.id} value={t.id}>{t.name}{!t.is_active?' (désactivée)':''}</option>)}</select></label><button type="submit" disabled={!teams?.length} className="h-10 rounded-lg bg-navy-900 px-4 text-sm font-semibold text-white disabled:opacity-50">Afficher</button></form><Link href="/admin/equipes" className="pb-2 text-sm font-semibold underline">Gérer les équipes</Link></div>}
     <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <KpiTile label="Prospects actifs" value={fmtNombre(sum('actifs'))}/><KpiTile label="Actions en retard" value={fmtNombre(sum('retards'))}/><KpiTile label="Dossiers en cours" value={fmtNombre(sum('encours'))}/><KpiTile label="Dossiers validés ADV" value={fmtNombre(sum('valides'))}/>
     </div>
     <Card className="overflow-x-auto"><table className="w-full min-w-[50rem] text-left text-sm"><thead><tr>{['Commercial','Équipe','Prospects actifs','Actions en retard','Dossiers en cours','Validés ADV'].map(h=><th key={h} className="px-4 py-3">{h}</th>)}</tr></thead><tbody>
       {rows.map(row=><tr key={row.id} className="border-b border-navy-100"><td className="px-4 py-3 font-semibold">{row.full_name}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</td><td className="px-4 py-3">{row.partner_team_id ? teamNames.get(row.partner_team_id)??'—' : '—'}</td><td className="px-4 py-3">{row.actifs}</td><td className="px-4 py-3">{row.retards}</td><td className="px-4 py-3">{row.encours}</td><td className="px-4 py-3">{row.valides}</td></tr>)}
       {rows.length>0&&<tr className="font-bold"><td className="px-4 py-3">Total équipes</td><td/><td className="px-4 py-3">{sum('actifs')}</td><td className="px-4 py-3">{sum('retards')}</td><td className="px-4 py-3">{sum('encours')}</td><td className="px-4 py-3">{sum('valides')}</td></tr>}
-    </tbody></table>{!rows.length&&<p className="p-6 text-sm text-grey-brand">Aucun commercial affecté à votre équipe.</p>}</Card>
+    </tbody></table>{!rows.length&&<p className="p-6 text-sm text-grey-brand">Aucun commercial affecté à cette équipe.</p>}</Card>
   </main>;
 }
