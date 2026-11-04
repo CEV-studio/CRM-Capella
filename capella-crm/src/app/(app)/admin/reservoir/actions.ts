@@ -15,6 +15,7 @@ import {
 import { PREFIXE_PERSO } from "@/lib/domain/champs";
 import { normalizeDigits, normalizePhone } from "@/lib/format";
 import type { ActionResult } from "@/lib/action-result";
+import { filtrePuissance } from "./puissances";
 import { VALEURS_TYPE_SOURCE } from "@/lib/domain/sources";
 import type { ProspectInsert, Source } from "@/lib/domain/database.types";
 
@@ -349,52 +350,43 @@ export async function attribuerSelection(
   return { ok: true, message: `${data.length} lead(s) attribué(s).` };
 }
 
-/** Attribue d'un coup tous les leads non attribués d'une source. */
-export async function attribuerSource(
+/** Attribue les dossiers disponibles pour une puissance, toutes sources confondues. */
+export async function attribuerPuissance(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
   await requireAdmin();
-
   const commercial = String(formData.get("commercial") ?? "").trim();
-  const sourceId = String(formData.get("source_id") ?? "").trim();
-  const limite = Number(String(formData.get("limite") ?? "").trim());
-
+  const puissance = String(formData.get("puissance") ?? "").trim();
+  const limiteTexte = String(formData.get("limite") ?? "").trim();
+  const limite = limiteTexte ? Number(limiteTexte) : Infinity;
   if (!commercial) return { ok: false, message: "Choisis un commercial." };
-  if (!sourceId) return { ok: false, message: "Choisis une source." };
+  if (puissance !== "inconnue" && !/^[1-9]\d*(?:\.\d+)?$/.test(puissance)) return { ok: false, message: "Choisis une puissance." };
+  if (limiteTexte && (!Number.isSafeInteger(limite) || limite < 1)) return { ok: false, message: "Indique un nombre entier positif." };
 
   const admin = createAdminClient();
-
-  // Sélection d'abord, mise à jour ensuite : c'est ce qui permet de
-  // n'attribuer qu'un lot (« les 50 premiers ») plutôt que tout.
-  let requete = admin
-    .from("prospects")
-    .select("id")
-    .is("assigned_to", null)
-    .is("deleted_at", null)
-    .eq("source_id", sourceId)
-    .order("created_at");
-
-  if (Number.isFinite(limite) && limite > 0) requete = requete.limit(limite);
-
-  const { data: cibles, error: errLecture } = await requete;
-  if (errLecture) return { ok: false, message: `Échec : ${errLecture.message}` };
-  if (!cibles || cibles.length === 0) {
-    return { ok: false, message: "Aucun lead disponible pour cette source." };
+  const ids: string[] = [];
+  // Lire toutes les pages avant de modifier les lignes, pour ne pas sauter de dossiers.
+  while (ids.length < limite) {
+    const taille = Math.min(500, limite - ids.length);
+    const { data, error } = await admin.from("prospects").select("id")
+      .is("assigned_to", null).is("deleted_at", null).or(puissance === "inconnue" ? "puissance.is.null,puissance.eq." : filtrePuissance(puissance))
+      .order("created_at").order("id").range(ids.length, ids.length + taille - 1);
+    if (error) return { ok: false, message: `Échec de lecture : ${error.message}` };
+    ids.push(...(data ?? []).map((p) => p.id));
+    if (!data || data.length < taille) break;
   }
-
-  const { data, error } = await admin
-    .from("prospects")
-    .update({ assigned_to: commercial })
-    .in("id", cibles.map((c) => c.id))
-    .is("assigned_to", null)
-    .select("id");
-
-  if (error) return { ok: false, message: `Échec : ${error.message}` };
-
+  if (!ids.length) return { ok: false, message: "Aucun dossier disponible pour cette puissance." };
+  let attribues = 0;
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await admin.from("prospects").update({ assigned_to: commercial })
+      .in("id", ids.slice(i, i + 200)).is("assigned_to", null).is("deleted_at", null).select("id");
+    if (error) return { ok: false, message: `Attribution interrompue : ${attribues} dossier(s) attribué(s). ${error.message}` };
+    attribues += data?.length ?? 0;
+  }
   revalidatePath("/admin/reservoir");
   revalidatePath("/prospection");
-  return { ok: true, message: `${data.length} lead(s) attribué(s).` };
+  return { ok: true, message: `${attribues} dossier(s) attribué(s).` };
 }
 
 /**
