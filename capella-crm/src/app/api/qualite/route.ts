@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   if(score.score_percent===null||score.status===null)return NextResponse.json({error:"Aucun critère applicable au calcul."},{status:400});
   const db=await createClient();
   const {data,error}=await db.from('quality_reviews').insert({
-    activity_name:'MEGA',rubric_key:rubric.key,agent_name:sale.agent_reference||sale.agent,sale_reference:sale.key,sale_key:sale.key,
+    activity_name:'MEGA',rubric_key:rubric.key,agent_name:sale.agent,agent_centre:sale.centre,sale_reference:sale.key,sale_key:sale.key,
     identification:{},condition_context:conditionValues,answers:input.answers,score_sum:score.score_sum,applicable_count:score.applicable_count,max_score:rubric.maxScore,
     score_percent:Number(score.score_percent.toFixed(4)),status:score.status,grave_faults:score.grave_faults,
     call_quality_note:note||null,comments:comments||null,controller_id:profile.id,controller_name:profile.full_name,

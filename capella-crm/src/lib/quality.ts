@@ -62,23 +62,23 @@ export const MEGA_QUALITY_SCALE = [
  [2,'Insuffisant'],[1,'Très insuffisant'],[0,'Non réalisé ou non conforme'],
 ] as const;
 
-export type QualityScoreRow = { id:string; activity_name:string; agent_name:string; sale_reference:string; score_percent:number };
+export type QualityScoreRow = { id:string; activity_name:string; agent_name:string; agent_centre?:string|null; sale_reference:string; score_percent:number };
 export function aggregateQualityScores<T extends QualityScoreRow>(rows:T[]) {
   const key=(value:string)=>value.trim().toLocaleLowerCase('fr-FR');
   const saleKey=(row:QualityScoreRow)=>`${key(row.activity_name)}::${key(row.sale_reference)}`;
-  const agentKey=(row:QualityScoreRow)=>key(row.agent_name);
+  const agentKey=(row:QualityScoreRow)=>`${key(row.agent_centre||'')}::${key(row.agent_name)}`;
   const sums=new Map<string,{sum:number;count:number}>();
   for(const row of rows){const k=saleKey(row),v=sums.get(k)||{sum:0,count:0};v.sum+=Number(row.score_percent);v.count++;sums.set(k,v);}
   const saleScores=new Map([...sums].map(([k,v])=>[k,v.sum/v.count]));
-  const agentSales=new Map<string,{label:string;sales:Map<string,number>}>();
-  for(const row of rows){const agent=agentKey(row),sale=saleKey(row),entry=agentSales.get(agent)||{label:row.agent_name.trim(),sales:new Map<string,number>()};entry.sales.set(sale,saleScores.get(sale)||0);agentSales.set(agent,entry);}
+  const agentSales=new Map<string,{label:string;centre:string;sales:Map<string,number>}>();
+  for(const row of rows){const agent=agentKey(row),sale=saleKey(row),entry=agentSales.get(agent)||{label:row.agent_name.trim(),centre:row.agent_centre||'',sales:new Map<string,number>()};entry.sales.set(sale,saleScores.get(sale)||0);agentSales.set(agent,entry);}
   const agentScores=new Map([...agentSales].map(([agent,entry])=>[agent,[...entry.sales.values()].reduce((sum,value)=>sum+value,0)/entry.sales.size]));
   return {
     saleCount:saleScores.size,
     averageSaleScore:saleScores.size?[...saleScores.values()].reduce((sum,value)=>sum+value,0)/saleScores.size:null,
     averageAgentScore:agentScores.size?[...agentScores.values()].reduce((sum,value)=>sum+value,0)/agentScores.size:null,
     scoresFor:(row:T)=>({sale:saleScores.get(saleKey(row))??null,agent:agentScores.get(agentKey(row))??null}),
-    agentSummaries:[...agentSales.values()].map(({label,sales})=>({agent:label,sales:sales.size,score:[...sales.values()].reduce((sum,value)=>sum+value,0)/sales.size})).sort((a,b)=>b.score-a.score),
+    agentSummaries:[...agentSales.values()].map(({label,centre,sales})=>({agent:label,centre,sales:sales.size,score:[...sales.values()].reduce((sum,value)=>sum+value,0)/sales.size})).sort((a,b)=>b.score-a.score),
   };
 }
 
