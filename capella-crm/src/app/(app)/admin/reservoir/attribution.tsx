@@ -207,12 +207,14 @@ export function TableauReservoir({
   total,
   kva,
   puissancesKva,
+  inconnues,
 }: {
   leads: LeadReservoir[];
   commerciaux: Option[];
   total: number;
   kva: string;
-  puissancesKva: number[];
+  puissancesKva: [number, number][];
+  inconnues: number;
 }) {
   const [etat, action, enCours] = useActionState<ActionResult | null, FormData>(
     attribuerSelection,
@@ -234,18 +236,18 @@ export function TableauReservoir({
   return (
     <Card className="overflow-hidden">
       <CardHeader
-        title="Réservoir"
-        hint={`${total} lead(s)${kva ? " correspondant au filtre" : ""} en attente d'attribution. Toi seul les vois.`}
+        title="Leads disponibles"
+        hint={`${total} lead(s) disponibles${kva ? " pour cette puissance" : ""}.`}
       />
 
       <form method="get" action="/admin/reservoir" className="flex flex-wrap items-end gap-3 border-b border-navy-100 px-5 py-4">
         <Field label="Filtrer par puissance compteur">
           <select name="kva" defaultValue={kva} className={`${SELECT} w-56`}>
             <option value="">Toutes les puissances</option>
-            {puissancesKva.map((puissance) => (
-              <option key={puissance} value={puissance}>{puissance} kVA</option>
+            {puissancesKva.map(([puissance, nombre]) => (
+              <option key={puissance} value={puissance}>{puissance} kVA ({nombre} disponibles)</option>
             ))}
-            <option value="inconnue">Puissance non renseignée</option>
+            <option value="inconnue">Puissance non renseignée ({inconnues} disponibles)</option>
           </select>
         </Field>
         <Button type="submit">Filtrer</Button>
@@ -264,6 +266,7 @@ export function TableauReservoir({
               </option>
             ))}
           </select>
+          <span className="text-xs text-grey-brand">Sélection limitée aux leads affichés sur cette page.</span>
           <Button type="submit" disabled={enCours || selection.size === 0}>
             {enCours ? "…" : `Attribuer ${selection.size} lead(s)`}
           </Button>
@@ -305,7 +308,7 @@ export function TableauReservoir({
               {leads.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-3 py-10 text-center text-sm text-grey-brand">
-                    Le réservoir est vide. Importe un fichier ci-dessus.
+                    Aucun lead disponible pour ce filtre.
                   </td>
                 </tr>
               ) : (
