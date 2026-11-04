@@ -16,7 +16,7 @@ import { nomComplet } from "@/lib/domain/noms";
 import type { Prospect } from "@/lib/domain/database.types";
 
 type Option = { value: string; label: string };
-export type LeadReservoir = Pick<Prospect, "id" | "ref" | "raison_sociale" | "nom" | "prenom" | "tel_mobile" | "siren" | "source_id" | "created_at"> & { source?: string | null };
+export type LeadReservoir = Pick<Prospect, "id" | "ref" | "raison_sociale" | "nom" | "prenom" | "tel_mobile" | "siren" | "source_id" | "created_at" | "puissance"> & { source?: string | null };
 
 const SELECT =
   "h-10 w-full rounded-lg border border-navy-200 bg-white px-3 text-sm focus:border-star-500 focus:outline-none focus:ring-2 focus:ring-star-500/20";
@@ -289,7 +289,7 @@ export function TableauReservoir({
                     aria-label="Tout sélectionner"
                   />
                 </th>
-                {["Société", "Contact", "Mobile", "SIREN", "Source", "Reçu le"].map(
+                {["Société", "Contact", "Mobile", "SIREN", "Puissance", "Source", "Reçu le"].map(
                   (t) => (
                     <th
                       key={t}
@@ -304,7 +304,7 @@ export function TableauReservoir({
             <tbody>
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-10 text-center text-sm text-grey-brand">
+                  <td colSpan={8} className="px-3 py-10 text-center text-sm text-grey-brand">
                     Le réservoir est vide. Importe un fichier ci-dessus.
                   </td>
                 </tr>
@@ -331,6 +331,7 @@ export function TableauReservoir({
                       {l.tel_mobile || "—"}
                     </td>
                     <td className="tabular px-3 py-2 text-navy-700">{l.siren || "—"}</td>
+                    <td className="px-3 py-2 text-xs text-navy-700">{l.puissance || "—"}</td>
                     <td className="px-3 py-2 text-xs text-grey-brand">{l.source ?? "—"}</td>
                     <td className="tabular px-3 py-2 text-xs text-grey-brand">
                       {fmtDate(l.created_at)}
