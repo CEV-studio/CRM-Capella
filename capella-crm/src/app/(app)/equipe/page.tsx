@@ -59,6 +59,17 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
       valides:signed.length};
   });
   const sum=(key:'actifs'|'retards'|'encours'|'valides')=>rows.reduce((total,row)=>total+row[key],0);
+  const statusTotals=new Map<string,number>();
+  const statusByMember=new Map<string,Map<string,number>>();
+  for(const prospect of prospects){
+    const status=prospect.stage?.trim()||'Sans statut';
+    statusTotals.set(status,(statusTotals.get(status)??0)+1);
+    const counts=statusByMember.get(prospect.assigned_to)??new Map<string,number>();
+    counts.set(status,(counts.get(status)??0)+1);
+    statusByMember.set(prospect.assigned_to,counts);
+  }
+  const statuses=[...statusTotals.keys()].sort((a,b)=>a.localeCompare(b,'fr'));
+
   return <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6">
     <header className="mb-6"><div><p className="text-xs font-bold uppercase tracking-wider">{isAdmin?'Administration':'Espace manager'}</p><h1 className="font-display text-3xl font-bold">{isAdmin?'KPI des équipes':'Mon équipe'}</h1></div></header>
     {isAdmin&&<div className="mb-6 flex flex-wrap items-end gap-3"><form action="/equipe" className="flex items-end gap-2"><label className="grid gap-1 text-sm font-semibold">Équipe<select name="team" defaultValue={selectedTeam?.id??''} className="h-10 min-w-56 rounded-lg border border-navy-200 bg-white px-3" disabled={!teams?.length}>{!teams?.length&&<option value="">Aucune équipe</option>}{teams?.map(t=><option key={t.id} value={t.id}>{t.name}{!t.is_active?' (désactivée)':''}</option>)}</select></label><button type="submit" disabled={!teams?.length} className="h-10 rounded-lg bg-navy-900 px-4 text-sm font-semibold text-white disabled:opacity-50">Afficher</button></form><Link href="/admin/equipes" className="pb-2 text-sm font-semibold underline">Gérer les équipes</Link></div>}
@@ -69,5 +80,13 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
       {rows.map(row=><tr key={row.id} className="border-b border-navy-100"><td className="px-4 py-3 font-semibold">{row.full_name}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</td><td className="px-4 py-3">{row.partner_team_id ? teamNames.get(row.partner_team_id)??'—' : '—'}</td><td className="px-4 py-3">{row.actifs}</td><td className="px-4 py-3">{row.retards}</td><td className="px-4 py-3">{row.encours}</td><td className="px-4 py-3">{row.valides}</td></tr>)}
       {rows.length>0&&<tr className="font-bold"><td className="px-4 py-3">Total équipes</td><td/><td className="px-4 py-3">{sum('actifs')}</td><td className="px-4 py-3">{sum('retards')}</td><td className="px-4 py-3">{sum('encours')}</td><td className="px-4 py-3">{sum('valides')}</td></tr>}
     </tbody></table>{!rows.length&&<p className="p-6 text-sm text-grey-brand">Aucun commercial affecté à cette équipe.</p>}</Card>
+    <section className="mt-8 space-y-4" aria-labelledby="statuts-prospection">
+      <h2 id="statuts-prospection" className="font-display text-xl font-bold">Statuts de prospection</h2>
+      {statuses.length>0?<><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{statuses.map(status=><KpiTile key={status} label={status} value={fmtNombre(statusTotals.get(status)??0)}/>)}</div>
+      <Card className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th scope="col" className="whitespace-nowrap px-4 py-3">Commercial</th>{statuses.map(status=><th scope="col" key={status} className="whitespace-nowrap px-4 py-3">{status}</th>)}<th scope="col" className="px-4 py-3">Total</th></tr></thead><tbody>
+      {rows.map(row=>{const counts=statusByMember.get(row.id);return <tr key={row.id} className="border-b border-navy-100"><th scope="row" className="whitespace-nowrap px-4 py-3 font-semibold">{row.full_name}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(counts?.get(status)??0)}</td>)}<td className="px-4 py-3 font-semibold">{fmtNombre([...counts?.values()??[]].reduce((a,b)=>a+b,0))}</td></tr>})}
+      <tr className="font-bold"><th scope="row" className="px-4 py-3">Total équipe</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(statusTotals.get(status)??0)}</td>)}<td className="px-4 py-3">{fmtNombre(prospects.length)}</td></tr>
+      </tbody></table></Card></>:<p className="text-sm text-grey-brand">Aucun lead attribué à cette équipe.</p>}
+    </section>
   </main>;
 }
