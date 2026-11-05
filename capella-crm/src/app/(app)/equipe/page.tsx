@@ -84,7 +84,7 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
     </tbody></table>{!rows.length&&<p className="p-6 text-sm text-grey-brand">Aucun commercial à afficher.</p>}</Card>
     <section className="mt-8 space-y-4" aria-labelledby="statuts-prospection">
       <h2 id="statuts-prospection" className="font-display text-xl font-bold">Statuts de prospection</h2>
-      {statuses.length>0?<><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{statuses.map(status=><KpiTile key={status} label={status} value={fmtNombre(statusTotals.get(status)??0)}/>)}</div>
+      {statuses.length>0?<>
       <Card className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th scope="col" className="whitespace-nowrap px-4 py-3">Commercial</th>{statuses.map(status=><th scope="col" key={status} className="whitespace-nowrap px-4 py-3">{status}</th>)}<th scope="col" className="px-4 py-3">Total</th></tr></thead><tbody>
       {rows.map(row=>{const counts=statusByMember.get(row.id);return <tr key={row.id} className="border-b border-navy-100"><th scope="row" className="whitespace-nowrap px-4 py-3 font-semibold">{row.full_name}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(counts?.get(status)??0)}</td>)}<td className="px-4 py-3 font-semibold">{fmtNombre([...counts?.values()??[]].reduce((a,b)=>a+b,0))}</td></tr>})}
       <tr className="font-bold"><th scope="row" className="px-4 py-3">{isAdmin&&!selectedTeam?"Total commerciaux":"Total équipe"}</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(statusTotals.get(status)??0)}</td>)}<td className="px-4 py-3">{fmtNombre(prospects.length)}</td></tr>
