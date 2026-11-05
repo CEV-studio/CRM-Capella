@@ -185,4 +185,11 @@ await imp(cutoffRows.map(c=>({...c,effect_date:'2026-11-20',period:'2026-11-01'}
 const retainedCutoff=(await db.query('select data from be_contracts where key=$1',[cutoffRows[0].key])).rows[0].data;
 assert.equal(retainedCutoff.period,'2026-10-01');assert.equal(retainedCutoff.effect_date,'2026-11-14');
 console.log('PASS: database imports enforce day-14 cutoff and preserve first observed activation on later reports.');
+await asUser(admin);
+const sarahRow=parseRows([header,['777','541449020000073142','Ayoub El Guebais','En salle d’attente','Sarah','Test','11/04/26 11:35','Virement','Elec']],'report','2026-11-05','')[0];
+assert.equal(sarahRow.centre,'Sarah');
+await imp([{...sarahRow,centre:'TILIRA'}],'2026-11-05');
+assert.equal((await db.query('select centre from be_contracts where key=$1',[sarahRow.key])).rows[0].centre,'Sarah','supplier alias routes to Sarah even if a caller supplies the legacy default centre');
+assert.equal((await db.query("select display_name from be_sales_agents where centre='Sarah' and agent_ref='ayoubelguebais'")).rows[0].display_name,'Sarah');
+console.log('PASS: Sarah alias routing in parser and database, agent KPI display name, existing ownership isolation retained.');
 await db.close();console.log('PASS: parsing, dual EAN, periods, month-end clawback, atomic imports, no duplicates, stale reports, immutable invoices, payment states, admin-only RLS.');
