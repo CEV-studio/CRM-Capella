@@ -4,6 +4,7 @@ import { requireProfile } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Card, KpiTile } from '@/components/ui';
 import { fmtNombre } from '@/lib/format';
+import { PROSPECT_STAGES } from '@/lib/domain/stages';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Mon équipe — Capella CRM' };
@@ -68,7 +69,8 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
     counts.set(status,(counts.get(status)??0)+1);
     statusByMember.set(prospect.assigned_to,counts);
   }
-  const statuses=[...statusTotals.keys()].sort((a,b)=>a.localeCompare(b,'fr'));
+  const configuredStatuses=PROSPECT_STAGES.map(stage=>stage.label);
+  const statuses=[...new Set([...configuredStatuses,...statusTotals.keys()])];
 
   return <main className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6">
     <header className="mb-6"><div><p className="text-xs font-bold uppercase tracking-wider">{isAdmin?'Administration':'Espace manager'}</p><h1 className="font-display text-3xl font-bold">{isAdmin?'KPI des équipes':'Mon équipe'}</h1></div></header>
