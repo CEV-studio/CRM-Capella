@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { calculateQuality, QUALITY_RUBRICS, type QualityRubricKey, validateQualityAnswers, isQualityEligibleSale } from "@/lib/quality";
+import { applyQualityConditions, calculateQuality, QUALITY_RUBRICS, type QualityRubricKey, validateQualityAnswers, isQualityEligibleSale } from "@/lib/quality";
 import { loadBelgiumProduction } from '@/lib/belgium/server';
 import { validatedTextMentions } from '@/lib/quality-mentions';
 
@@ -15,12 +15,13 @@ export async function POST(request: NextRequest) {
   const rubricKey=typeof input.rubric_key==='string'?input.rubric_key:'';
   if(!Object.prototype.hasOwnProperty.call(QUALITY_RUBRICS,rubricKey))return NextResponse.json({error:"Ce barème n’est pas configuré."},{status:400});
   const rubric=QUALITY_RUBRICS[rubricKey as QualityRubricKey];
-  if (!validateQualityAnswers(input.answers,rubric.questions,rubric.conditionRules.map(rule=>rule.questionId))) return NextResponse.json({error:"Notez chaque critère de 0 à 5."},{status:400});
   const conditions=input.conditions;
   if(!conditions||typeof conditions!=='object'||rubric.conditionRules.some(rule=>typeof (conditions as Record<string,unknown>)[rule.field]!=='boolean'))return NextResponse.json({error:"Précisez les conditions d’application du barème."},{status:400});
   const conditionValues=conditions as Record<string,boolean>;
-  const answers=input.answers;
-  if(rubric.conditionRules.some(rule=>(answers[String(rule.questionId)].kind==='na')!==(conditionValues[rule.field]===rule.naWhen)))return NextResponse.json({error:"La réponse N/A ne correspond pas à la condition d’application du barème."},{status:400});
+  const answers=applyQualityConditions(input.answers,conditionValues,rubric.conditionRules);
+  if (!validateQualityAnswers(answers,rubric.questions,rubric.conditionRules.map(rule=>rule.questionId))) return NextResponse.json({error:"Notez chaque critère de 0 à 5."},{status:400});
+  const invalidRule=rubric.conditionRules.find(rule=>answers[String(rule.questionId)].kind==='na'&&conditionValues[rule.field]!==rule.naWhen);
+  if(invalidRule)return NextResponse.json({error:`Q${invalidRule.questionId} : choisissez une note de 0 à 5 pour cette condition.`},{status:400});
   // Ces deux critères sont évalués par la condition et la note, sans texte associé.
   for(const questionId of [14,25]){answers[String(questionId)].comment='';answers[String(questionId)].reason='';}
   const saleKey=typeof input.sale_key==='string'?input.sale_key.trim():'';
@@ -34,13 +35,13 @@ export async function POST(request: NextRequest) {
   if(comments.length>10000)return NextResponse.json({error:'Synthèse trop longue.'},{status:400});
   let mentionedIds:string[];
   try{mentionedIds=await validatedTextMentions(input.mentioned_ids||[],comments);}catch(error){return NextResponse.json({error:(error as Error).message},{status:400});}
-  const score=calculateQuality(input.answers,rubric.questions);
+  const score=calculateQuality(answers,rubric.questions);
   if(score.score_percent===null||score.status===null)return NextResponse.json({error:"Aucun critère applicable au calcul."},{status:400});
   const clientKey=sale.client_id||sale.mega_id||sale.key;
   const db=await createClient();
   const {data,error}=await db.from('quality_reviews').insert({
     activity_name:'MEGA',rubric_key:rubric.key,agent_name:sale.agent,agent_centre:sale.centre,sale_reference:sale.key,sale_key:sale.key,
-    identification:{},condition_context:conditionValues,answers:input.answers,score_sum:score.score_sum,applicable_count:score.applicable_count,max_score:rubric.maxScore,
+    identification:{},condition_context:conditionValues,answers,score_sum:score.score_sum,applicable_count:score.applicable_count,max_score:rubric.maxScore,
     score_percent:Number(score.score_percent.toFixed(4)),status:score.status,grave_faults:score.grave_faults,
     call_quality_note:note||null,comments:comments||null,mentioned_ids:mentionedIds,client_key:clientKey,controller_id:profile.id,controller_name:profile.full_name,
   }).select('id').single();

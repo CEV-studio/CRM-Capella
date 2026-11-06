@@ -57,6 +57,14 @@ export const QUALITY_RUBRICS = {
 } as const;
 export type QualityRubricKey=keyof typeof QUALITY_RUBRICS;
 
+export function applyQualityConditions(value:unknown,conditions:Record<string,boolean>,rules:readonly {questionId:number;field:string;naWhen:boolean}[]) {
+ if(!value||typeof value!=='object'||Array.isArray(value))return value;
+ const answers={...value as Record<string,unknown>};
+ for(const rule of rules)if(conditions[rule.field]===rule.naWhen)
+  answers[String(rule.questionId)]={kind:'na',score:null,comment:'',reason:''};
+ return answers;
+}
+
 export const MEGA_QUALITY_SCALE = [
  [5,'Conforme et complet'],[4,'Conforme avec un détail mineur'],[3,'Partiellement conforme'],
  [2,'Insuffisant'],[1,'Très insuffisant'],[0,'Non réalisé ou non conforme'],

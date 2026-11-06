@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { calculateQuality,validateQualityAnswers,MEGA_QUALITY_QUESTIONS,MEGA_QUALITY_QUESTIONS_V1 } from '../src/lib/quality.ts';
+import { applyQualityConditions,calculateQuality,validateQualityAnswers,MEGA_QUALITY_QUESTIONS,MEGA_QUALITY_QUESTIONS_V1,QUALITY_RUBRICS } from '../src/lib/quality.ts';
 
 assert.equal(MEGA_QUALITY_QUESTIONS.length,18);
 assert.deepEqual(MEGA_QUALITY_QUESTIONS.map(q=>q.criterion),MEGA_QUALITY_QUESTIONS_V1.map(q=>q.criterion));
@@ -15,4 +15,14 @@ const partial=all(5);partial['14']={kind:'na',score:null,comment:'',reason:''};p
 assert.equal(validateQualityAnswers(partial),true);
 assert.equal(calculateQuality(partial).applicable_count,16);
 assert.equal(calculateQuality(partial).score_percent,100);
+const rules=QUALITY_RUBRICS.mega_call_v2.conditionRules;
+const stale=all(5);stale['25']=answer(3);
+const normalized=applyQualityConditions(stale,{q14_consumption_available:true,q25_more_than_five_objections:false},rules);
+assert.equal(normalized['14'].kind,'na');
+assert.equal(normalized['25'].kind,'na');
+assert.equal(calculateQuality(normalized).applicable_count,16);
+const applicable=applyQualityConditions(stale,{q14_consumption_available:false,q25_more_than_five_objections:true},rules);
+assert.equal(applicable['25'].score,3);
+assert.equal(applicable['14'].score,5);
+assert.equal(validateQualityAnswers(applicable),true);
 console.log('PASS: barème 0–5, critères conservés, N/A exclu, faute grave refusée.');
