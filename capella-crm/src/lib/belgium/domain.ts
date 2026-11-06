@@ -61,8 +61,8 @@ export function parseRows(rows:unknown[][],kind:'report'|'statement',reportDate:
  }
  const agent=text(get('Agent','Agent Mega','Vendeur'));if(!agent)throw new Error(`Agent absent pour ${key}`);
  const explicitCentre=text(get('Centre'));
- const centre=norm(agent)==='houssamterazi'?'Cimsourse':norm(agent)==='ayoubelguebais'?'Sarah':explicitCentre||'TILIRA';
- if(!['TILIRA','Cimsourse','Sarah'].includes(centre))throw new Error(`Centre inconnu : ${centre}`);
+ const centre=norm(agent)==='houssamterazi'?'Cimsourse':norm(agent)==='ayoubelguebais'?'SG Contact':explicitCentre||'TILIRA';
+ if(!['TILIRA','Cimsourse','SG Contact'].includes(centre))throw new Error(`Centre inconnu : ${centre}`);
  const status_class=classify(status);if(!status)throw new Error(`Statut absent pour ${key}`);
  const registered_date=dateValue(get('Inscription','DateInscription','Date d’inscription'));
  const observed=dateValue(get('Effet observé (provisoire)','Start Date'));
