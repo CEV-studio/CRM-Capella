@@ -15,12 +15,14 @@ export async function POST(request: NextRequest) {
   const rubricKey=typeof input.rubric_key==='string'?input.rubric_key:'';
   if(!Object.prototype.hasOwnProperty.call(QUALITY_RUBRICS,rubricKey))return NextResponse.json({error:"Ce barème n’est pas configuré."},{status:400});
   const rubric=QUALITY_RUBRICS[rubricKey as QualityRubricKey];
-  if (!validateQualityAnswers(input.answers,rubric.questions,rubric.conditionRules.map(rule=>rule.questionId))) return NextResponse.json({error:"Notez chaque critère de 0 à 5 et renseignez les motifs non applicables."},{status:400});
+  if (!validateQualityAnswers(input.answers,rubric.questions,rubric.conditionRules.map(rule=>rule.questionId))) return NextResponse.json({error:"Notez chaque critère de 0 à 5."},{status:400});
   const conditions=input.conditions;
   if(!conditions||typeof conditions!=='object'||rubric.conditionRules.some(rule=>typeof (conditions as Record<string,unknown>)[rule.field]!=='boolean'))return NextResponse.json({error:"Précisez les conditions d’application du barème."},{status:400});
   const conditionValues=conditions as Record<string,boolean>;
   const answers=input.answers;
   if(rubric.conditionRules.some(rule=>(answers[String(rule.questionId)].kind==='na')!==(conditionValues[rule.field]===rule.naWhen)))return NextResponse.json({error:"La réponse N/A ne correspond pas à la condition d’application du barème."},{status:400});
+  // Ces deux critères sont évalués par la condition et la note, sans texte associé.
+  for(const questionId of [14,25]){answers[String(questionId)].comment='';answers[String(questionId)].reason='';}
   const saleKey=typeof input.sale_key==='string'?input.sale_key.trim():'';
   if(!saleKey||saleKey.length>160)return NextResponse.json({error:"Sélectionnez une vente dans la base clients."},{status:400});
   const production=await loadBelgiumProduction();

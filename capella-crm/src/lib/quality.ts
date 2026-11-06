@@ -97,7 +97,7 @@ export function validateQualityAnswers(value:unknown,questions:readonly QualityQ
   const a=answers[String(q.id)];
   if(!a||typeof a!=="object"||Array.isArray(a)||typeof a.comment!=="string"||typeof a.reason!=="string")return false;
   if(a.kind==="na"){
-   if(!naQuestionIds.includes(q.id)||a.score!==null||!a.reason.trim())return false;
+   if(!naQuestionIds.includes(q.id)||a.score!==null||(![14,25].includes(q.id)&&!a.reason.trim()))return false;
   }else if(a.kind!=="score"||!Number.isInteger(a.score)||a.score!<0||a.score!>5)return false;
  }
  return Object.keys(answers).every(key=>questions.some(q=>String(q.id)===key));
