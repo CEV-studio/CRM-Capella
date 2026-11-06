@@ -9,6 +9,7 @@ export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 export type Profile = { id:string; full_name:string; email:string; role:Role; hierarchy_title:"Leader"|null; commission_rate:number; is_active:boolean; must_change_password:boolean; can_export:boolean; can_view_all:boolean; can_manage_team:boolean; manager_id:string|null; partner_team_id:string|null; archived_at:string|null; created_at:string; updated_at:string };
 export type PartnerTeam = { id:string; name:string; partner_name:string|null; manager_id:string|null; is_active:boolean; created_at:string };
 export type QualityReview = { id:string; activity_name:string; rubric_key:string; agent_name:string; agent_centre:string|null; sale_reference:string; sale_key:string|null; client_key:string|null; mentioned_ids:string[]; identification:Record<string,string>; condition_context:Record<string,boolean>; answers:Record<string,import('@/lib/quality').QualityAnswer>; score_sum:number; applicable_count:number; max_score:number; score_percent:number; status:import('@/lib/quality').QualityStatus; grave_faults:Array<{question_id:number;criterion:string;comment:string}>; call_quality_note:string|null; comments:string|null; controller_id:string; controller_name:string; reviewed_at:string; created_at:string };
+export type QualityReviewComment = { id:string; review_id:string; author_id:string; author_name:string; body:string; mentioned_ids:string[]; created_at:string };
 export type QualityIncident = { id:string; source:'crm'|'email'; source_account_id:string|null; source_message_id:string|null; source_thread_id:string|null; reporter_id:string|null; reporter_name:string; title:string; description:string; category:'ecart_contrat'|'controle_a_refaire'|'autre'; sale_key:string|null; client_name:string|null; attachment_names:string[]; mentioned_ids:string[]; status:'ouvert'|'en_cours'|'resolu'; reported_at:string; resolved_at:string|null; created_at:string; updated_at:string };
 export type QualityIncidentComment = { id:string; incident_id:string; author_id:string; author_name:string; body:string; mentioned_ids:string[]; created_at:string };
 export type Source = { id:string; name:string; kind:"call_center"|"apporteur"|"fichier"|"web"|"autre"; is_active:boolean; created_at:string };
@@ -131,6 +132,7 @@ export interface Database {
       be_imports:Table<BelgiumImportRun>;
       be_invoices:Table<Invoice>;
       quality_reviews:Table<QualityReview>;
+      quality_review_comments:Table<QualityReviewComment>;
       quality_incidents:Table<QualityIncident>;
       quality_incident_comments:Table<QualityIncidentComment>;
       profiles:Table<Profile>;
