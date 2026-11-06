@@ -6,6 +6,7 @@ import { norm } from '@/lib/belgium/domain';
 import { createClient } from '@/lib/supabase/server';
 import { isQualityEligibleSale } from '@/lib/quality';
 import type { QualityReview } from '@/lib/domain/database.types';
+import { balancedQualityQueue } from '@/lib/quality-queue';
 
 export const dynamic='force-dynamic';
 export const metadata={title:'Appels et contrôles qualité — Capella CRM'};
@@ -30,9 +31,10 @@ export default async function QualitySalesPage({searchParams}:{searchParams:Prom
  }
  const reviewedKeys=new Set(reviews.flatMap(r=>[r.sale_key,r.sale_reference].filter((key):key is string=>!!key)));
  const search=norm(params.q||'');
- const remaining=contracts.filter(c=>c.supplier==='MEGA'&&['Elec','Gaz'].includes(c.energy)&&isQualityEligibleSale(c.status_class)&&!reviewedKeys.has(c.key))
-  .filter(c=>(!params.status||c.status_class===params.status)&&(!search||norm([c.client,c.mega_id,c.reference,c.ean,c.agent,c.agent_reference,c.centre,c.key].join(' ')).includes(search)))
-  .sort((a,b)=>(b.registered_date||'').localeCompare(a.registered_date||'')||a.client.localeCompare(b.client,'fr'));
+ const remainingCandidates=contracts.filter(c=>c.supplier==='MEGA'&&['Elec','Gaz'].includes(c.energy)&&isQualityEligibleSale(c.status_class)&&!reviewedKeys.has(c.key))
+  .filter(c=>(!params.status||c.status_class===params.status)&&(!search||norm([c.client,c.mega_id,c.reference,c.ean,c.agent,c.agent_reference,c.centre,c.key].join(' ')).includes(search)));
+ const balanced=balancedQualityQueue(remainingCandidates,reviews,contracts);
+ const remaining=balanced.ordered;
  const completedRows=reviews.filter(r=>{
   if(!search)return true;
   const sale=byKey.get(r.sale_key||'')||byKey.get(r.sale_reference);
@@ -50,6 +52,7 @@ export default async function QualitySalesPage({searchParams}:{searchParams:Prom
    <Link href="/qualite/ventes" aria-current={!completed?'page':undefined} className={`rounded-lg px-4 py-2 text-sm font-semibold ${!completed?'bg-navy-800 text-white':'border border-navy-200 bg-white'}`}>À contrôler · {remaining.length}</Link>
    <Link href="/qualite/ventes?vue=effectues" aria-current={completed?'page':undefined} className={`rounded-lg px-4 py-2 text-sm font-semibold ${completed?'bg-navy-800 text-white':'border border-navy-200 bg-white'}`}>Contrôles effectués · {reviews.length}</Link>
   </nav>
+  {!completed&&<div className="flex flex-wrap items-center gap-3 text-sm text-navy-700"><span className="rounded-full bg-amber-50 px-3 py-1 font-semibold text-amber-900">Ordre conseillé</span><span>{balanced.agentCount} agents avec des appels en attente · équilibre sur les contrôles des 30 derniers jours</span></div>}
   <section className="rounded-xl border border-navy-100 bg-white">
    <form className={`grid gap-3 border-b p-4 ${completed?'sm:grid-cols-[1fr_auto]':'sm:grid-cols-[1fr_220px_auto]'}`}>
     <input type="hidden" name="vue" value={completed?'effectues':'a_controler'}/>
@@ -68,10 +71,10 @@ export default async function QualitySalesPage({searchParams}:{searchParams:Prom
       </div>
       <div className="flex flex-wrap gap-2">{clientKey&&<Link href={'/belgique?'+new URLSearchParams({tab:'clients',client:clientKey})} className="rounded-lg border border-navy-200 px-4 py-2 text-sm font-semibold">Fiche client</Link>}<Link href={'/qualite/'+r.id} className="rounded-lg bg-navy-800 px-4 py-2 text-sm font-semibold text-white">Voir le contrôle</Link></div>
      </article>;
-    }):(visible as typeof remaining).map(c=><article key={c.key} className="flex flex-wrap items-center justify-between gap-4 p-4">
-     <div><div className="font-semibold text-navy-900">{c.client||'Client sans nom'} <span className="ml-2 rounded bg-sky-50 px-2 py-1 text-xs text-sky-900">{c.status_class}</span></div>
+    }):(visible as typeof remaining).map((c,index)=><article key={c.key} className="flex flex-wrap items-center justify-between gap-4 p-4">
+     <div><div className="font-semibold text-navy-900"><span className="mr-2 text-star-600">#{(page-1)*30+index+1}</span>{c.client||'Client sans nom'} <span className="ml-2 rounded bg-sky-50 px-2 py-1 text-xs text-sky-900">{c.status_class}</span></div>
       <p className="mt-1 text-sm text-grey-brand">{c.energy} · Agent {c.agent} · Réf. centre {c.agent_reference||'—'} · ID MEGA {c.mega_id||'—'} · {c.reference||c.ean||c.key}</p>
-      <p className="mt-1 text-xs text-grey-brand">Inscription : {c.registered_date||'—'} · Centre : {c.centre}</p></div>
+      <p className="mt-1 text-xs text-grey-brand">Inscription : {c.registered_date||'—'} · Centre : {c.centre} · {balanced.completedFor(c)} contrôle{balanced.completedFor(c)>1?'s':''} de cet agent sur 30 jours</p></div>
      <Link href={'/qualite/nouveau?sale='+encodeURIComponent(c.key)} className="rounded-lg bg-navy-800 px-4 py-2 text-sm font-semibold text-white">Contrôler l’appel</Link>
     </article>)}
     {!visible.length&&<p className="p-6 text-sm text-grey-brand">{completed?'Aucun contrôle effectué dans cette vue.':'Aucun appel en attente de contrôle dans cette vue.'}</p>}
