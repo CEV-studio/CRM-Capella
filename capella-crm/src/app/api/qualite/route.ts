@@ -3,6 +3,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { calculateQuality, QUALITY_RUBRICS, type QualityRubricKey, validateQualityAnswers, isQualityEligibleSale } from "@/lib/quality";
 import { loadBelgiumProduction } from '@/lib/belgium/server';
+import { validatedTextMentions } from '@/lib/quality-mentions';
 
 export async function POST(request: NextRequest) {
   const profile = await requireProfile();
@@ -28,15 +29,19 @@ export async function POST(request: NextRequest) {
   const note=typeof input.call_quality_note==='string'?input.call_quality_note.trim():'';
   if(!['1','2','3','4','5'].includes(note))return NextResponse.json({error:'Note Q26 requise (1 à 5).'},{status:400});
   const comments=typeof input.comments==='string'?input.comments.trim():'';
+  if(comments.length>10000)return NextResponse.json({error:'Synthèse trop longue.'},{status:400});
+  let mentionedIds:string[];
+  try{mentionedIds=await validatedTextMentions(input.mentioned_ids||[],comments);}catch(error){return NextResponse.json({error:(error as Error).message},{status:400});}
   const score=calculateQuality(input.answers,rubric.questions);
   if(score.score_percent===null||score.status===null)return NextResponse.json({error:"Aucun critère applicable au calcul."},{status:400});
+  const clientKey=sale.client_id||sale.mega_id||sale.key;
   const db=await createClient();
   const {data,error}=await db.from('quality_reviews').insert({
     activity_name:'MEGA',rubric_key:rubric.key,agent_name:sale.agent,agent_centre:sale.centre,sale_reference:sale.key,sale_key:sale.key,
     identification:{},condition_context:conditionValues,answers:input.answers,score_sum:score.score_sum,applicable_count:score.applicable_count,max_score:rubric.maxScore,
     score_percent:Number(score.score_percent.toFixed(4)),status:score.status,grave_faults:score.grave_faults,
-    call_quality_note:note||null,comments:comments||null,controller_id:profile.id,controller_name:profile.full_name,
+    call_quality_note:note||null,comments:comments||null,mentioned_ids:mentionedIds,client_key:clientKey,controller_id:profile.id,controller_name:profile.full_name,
   }).select('id').single();
   if(error||!data)return NextResponse.json({error:"Enregistrement impossible."},{status:500});
-  return NextResponse.json({id:data.id,score:score.score_percent,status:score.status},{status:201});
+  return NextResponse.json({id:data.id,client_key:clientKey,score:score.score_percent,status:score.status},{status:201});
 }

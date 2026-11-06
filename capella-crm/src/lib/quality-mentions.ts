@@ -11,3 +11,11 @@ export async function validatedMentions(value: unknown): Promise<string[]> {
  if (error || data?.length !== ids.length) throw new Error('Un destinataire est introuvable.');
  return ids;
 }
+
+export async function validatedTextMentions(value:unknown,text:string):Promise<string[]>{
+ const ids=await validatedMentions(value);
+ if(!ids.length)return ids;
+ const {data,error}=await createAdminClient().from('profiles').select('id,full_name').in('id',ids).eq('is_active',true);
+ if(error||!data||data.some(person=>!text.includes(`@${person.full_name}`)))throw new Error('Sélectionnez les personnes mentionnées dans la synthèse.');
+ return ids;
+}

@@ -31,7 +31,7 @@ const PARTNER_NAV = [
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
 ];
-const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/signalements",label:"Signalements",icon:FileCheck2,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/agents",label:"Scores agents",icon:BarChart3,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/ventes",label:"Appels à contrôler",icon:FileCheck2,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>p.role==='be_agent'}])];
+const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/agents",label:"Scores agents",icon:BarChart3,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/ventes",label:"Appels à contrôler",icon:FileCheck2,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>p.role==='be_agent'}])];
 const AGENT_NAV = [section("Mes ventes", "/belgique?tab=clients", Users, [{ href: "/belgique?tab=clients", label: "Mes ventes", icon: Users }, { href: "/belgique/encoder", label: "Encoder une vente", icon: FileCheck2 }])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
@@ -87,7 +87,6 @@ const ADMIN_NAV = [
   ]),
   section("Qualité des ventes", "/qualite", ShieldCheck, [
     { href: "/qualite", label: "Tableau qualité", icon: ShieldCheck },
-    { href: "/qualite/signalements", label: "Signalements", icon: FileCheck2 },
     { href: "/qualite/agents", label: "Scores agents", icon: BarChart3 },
     { href: "/qualite/ventes", label: "Appels à contrôler", icon: FileCheck2 },
   ]),
@@ -112,7 +111,7 @@ function actif(pathname: string, href: string) {
   if([...expected].some(([key,value])=>actual.get(key)!==value))return false;
   if(href==="/belgique"&&actual.has("tab"))return false;
   pathname=currentPath;
-  if(cleanHref==="/qualite"&&["/qualite/agents","/qualite/ventes","/qualite/signalements"].some(route=>pathname===route||pathname.startsWith(`${route}/`)))return false;
+  if(cleanHref==="/qualite"&&["/qualite/agents","/qualite/ventes"].some(route=>pathname===route||pathname.startsWith(`${route}/`)))return false;
   if (cleanHref === "/") return pathname === "/";
   return pathname === cleanHref || pathname.startsWith(`${cleanHref}/`);
 }
