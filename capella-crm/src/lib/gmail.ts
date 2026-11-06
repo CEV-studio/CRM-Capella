@@ -7,7 +7,7 @@ import { getGmailAccountForProfile } from "@/lib/gmail-account";
 
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
 
-type GmailAccount = {
+export type GmailAccount = {
   id: string;
   email: string;
   display_name: string | null;
@@ -138,7 +138,7 @@ export async function getActiveGmailAccount(): Promise<GmailAccount | null> {
   return await getGmailAccountForProfile(profileId, "read") as GmailAccount | null;
 }
 
-async function gmailRequest<T>(
+export async function gmailRequest<T>(
   account: GmailAccount,
   path: string,
   init: RequestInit = {},
@@ -232,7 +232,7 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-function parseGmailMessage(message: GmailMessage, accountEmail: string) {
+export function parseGmailMessage(message: GmailMessage, accountEmail: string) {
   const headers = message.payload?.headers;
   const fromRaw = findHeader(headers, "From");
   const toRaw = findHeader(headers, "To");

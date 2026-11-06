@@ -31,7 +31,7 @@ const PARTNER_NAV = [
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
 ];
-const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/agents",label:"Scores agents",icon:BarChart3,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/ventes",label:"Appels à contrôler",icon:FileCheck2,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>p.role==='be_agent'}])];
+const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/signalements",label:"Signalements",icon:FileCheck2,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/agents",label:"Scores agents",icon:BarChart3,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/ventes",label:"Appels à contrôler",icon:FileCheck2,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>p.role==='be_agent'}])];
 const AGENT_NAV = [section("Mes ventes", "/belgique?tab=clients", Users, [{ href: "/belgique?tab=clients", label: "Mes ventes", icon: Users }, { href: "/belgique/encoder", label: "Encoder une vente", icon: FileCheck2 }])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
@@ -87,6 +87,7 @@ const ADMIN_NAV = [
   ]),
   section("Qualité des ventes", "/qualite", ShieldCheck, [
     { href: "/qualite", label: "Tableau qualité", icon: ShieldCheck },
+    { href: "/qualite/signalements", label: "Signalements", icon: FileCheck2 },
     { href: "/qualite/agents", label: "Scores agents", icon: BarChart3 },
     { href: "/qualite/ventes", label: "Appels à contrôler", icon: FileCheck2 },
   ]),
@@ -111,7 +112,7 @@ function actif(pathname: string, href: string) {
   if([...expected].some(([key,value])=>actual.get(key)!==value))return false;
   if(href==="/belgique"&&actual.has("tab"))return false;
   pathname=currentPath;
-  if(cleanHref==="/qualite"&&["/qualite/agents","/qualite/ventes"].some(route=>pathname===route||pathname.startsWith(`${route}/`)))return false;
+  if(cleanHref==="/qualite"&&["/qualite/agents","/qualite/ventes","/qualite/signalements"].some(route=>pathname===route||pathname.startsWith(`${route}/`)))return false;
   if (cleanHref === "/") return pathname === "/";
   return pathname === cleanHref || pathname.startsWith(`${cleanHref}/`);
 }
@@ -198,7 +199,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       <Link href="/deconnexion" prefetch={false} className="inline-flex items-center gap-1.5 text-xs text-navy-100"><LogOut size={14} /> Quitter</Link>
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
-      <div className="crm-workspace-bar flex min-h-14 items-center justify-between border-b border-navy-100 bg-white/95 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-2 text-sm"><Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="hidden font-medium text-navy-500 hover:text-navy-900 sm:inline">Capella CRM</Link><span className="hidden text-navy-300 sm:inline" aria-hidden>/</span><span className="truncate font-semibold text-navy-800">{currentSection?.titre ?? "Accueil"}</span>{currentItem && currentItem.label !== currentSection?.titre && <><span className="text-navy-300" aria-hidden>/</span><span className="truncate text-navy-600">{currentItem.label}</span></>}</div>{!['qualite','be_centre','be_agent'].includes(profile.role)&&<NotificationBell />}</div>
+      <div className="crm-workspace-bar flex min-h-14 items-center justify-between border-b border-navy-100 bg-white/95 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-2 text-sm"><Link href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="hidden font-medium text-navy-500 hover:text-navy-900 sm:inline">Capella CRM</Link><span className="hidden text-navy-300 sm:inline" aria-hidden>/</span><span className="truncate font-semibold text-navy-800">{currentSection?.titre ?? "Accueil"}</span>{currentItem && currentItem.label !== currentSection?.titre && <><span className="text-navy-300" aria-hidden>/</span><span className="truncate text-navy-600">{currentItem.label}</span></>}</div>{!['be_centre','be_agent'].includes(profile.role)&&<NotificationBell syncQuality={profile.role==='admin'}/>}</div>
       <nav className="flex items-start gap-2 overflow-x-auto border-b border-navy-100 bg-white p-3 md:hidden">{sections.map(s=>{
         const items=s.items.filter(visible),active=sectionActive(pathname,s);
         return items.length>1?<details key={s.titre} className="shrink-0 rounded-lg bg-navy-50"><summary className={`cursor-pointer whitespace-nowrap px-3 py-2 text-xs font-semibold ${active?'bg-sky-capella-100':''}`}>{s.titre}</summary><ul className="w-60 space-y-1 p-2">{items.map(item=><li key={item.href}><Link href={item.href} aria-current={actif(pathname,item.href)?'page':undefined} className={`block rounded-md px-3 py-2 text-xs leading-5 ${actif(pathname,item.href)?'bg-sky-capella-100 font-semibold':'hover:bg-white'}`}>{item.label}</Link></li>)}</ul></details>:<Link key={s.titre} href={items[0].href} className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs ${active?'bg-sky-capella-100 font-semibold':'bg-navy-50'}`}>{s.titre}</Link>;
