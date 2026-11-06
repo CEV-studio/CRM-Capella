@@ -2,14 +2,21 @@
 import { useRef, useState } from 'react';
 
 export type MentionPerson={id:string;full_name:string;role:string};
+const normalize=(name:string)=>name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('fr');
+function matchesName(name:string,query:string){
+ if(name.includes(query))return true;
+ // Tolère une lettre omise dans un prénom (ex. Thibaut → Thibault).
+ if(query.length<4)return false;
+ return name.split(/\s+/).some(part=>part.length===query.length+1&&[...part].some((_,i)=>part.slice(0,i)+part.slice(i+1)===query));
+}
 export function InlineMentions({people,value,onChange,mentionedIds,onMention}:{people:MentionPerson[];value:string;onChange:(value:string)=>void;mentionedIds:string[];onMention:(ids:string[])=>void}){
  const input=useRef<HTMLTextAreaElement>(null);
  const [cursor,setCursor]=useState(0);
  const [closed,setClosed]=useState(false);
  const before=value.slice(0,cursor);
  const match=before.match(/(^|\s)@([^@\n]*)$/u);
- const query=match?.[2].trim().toLocaleLowerCase('fr')||'';
- const suggestions=match&&!closed?people.filter(p=>p.full_name.toLocaleLowerCase('fr').includes(query)).slice(0,7):[];
+ const query=normalize(match?.[2].trim()||'');
+ const suggestions=match&&!closed?people.filter(p=>matchesName(normalize(p.full_name),query)).sort((a,b)=>Number(b.role==='qualite')-Number(a.role==='qualite')||a.full_name.localeCompare(b.full_name,'fr')).slice(0,7):[];
  function choose(person:MentionPerson){
   if(!match)return;
   const start=cursor-match[0].length+match[1].length;
