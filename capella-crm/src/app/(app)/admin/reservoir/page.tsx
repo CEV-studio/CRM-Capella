@@ -86,7 +86,7 @@ export default async function ReservoirPage({
   const nomParSource = new Map(listeSources.map((s) => [s.id, s.name]));
 
   if (leadsError) throw new Error(`Impossible de charger le réservoir : ${leadsError.message}`);
-  const leads: LeadReservoir[] = (leadsBruts ?? []).map(l => ({
+  const leads: LeadReservoir[] = (leadsBruts ?? []).map((l: LeadReservoir) => ({
     ...l, source: l.source_id ? (nomParSource.get(l.source_id) ?? null) : null,
   }));
   const totalPages = Math.max(1, Math.ceil((totalReservoir ?? 0) / PAR_PAGE));
