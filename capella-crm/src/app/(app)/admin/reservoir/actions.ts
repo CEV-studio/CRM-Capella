@@ -369,11 +369,11 @@ export async function attribuerPuissance(
   // Lire toutes les pages avant de modifier les lignes, pour ne pas sauter de dossiers.
   while (ids.length < limite) {
     const taille = Math.min(500, limite - ids.length);
-    const { data, error } = await admin.from("prospects").select("id")
+    const { data, error } = await (admin as any).from("reservoir_disponible").select("id")
       .is("assigned_to", null).is("deleted_at", null).or(puissance === "inconnue" ? "puissance.is.null,puissance.eq." : filtrePuissance(puissance))
       .order("created_at").order("id").range(ids.length, ids.length + taille - 1);
     if (error) return { ok: false, message: `Échec de lecture : ${error.message}` };
-    ids.push(...(data ?? []).map((p) => p.id));
+    ids.push(...(data ?? []).map((p: { id: string }) => p.id));
     if (!data || data.length < taille) break;
   }
   if (!ids.length) return { ok: false, message: "Aucun dossier disponible pour cette puissance." };
