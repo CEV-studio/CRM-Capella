@@ -7,7 +7,6 @@ import {
   AttributionParPuissance,
   NouveauChampPerso,
   NouvelleSource,
-  Reattribution,
   TableauReservoir,
   type LeadReservoir,
 } from "./attribution";
@@ -22,7 +21,7 @@ async function chargerPuissances(supabase: Awaited<ReturnType<typeof createClien
   const counts = new Map<number, number>();
   let inconnues = 0;
   for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await supabase.from("prospects").select("puissance,id")
+    const { data, error } = await (supabase as any).from("reservoir_disponible").select("puissance,id")
       .is("assigned_to", null).is("deleted_at", null).order("id").range(offset, offset + 999);
     if (error) throw new Error(`Impossible de compter les puissances : ${error.message}`);
     for (const p of data ?? []) {
@@ -52,8 +51,8 @@ export default async function ReservoirPage({
         ? (params.kva ?? "")
         : "";
 
-  let requeteLeads = supabase
-    .from("prospects")
+  let requeteLeads = (supabase as any)
+    .from("reservoir_disponible")
     .select("id,ref,raison_sociale,nom,prenom,tel_mobile,siren,source_id,created_at,puissance", { count: "exact" })
     .is("assigned_to", null)
     .is("deleted_at", null);
@@ -157,7 +156,7 @@ export default async function ReservoirPage({
           champs={champsPerso.map((c) => ({ cle: c.cle, libelle: c.libelle }))}
         />
 
-        <Reattribution commerciaux={commerciaux} />
+
       </div>
     </main>
   );
