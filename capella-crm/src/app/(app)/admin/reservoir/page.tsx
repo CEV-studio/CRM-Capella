@@ -36,7 +36,7 @@ async function chargerPuissances(supabase: Awaited<ReturnType<typeof createClien
 export default async function ReservoirPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kva?: string; page?: string }>;
+  searchParams: Promise<{ kva?: string; page?: string; echeance?: string }>;
 }) {
   await requireAdmin();
   const supabase = await createClient();
@@ -51,9 +51,18 @@ export default async function ReservoirPage({
         ? (params.kva ?? "")
         : "";
 
+  const filtresEcheance = ["connues", "depassees", "6mois", "12mois", "18mois", "sans"];
+  const echeance = filtresEcheance.includes(params.echeance ?? "") ? params.echeance! : "";
+  const aujourdHui = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  function dansMois(nombre: number) {
+    const [annee, mois, jour] = aujourdHui.split("-").map(Number);
+    const finMois = new Date(Date.UTC(annee, mois - 1 + nombre + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(annee, mois - 1 + nombre, Math.min(jour, finMois))).toISOString().slice(0, 10);
+  }
+
   let requeteLeads = (supabase as any)
-    .from("reservoir_disponible")
-    .select("id,ref,raison_sociale,nom,prenom,tel_mobile,siren,source_id,created_at,puissance", { count: "exact" })
+    .from("reservoir_echeances")
+    .select("id,ref,raison_sociale,nom,prenom,tel_mobile,siren,source_id,created_at,puissance,echeance_reservoir", { count: "exact" })
     .is("assigned_to", null)
     .is("deleted_at", null);
 
@@ -63,6 +72,16 @@ export default async function ReservoirPage({
     requeteLeads = requeteLeads.or(filtrePuissance(kva));
   }
 
+  if (echeance === "sans") requeteLeads = requeteLeads.is("echeance_reservoir", null);
+  else if (echeance === "connues") requeteLeads = requeteLeads.not("echeance_reservoir", "is", null);
+  else if (echeance === "depassees") requeteLeads = requeteLeads.lt("echeance_reservoir", aujourdHui);
+  else if (echeance === "6mois" || echeance === "12mois" || echeance === "18mois") {
+    requeteLeads = requeteLeads.lte("echeance_reservoir", dansMois(Number.parseInt(echeance, 10)));
+  }
+  requeteLeads = echeance && echeance !== "sans"
+    ? requeteLeads.order("echeance_reservoir", { ascending: true, nullsFirst: false }).order("id")
+    : requeteLeads.order("created_at", { ascending: false }).order("id");
+
   const [
     { data: leadsBruts, count: totalReservoir, error: leadsError },
     sources,
@@ -70,8 +89,6 @@ export default async function ReservoirPage({
     champsPerso,
   ] = await Promise.all([
     requeteLeads
-      .order("created_at", { ascending: false })
-      .order("id")
       .range((page - 1) * PAR_PAGE, page * PAR_PAGE - 1),
     chargerSources(),
     supabase
@@ -93,6 +110,7 @@ export default async function ReservoirPage({
   function lienPage(numero: number) {
     const query = new URLSearchParams();
     if (kva) query.set("kva", kva);
+    if (echeance) query.set("echeance", echeance);
     query.set("page", String(numero));
     return `/admin/reservoir?${query}`;
   }
@@ -116,11 +134,13 @@ export default async function ReservoirPage({
       <div className="space-y-6">
         <div id="liste-reservoir">
         <TableauReservoir
-          key={`${kva}:${page}:${leads.map(l => l.id).join(",")}`}
+          key={`${kva}:${echeance}:${page}:${leads.map(l => l.id).join(",")}`}
           leads={leads}
           commerciaux={commerciaux}
           total={totalReservoir ?? 0}
           kva={kva}
+          echeance={echeance}
+          aujourdHui={aujourdHui}
           puissancesKva={puissances}
           inconnues={inconnues}
         />

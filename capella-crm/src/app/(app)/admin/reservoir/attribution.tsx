@@ -16,7 +16,7 @@ import { nomComplet } from "@/lib/domain/noms";
 import type { Prospect } from "@/lib/domain/database.types";
 
 type Option = { value: string; label: string };
-export type LeadReservoir = Pick<Prospect, "id" | "ref" | "raison_sociale" | "nom" | "prenom" | "tel_mobile" | "siren" | "source_id" | "created_at" | "puissance"> & { source?: string | null };
+export type LeadReservoir = Pick<Prospect, "id" | "ref" | "raison_sociale" | "nom" | "prenom" | "tel_mobile" | "siren" | "source_id" | "created_at" | "puissance"> & { source?: string | null; echeance_reservoir: string | null };
 
 const SELECT =
   "h-10 w-full rounded-lg border border-navy-200 bg-white px-3 text-sm focus:border-star-500 focus:outline-none focus:ring-2 focus:ring-star-500/20";
@@ -206,6 +206,8 @@ export function TableauReservoir({
   commerciaux,
   total,
   kva,
+  echeance,
+  aujourdHui,
   puissancesKva,
   inconnues,
 }: {
@@ -213,6 +215,8 @@ export function TableauReservoir({
   commerciaux: Option[];
   total: number;
   kva: string;
+  echeance: string;
+  aujourdHui: string;
   puissancesKva: [number, number][];
   inconnues: number;
 }) {
@@ -250,8 +254,19 @@ export function TableauReservoir({
             <option value="inconnue">Puissance non renseignée ({inconnues} disponibles)</option>
           </select>
         </Field>
+        <Field label="Échéance du contrat">
+          <select name="echeance" defaultValue={echeance} className={`${SELECT} w-64`}>
+            <option value="">Toutes les dates</option>
+            <option value="connues">Toutes les échéances connues</option>
+            <option value="depassees">Échéances dépassées</option>
+            <option value="6mois">Jusqu’à 6 mois, dépassées comprises</option>
+            <option value="12mois">Jusqu’à 12 mois, dépassées comprises</option>
+            <option value="18mois">Jusqu’à 18 mois, dépassées comprises</option>
+            <option value="sans">Sans échéance renseignée</option>
+          </select>
+        </Field>
         <Button type="submit">Filtrer</Button>
-        {kva ? <a href="/admin/reservoir" className="px-2 py-2 text-sm font-medium text-navy-700 underline">Effacer le filtre</a> : null}
+        {kva || echeance ? <a href="/admin/reservoir" className="px-2 py-2 text-sm font-medium text-navy-700 underline">Effacer le filtre</a> : null}
       </form>
 
       <form action={action}>
@@ -292,7 +307,7 @@ export function TableauReservoir({
                     aria-label="Tout sélectionner"
                   />
                 </th>
-                {["Société", "Contact", "Mobile", "SIREN", "Puissance", "Source", "Reçu le"].map(
+                {["Société", "Contact", "Mobile", "SIREN", "Puissance", "Échéance", "Source", "Reçu le"].map(
                   (t) => (
                     <th
                       key={t}
@@ -307,7 +322,7 @@ export function TableauReservoir({
             <tbody>
               {leads.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-10 text-center text-sm text-grey-brand">
+                  <td colSpan={9} className="px-3 py-10 text-center text-sm text-grey-brand">
                     Aucun lead disponible pour ce filtre.
                   </td>
                 </tr>
@@ -335,6 +350,9 @@ export function TableauReservoir({
                     </td>
                     <td className="tabular px-3 py-2 text-navy-700">{l.siren || "—"}</td>
                     <td className="px-3 py-2 text-xs text-navy-700">{l.puissance || "—"}</td>
+                    <td className={`tabular whitespace-nowrap px-3 py-2 text-xs ${l.echeance_reservoir && l.echeance_reservoir < aujourdHui ? "font-semibold text-red-700" : "text-navy-700"}`}>
+                      {l.echeance_reservoir ? fmtDate(l.echeance_reservoir) : "—"}
+                    </td>
                     <td className="px-3 py-2 text-xs text-grey-brand">{l.source ?? "—"}</td>
                     <td className="tabular px-3 py-2 text-xs text-grey-brand">
                       {fmtDate(l.created_at)}
