@@ -20,7 +20,9 @@ export async function saveSalesAgent(_previous:ActionResult|null,form:FormData):
   const centre=(await centreNames(db)).find(value=>value.toLocaleLowerCase('fr')===requested.toLocaleLowerCase('fr'));
   const ref=String(form.get('agent_ref')||'').trim().toLowerCase();
   if(!centre||!/^[a-z0-9._-]{2,80}$/.test(ref))return {ok:false,message:'Centre ou identifiant agent invalide.'};
-  const {error}=await db.from('be_sales_agents').insert({centre,agent_ref:ref,display_name:name});
+  const existing=await db.from('be_sales_agents').select('id,archived_at').eq('centre',centre).eq('agent_ref',ref).maybeSingle();
+  if(existing.error)return {ok:false,message:'Lecture de l’agent impossible.'};
+  const {error}=existing.data?.archived_at?await db.from('be_sales_agents').update({archived_at:null,is_active:true,display_name:name}).eq('id',existing.data.id):await db.from('be_sales_agents').insert({centre,agent_ref:ref,display_name:name});
   if(error)return {ok:false,message:error.code==='23505'?'Cet agent existe déjà dans ce centre.':'Création impossible.'};
  }
  revalidatePath('/admin/centres');revalidatePath('/belgique');
@@ -35,4 +37,12 @@ export async function toggleSalesAgent(_previous:ActionResult|null,form:FormData
  if(error||!data?.length)return {ok:false,message:'Modification impossible.'};
  revalidatePath('/admin/centres');revalidatePath('/belgique');
  return {ok:true,message:'Statut enregistré.'};
+}
+
+export async function supprimerAgent(_previous:ActionResult|null,form:FormData):Promise<ActionResult>{
+ await requireAdmin();const id=String(form.get('id')||'');
+ if(!/^[0-9a-f-]{36}$/i.test(id))return {ok:false,message:'Agent invalide.'};
+ const db=await createClient();const {error}=await db.rpc('be_archive_agent',{p_agent_id:id});
+ if(error)return {ok:false,message:'Suppression impossible.'};
+ revalidatePath('/admin/centres');revalidatePath('/belgique');return {ok:true,message:'Agent supprimé.'};
 }

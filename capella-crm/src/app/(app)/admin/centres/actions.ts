@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { centreNames,provisionCentre } from '@/lib/belgium/centre-accounts';
 import type { ActionResult } from '@/lib/action-result';
 
@@ -47,8 +48,10 @@ export async function gererCentre(_prev:ActionResult|null,form:FormData):Promise
   if(reset.error)return {ok:false,message:'Réinitialisation impossible.'};
   revalidatePath('/admin/centres');return {ok:true,message:'Nouveau mot de passe provisoire.',motDePasse};
  }
+ const scope=await db.from('be_access').update({is_active:operation==='activer'}).eq('user_id',id);
+ if(scope.error)return {ok:false,message:'Modification impossible.'};
  const update=await db.from('profiles').update({is_active:operation==='activer'}).eq('id',id).in('role',['be_centre','be_agent']);
- if(update.error)return {ok:false,message:'Modification impossible.'};
+ if(update.error){await db.from('be_access').update({is_active:false}).eq('user_id',id);return {ok:false,message:'Modification impossible.'};}
  revalidatePath('/admin/centres');return {ok:true,message:operation==='activer'?'Compte activé.':'Compte désactivé.'};
 }
 
@@ -58,7 +61,18 @@ export async function ajouterCentre(_prev:ActionResult|null, form:FormData):Prom
  if(!name||name.length>100||/[\u0000-\u001f]/.test(name))return {ok:false,message:'Indique un nom de centre valide.'};
  const db=createAdminClient();
  if((await centreNames(db)).some(n=>n.toLocaleLowerCase('fr')===name.toLocaleLowerCase('fr')))return {ok:false,message:'Ce centre existe déjà.'};
- const {error}=await db.from('be_centres').insert({name});
+ const existing=await db.from('be_centres').select('id,name,archived_at');
+ if(existing.error)return {ok:false,message:'Lecture des centres impossible.'};
+ const archived=existing.data?.find(c=>c.archived_at&&c.name.toLocaleLowerCase('fr')===name.toLocaleLowerCase('fr'));
+ const {error}=archived?await db.from('be_centres').update({archived_at:null}).eq('id',archived.id):await db.from('be_centres').insert({name});
  if(error)return {ok:false,message:error.code==='23505'?'Ce centre existe déjà.':'Création impossible.'};
  revalidatePath('/admin/centres');return {ok:true,message:'Centre créé.'};
+}
+
+export async function supprimerCentre(_prev:ActionResult|null,form:FormData):Promise<ActionResult>{
+ await requireAdmin();const name=String(form.get('centre')||'').trim();
+ if(!name||name.length>100)return {ok:false,message:'Centre invalide.'};
+ const db=await createClient();const {error}=await db.rpc('be_archive_centre',{p_name:name});
+ if(error)return {ok:false,message:'Suppression impossible.'};
+ revalidatePath('/admin/centres');revalidatePath('/belgique');return {ok:true,message:'Centre supprimé.'};
 }
