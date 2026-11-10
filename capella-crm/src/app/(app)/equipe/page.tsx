@@ -3,13 +3,15 @@ import Link from 'next/link';
 import { requireProfile } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { Card, KpiTile } from '@/components/ui';
-import { fmtNombre } from '@/lib/format';
+import { fmtNombre, fmtDateHeure } from '@/lib/format';
+import { nomComplet } from '@/lib/domain/noms';
 import { PROSPECT_STAGES } from '@/lib/domain/stages';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Mon équipe — Capella CRM' };
 
-type TeamMember = { id:string; full_name:string; is_active:boolean; partner_team_id:string|null };
+type TeamMember = { id:string; full_name:string; is_active:boolean; partner_team_id:string|null; role:'commercial'|'manager' };
+type CommentedProspect = { id:string; assigned_to:string; raison_sociale:string|null; nom:string|null; prenom:string|null; notes:string|null; last_action_at:string|null }; 
 type ProspectRow = { assigned_to:string; stage:string; next_action_date:string|null };
 type AffaireRow = { commercial_id:string; stage:string };
 
@@ -19,22 +21,32 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
   // Admins can select any team; managers remain restricted to their active teams.
   const isAdmin=profile.role==='admin';
   const db = createAdminClient();
-  let teamsQuery=db.from('partner_teams').select('id,name,is_active').order('name');
+  let teamsQuery=db.from('partner_teams').select('id,name,is_active,manager_id').order('name');
   if(!isAdmin)teamsQuery=teamsQuery.eq('manager_id',profile.id).eq('is_active',true);
   const {data:teams,error:teamsError}=await teamsQuery;
   if(teamsError)throw new Error('Impossible de charger les équipes.');
   const requestedTeam=(await searchParams).team;
   const selectedTeam=isAdmin?(teams??[]).find(team=>team.id===requestedTeam):undefined;
   const teamIds=isAdmin?(selectedTeam?[selectedTeam.id]:[]):(teams??[]).map(team=>team.id);
-  let membersQuery=db.from('profiles').select('id,full_name,is_active,partner_team_id').eq('role','commercial').is('archived_at',null).order('full_name');
+  let membersQuery=db.from('profiles').select('id,full_name,is_active,partner_team_id,role').eq('role','commercial').is('archived_at',null).order('full_name');
   if(isAdmin && selectedTeam) membersQuery=membersQuery.eq('partner_team_id',selectedTeam.id);
   else if(!isAdmin) membersQuery=teamIds.length?membersQuery.or(`partner_team_id.in.(${teamIds.join(',')}),and(partner_team_id.is.null,manager_id.eq.${profile.id})`):membersQuery.is('partner_team_id',null).eq('manager_id',profile.id);
   const { data: membres, error: teamError } = await membersQuery;
   if (teamError) throw new Error('Impossible de charger l’équipe.');
-  const team = (membres ?? []) as TeamMember[];
+  const managerIds=isAdmin
+    ? [...new Set((selectedTeam?[selectedTeam]:(teams??[])).map(t=>t.manager_id).filter((id):id is string=>!!id))]
+    : [profile.id];
+  let managers:TeamMember[]=[];
+  if(managerIds.length){
+    const {data,error}=await db.from('profiles').select('id,full_name,is_active,partner_team_id,role').in('id',managerIds).eq('role','manager').is('archived_at',null).order('full_name');
+    if(error)throw new Error('Impossible de charger les responsables.');
+    managers=(data??[]) as TeamMember[];
+  }
+  const team = [...managers,...((membres ?? []) as TeamMember[])];
   const teamNames=new Map((teams??[]).map(t=>[t.id,t.name]));
   const ids = team.map(m => m.id);
   const prospects:ProspectRow[]=[]; const affaires:AffaireRow[]=[];
+  let commented:CommentedProspect[]=[];
   if (ids.length) {
     // Read every page: team KPIs must stay correct beyond the API row limit.
     for (let offset=0;;offset+=1000) {
@@ -47,6 +59,11 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
       if(error) throw new Error('Impossible de charger les indicateurs des dossiers.');
       affaires.push(...(data??[]) as AffaireRow[]); if(!data||data.length<1000)break;
     }
+  }
+  if(isAdmin&&ids.length){
+    const {data,error}=await db.from('prospects').select('id,assigned_to,raison_sociale,nom,prenom,notes,last_action_at').in('assigned_to',ids).is('deleted_at',null).not('notes','is',null).order('last_action_at',{ascending:false,nullsFirst:false}).order('id').limit(100);
+    if(error)throw new Error('Impossible de charger les commentaires.');
+    commented=((data??[]) as CommentedProspect[]).filter(p=>p.notes?.trim());
   }
   const today = new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const inactiveStages = new Set(['KO','Numéro KO','Pas intéressé','DDF trop éloignée']);
@@ -78,17 +95,18 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
     <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <KpiTile label="Prospects actifs" value={fmtNombre(sum('actifs'))}/><KpiTile label="Actions en retard" value={fmtNombre(sum('retards'))}/><KpiTile label="Dossiers en cours" value={fmtNombre(sum('encours'))}/><KpiTile label="Dossiers validés ADV" value={fmtNombre(sum('valides'))}/>
     </div>
-    <Card className="overflow-x-auto"><table className="w-full min-w-[50rem] text-left text-sm"><thead><tr>{['Commercial','Équipe','Prospects actifs','Actions en retard','Dossiers en cours','Validés ADV'].map(h=><th key={h} className="px-4 py-3">{h}</th>)}</tr></thead><tbody>
-      {rows.map(row=><tr key={row.id} className="border-b border-navy-100"><td className="px-4 py-3 font-semibold">{row.full_name}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</td><td className="px-4 py-3">{row.partner_team_id ? teamNames.get(row.partner_team_id)??'—' : '—'}</td><td className="px-4 py-3">{row.actifs}</td><td className="px-4 py-3">{row.retards}</td><td className="px-4 py-3">{row.encours}</td><td className="px-4 py-3">{row.valides}</td></tr>)}
+    <Card className="overflow-x-auto"><table className="w-full min-w-[50rem] text-left text-sm"><thead><tr>{['Commercial / responsable','Équipe','Prospects actifs','Actions en retard','Dossiers en cours','Validés ADV'].map(h=><th key={h} className="px-4 py-3">{h}</th>)}</tr></thead><tbody>
+      {rows.map(row=><tr key={row.id} className="border-b border-navy-100"><td className="px-4 py-3 font-semibold">{row.full_name}{row.role==='manager'&&<span className="ml-2 text-xs text-grey-brand">Responsable</span>}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</td><td className="px-4 py-3">{row.role==='manager'?(teams??[]).filter(t=>t.manager_id===row.id&&(!selectedTeam||t.id===selectedTeam.id)).map(t=>t.name).join(', ')||'—':row.partner_team_id?teamNames.get(row.partner_team_id)??'—':'—'}</td><td className="px-4 py-3">{row.actifs}</td><td className="px-4 py-3">{row.retards}</td><td className="px-4 py-3">{row.encours}</td><td className="px-4 py-3">{row.valides}</td></tr>)}
       {rows.length>0&&<tr className="font-bold"><td className="px-4 py-3">Total équipes</td><td/><td className="px-4 py-3">{sum('actifs')}</td><td className="px-4 py-3">{sum('retards')}</td><td className="px-4 py-3">{sum('encours')}</td><td className="px-4 py-3">{sum('valides')}</td></tr>}
     </tbody></table>{!rows.length&&<p className="p-6 text-sm text-grey-brand">Aucun commercial à afficher.</p>}</Card>
     <section className="mt-8 space-y-4" aria-labelledby="statuts-prospection">
       <h2 id="statuts-prospection" className="font-display text-xl font-bold">Statuts de prospection</h2>
       {statuses.length>0?<>
       <Card className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th scope="col" className="whitespace-nowrap px-4 py-3">Commercial</th>{statuses.map(status=><th scope="col" key={status} className="whitespace-nowrap px-4 py-3">{status}</th>)}<th scope="col" className="px-4 py-3">Total</th></tr></thead><tbody>
-      {rows.map(row=>{const counts=statusByMember.get(row.id);return <tr key={row.id} className="border-b border-navy-100"><th scope="row" className="whitespace-nowrap px-4 py-3 font-semibold">{row.full_name}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(counts?.get(status)??0)}</td>)}<td className="px-4 py-3 font-semibold">{fmtNombre([...counts?.values()??[]].reduce((a,b)=>a+b,0))}</td></tr>})}
-      <tr className="font-bold"><th scope="row" className="px-4 py-3">{isAdmin&&!selectedTeam?"Total commerciaux":"Total équipe"}</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(statusTotals.get(status)??0)}</td>)}<td className="px-4 py-3">{fmtNombre(prospects.length)}</td></tr>
+      {rows.map(row=>{const counts=statusByMember.get(row.id);return <tr key={row.id} className="border-b border-navy-100"><th scope="row" className="whitespace-nowrap px-4 py-3 font-semibold">{row.full_name}{row.role==='manager'&&<span className="ml-2 text-xs text-grey-brand">Responsable</span>}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(counts?.get(status)??0)}</td>)}<td className="px-4 py-3 font-semibold">{fmtNombre([...counts?.values()??[]].reduce((a,b)=>a+b,0))}</td></tr>})}
+      <tr className="font-bold"><th scope="row" className="px-4 py-3">Total équipe</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(statusTotals.get(status)??0)}</td>)}<td className="px-4 py-3">{fmtNombre(prospects.length)}</td></tr>
       </tbody></table></Card></>:<p className="text-sm text-grey-brand">Aucun lead attribué aux commerciaux affichés.</p>}
     </section>
+    {isAdmin&&<section className="mt-8 space-y-4" aria-labelledby="commentaires-equipe"><h2 id="commentaires-equipe" className="font-display text-xl font-bold">Commentaires des prospects</h2><p className="text-sm text-grey-brand">Dernier commentaire enregistré par prospect · 100 prospects maximum, classés par dernière activité.</p><Card><div className="divide-y divide-navy-100">{commented.map(p=><article key={p.id} className="space-y-1 px-4 py-4"><div className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><Link href={`/prospection/${p.id}`} className="font-semibold underline">{p.raison_sociale||nomComplet(p.nom,p.prenom)||'Prospect'}</Link><span className="text-sm text-grey-brand">Attribué à : {team.find(m=>m.id===p.assigned_to)?.full_name??'—'}</span>{p.last_action_at&&<span className="text-xs text-grey-brand">Dernière activité : {fmtDateHeure(p.last_action_at)}</span>}</div><p className="whitespace-pre-wrap break-words text-sm">{p.notes}</p></article>)}{!commented.length&&<p className="p-5 text-sm text-grey-brand">Aucun commentaire sur les prospects affichés.</p>}</div></Card></section>}
   </main>;
 }
