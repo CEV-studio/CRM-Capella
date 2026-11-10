@@ -6,7 +6,7 @@ import type { ActionResult } from '@/lib/action-result';
 
 export async function encoderVente(_prev:ActionResult|null,form:FormData):Promise<ActionResult>{
  const profile=await requireProfile();
- if(profile.role!=='be_agent'||profile.must_change_password)return {ok:false,message:'Accès encodage refusé.'};
+ if(!['be_agent','be_centre'].includes(profile.role)||profile.must_change_password)return {ok:false,message:'Accès encodage refusé.'};
  const fields=['submission_id','first_name','last_name','phone','email','energy','product_id','comment'] as const;
  const payload=Object.fromEntries(fields.map(k=>[k,String(form.get(k)||'').trim()]));
  if(!/^[0-9a-f-]{36}$/i.test(payload.submission_id))return {ok:false,message:'Formulaire expiré : recharge la page.'};
@@ -14,7 +14,9 @@ export async function encoderVente(_prev:ActionResult|null,form:FormData):Promis
  if(!payload.first_name||!payload.last_name||payload.first_name.length>100||payload.last_name.length>100)return {ok:false,message:'Nom et prénom requis (100 caractères maximum).'};
  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)||payload.email.length>254||payload.phone.length<6||payload.phone.length>40)return {ok:false,message:'Téléphone et email valides requis.'};
  if(payload.comment.length>5000)return {ok:false,message:'Un champ dépasse la longueur autorisée.'};
- const db=await createClient();const {data,error}=await db.rpc('be_encode_sale',{p_data:payload});
+ const agentId=String(form.get('agent_id')||'');
+ if(profile.role==='be_centre'&&!/^[0-9a-f-]{36}$/i.test(agentId))return {ok:false,message:'Sélectionne un agent de ton centre.'};
+ const db=await createClient();const {data,error}=profile.role==='be_centre'?await db.rpc('be_encode_sale_for_agent',{p_data:payload,p_agent_id:agentId}):await db.rpc('be_encode_sale',{p_data:payload});
  if(error)return {ok:false,message:error.code==='23505'?'Cette vente a déjà été encodée.':error.message};
  revalidatePath('/belgique');return {ok:true,message:'Vente enregistrée au statut Signé.',venteClientId:'CRM:'+data};
 }
