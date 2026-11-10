@@ -4,14 +4,15 @@ import type { Database } from '@/lib/domain/database.types';
 
 export async function centreNames(db:SupabaseClient<Database>){
  const names=new Set<string>();
- const {data:centres,error:centreError}=await db.from("be_centres").select("name");
+ const {data:centres,error:centreError}=await db.from("be_centres").select("name,archived_at");
  if(centreError)throw new Error("Lecture des centres impossible.");
- for(const centre of centres||[])names.add(centre.name);
+ const archived=new Set((centres||[]).filter(c=>c.archived_at).map(c=>c.name.toLocaleLowerCase("fr")));
+ for(const centre of centres||[])if(!centre.archived_at)names.add(centre.name);
  for(const table of ['be_contracts','be_access'] as const){
   for(let offset=0;;offset+=1000){
    const {data,error}=await db.from(table).select('centre').order('centre').range(offset,offset+999);
    if(error)throw new Error('Lecture des centres impossible.');
-   for(const row of data||[])names.add(row.centre);
+   for(const row of data||[])if(!archived.has(row.centre.toLocaleLowerCase("fr")))names.add(row.centre);
    if((data||[]).length<1000)break;
   }
  }

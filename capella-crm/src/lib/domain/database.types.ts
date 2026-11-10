@@ -125,9 +125,9 @@ export interface Database {
       be_cycle_tracking:Table<CycleTracking>;
       be_supplier_billing:Table<SupplierBilling>;
       be_deductions:Table<import('@/lib/belgium/domain').Deduction>;
-      be_centres:Table<{id:string;name:string;created_at:string}>;
+      be_centres:Table<{id:string;name:string;created_at:string;archived_at:string|null}>;
       be_access:Table<{user_id:string;centre:string;agent_ref:string|null;is_active:boolean;created_at:string}>;
-      be_sales_agents:Table<{id:string;centre:string;agent_ref:string;display_name:string;is_active:boolean;created_at:string}>;
+      be_sales_agents:Table<{id:string;centre:string;agent_ref:string;display_name:string;is_active:boolean;created_at:string;archived_at:string|null}>;
       be_contracts:Table<{key:string;supplier:string;mega_id:string;ean:string;agent:string;centre:string;status:string;status_class:string;report_date:string;data:Contract;import_id:string}>;
       be_statement_lines:Table<{id:string;supplier:string;period:string;contract_key:string;gross_cents:number;centre_cents:number;data:Statement;import_id:string}>;
       be_imports:Table<BelgiumImportRun>;
@@ -169,6 +169,8 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      be_archive_agent:{Args:{p_agent_id:string};Returns:undefined};
+      be_archive_centre:{Args:{p_name:string};Returns:undefined};
       partner_team_stats:{Args:Record<never,never>;Returns:{team_id:string;membres:number;prospects_actifs:number;dossiers_en_cours:number;dossiers_valides:number}[]};
       be_encode_sale:{Args:{p_data:Record<string,string>};Returns:string};
       be_save_comment:{Args:{p_id:string|null;p_mega:string;p_centre:string;p_body:string};Returns:string};

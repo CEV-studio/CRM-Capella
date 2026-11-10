@@ -1,6 +1,6 @@
 'use client';
 import { useActionState,useState } from 'react';
-import { creerCentre,gererCentre,ajouterCentre } from './actions';
+import { creerCentre,gererCentre,ajouterCentre,supprimerCentre } from './actions';
 import type { ActionResult } from '@/lib/action-result';
 import { Button,Field,Input } from '@/components/ui';
 
@@ -21,4 +21,9 @@ export function GestionCentre({id,active}:{id:string;active:boolean}){
 export function NouveauCentre(){
  const [state,action,pending]=useActionState<ActionResult|null,FormData>(ajouterCentre,null);
  return <form action={action} className="flex flex-wrap items-end gap-3 p-5"><Field label="Nom du centre"><Input name="name" required maxLength={100}/></Field><Button disabled={pending}>Créer le centre</Button><Result state={state}/></form>;
+}
+
+export function SupprimerCentre({centre}:{centre:string}){
+ const [state,action,pending]=useActionState<ActionResult|null,FormData>(supprimerCentre,null);
+ return <form action={action} onSubmit={e=>{if(!window.confirm(`Supprimer ${centre} ? Les accès du centre seront désactivés. Les ventes et contrôles seront conservés.`))e.preventDefault();}}><input type="hidden" name="centre" value={centre}/><Button variant="ghost" disabled={pending}>Supprimer le centre</Button><Result state={state}/></form>;
 }
