@@ -31,7 +31,7 @@ const PARTNER_NAV = [
     { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
   ]),
 ];
-const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/agents",label:"Scores agents",icon:BarChart3,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/ventes",label:"Appels à contrôler",icon:FileCheck2,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>['be_agent','be_centre'].includes(p.role)}])];
+const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/agents",label:"Qualité par agent",icon:BarChart3,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>['be_agent','be_centre'].includes(p.role)}])];
 const AGENT_NAV = [section("Mes ventes", "/belgique?tab=clients", Users, [{ href: "/belgique?tab=clients", label: "Mes ventes", icon: Users }, { href: "/belgique/encoder", label: "Encoder une vente", icon: FileCheck2 }])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
@@ -87,8 +87,7 @@ const ADMIN_NAV = [
   ]),
   section("Qualité des ventes", "/qualite", ShieldCheck, [
     { href: "/qualite", label: "Tableau qualité", icon: ShieldCheck },
-    { href: "/qualite/agents", label: "Scores agents", icon: BarChart3 },
-    { href: "/qualite/ventes", label: "Appels à contrôler", icon: FileCheck2 },
+    { href: "/qualite/agents", label: "Qualité par agent", icon: BarChart3 },
   ]),
   section("Admin", "/admin/commerciaux", ShieldCheck, [
     { href: "/admin/commerciaux", label: "Création de comptes", icon: Users },
