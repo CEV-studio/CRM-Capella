@@ -4,6 +4,9 @@ import type { Database } from '@/lib/domain/database.types';
 
 export async function centreNames(db:SupabaseClient<Database>){
  const names=new Set<string>();
+ const {data:centres,error:centreError}=await db.from("be_centres").select("name");
+ if(centreError)throw new Error("Lecture des centres impossible.");
+ for(const centre of centres||[])names.add(centre.name);
  for(const table of ['be_contracts','be_access'] as const){
   for(let offset=0;;offset+=1000){
    const {data,error}=await db.from(table).select('centre').order('centre').range(offset,offset+999);

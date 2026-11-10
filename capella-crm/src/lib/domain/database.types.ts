@@ -125,6 +125,7 @@ export interface Database {
       be_cycle_tracking:Table<CycleTracking>;
       be_supplier_billing:Table<SupplierBilling>;
       be_deductions:Table<import('@/lib/belgium/domain').Deduction>;
+      be_centres:Table<{id:string;name:string;created_at:string}>;
       be_access:Table<{user_id:string;centre:string;agent_ref:string|null;is_active:boolean;created_at:string}>;
       be_sales_agents:Table<{id:string;centre:string;agent_ref:string;display_name:string;is_active:boolean;created_at:string}>;
       be_contracts:Table<{key:string;supplier:string;mega_id:string;ean:string;agent:string;centre:string;status:string;status_class:string;report_date:string;data:Contract;import_id:string}>;

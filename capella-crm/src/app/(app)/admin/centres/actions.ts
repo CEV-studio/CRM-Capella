@@ -51,3 +51,14 @@ export async function gererCentre(_prev:ActionResult|null,form:FormData):Promise
  if(update.error)return {ok:false,message:'Modification impossible.'};
  revalidatePath('/admin/centres');return {ok:true,message:operation==='activer'?'Compte activé.':'Compte désactivé.'};
 }
+
+export async function ajouterCentre(_prev:ActionResult|null, form:FormData):Promise<ActionResult>{
+ await requireAdmin();
+ const name=String(form.get('name')||'').trim().replace(/\s+/g,' ');
+ if(!name||name.length>100||/[\u0000-\u001f]/.test(name))return {ok:false,message:'Indique un nom de centre valide.'};
+ const db=createAdminClient();
+ if((await centreNames(db)).some(n=>n.toLocaleLowerCase('fr')===name.toLocaleLowerCase('fr')))return {ok:false,message:'Ce centre existe déjà.'};
+ const {error}=await db.from('be_centres').insert({name});
+ if(error)return {ok:false,message:error.code==='23505'?'Ce centre existe déjà.':'Création impossible.'};
+ revalidatePath('/admin/centres');return {ok:true,message:'Centre créé.'};
+}
