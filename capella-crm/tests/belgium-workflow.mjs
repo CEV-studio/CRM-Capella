@@ -127,7 +127,7 @@ await assert.rejects(()=>db.query("select be_save_comment($1,'99901','TILIRA','R
 await asUser(admin);await db.query("update be_access set centre='TILIRA' where user_id=$1",[centreUser]);
 await asUser(centreUser);assert.equal((await db.query('select * from be_sale_entries')).rows.length,1);assert.equal((await db.query("select * from be_client_comments where mega_id='99901'")).rows.length,1);
 await asUser(admin);
-const reported={...rows[1],key:'MEGA:99901:541449020000073180:ELEC',mega_id:'99901',ean:sale.ean,energy:'Elec',centre:'TILIRA',agent:'signedagent',status:'Contrat effectif',status_class:'Effectif',report_date:'2026-10-26'};
+const reported={...rows[1],key:'MEGA:99901:541449020000073180:ELEC',mega_id:'99901',ean:sale.ean,energy:'Elec',centre:'TILIRA',agent:'signedagent',client:'Client Alice',phone:sale.phone,status:'Contrat effectif',status_class:'Effectif',report_date:'2026-10-26'};
 await imp([reported],'2026-10-26','report','matching-signed-sale');
 await asUser(encoder);portal=(await db.query('select be_production_read() data')).rows[0].data;
 const reconciled=portal.contracts.filter(c=>c.mega_id==='99901');assert.equal(reconciled.length,1);assert.equal(reconciled[0].status_class,'Effectif');assert.equal(reconciled[0].owner_id,encoder);assert.equal(reconciled[0].email,sale.email);assert.equal(reconciled[0].entry_id,saleId);
@@ -147,6 +147,16 @@ assert.equal(portal.contracts.find(c=>c.entry_id===anonymousId)?.status_class,'E
 assert.ok(portal.contracts.every(c=>c.owner_id===encoder));
 assert.ok(portal.history.every(h=>portal.contracts.some(c=>c.key===h.contract_key)));
 await asUser(outsider);assert.ok(!(await db.query('select be_production_read() data')).rows[0].data.contracts.some(c=>c.entry_id===anonymousId));
+// Name is required even when an ID matches; ambiguous names and conflicting IDs remain for review.
+await asUser(encoder);
+const reviewSale={...sale,mega_id:'',ean:'',contract_reference:'',first_name:'Élodie',last_name:'Martin',phone:'0470999999',submission_id:'10000000-0000-4000-8000-000000000031',comment:''};
+const reviewId=(await db.query('select be_encode_sale($1::jsonb) id',[JSON.stringify(reviewSale)])).rows[0].id;
+await asUser(admin);
+const reviewReport={...reported,key:'MEGA:99111:541449020000073200:ELEC',mega_id:'99111',ean:'541449020000073200',client:'MARTIN Elodie',phone:''};
+await imp([reviewReport,{...reviewReport,key:'MEGA:99112:541449020000073201:ELEC',mega_id:'99112',ean:'541449020000073201'}],'2026-10-27','report','ambiguous-names');
+await asUser(encoder);portal=(await db.query('select be_production_read() data')).rows[0].data;
+assert.equal(portal.contracts.find(c=>c.entry_id===reviewId)?.reconciliation,'À vérifier');
+assert.equal(portal.contracts.find(c=>c.entry_id===reviewId)?.status_class,'Signé');
 await asUser(admin);await db.query('update be_access set is_active=false where user_id=$1',[encoder]);
 await asUser(encoder);assert.equal((await db.query('select * from be_sale_entries')).rows.length,0);assert.equal((await db.query('select * from be_client_comments')).rows.length,0);await assert.rejects(()=>db.query('select be_encode_sale($1::jsonb)',[JSON.stringify({...sale,mega_id:'99903'})]));
 console.log('PASS: signed encoding, immutable server-assigned ownership, centre and agent isolation, comment revisions and author protection, inactive denial, duplicate-free MEGA reconciliation.');
