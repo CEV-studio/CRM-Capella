@@ -71,7 +71,7 @@ export default async function proxy(request: NextRequest) {
         || /^\/api\/qualite\/[0-9a-f-]{36}\/commentaires$/i.test(path)&&request.method==='POST';
       const notificationRoute = (path==='/notifications'||path==='/api/partenaires/notifications')&&request.method==='GET'
         || path==='/api/notifications/lire'&&request.method==='POST';
-      const allowed=qualityRoute || mentionedReviewRoute || notificationRoute || path==="/belgique"&&(request.method==="GET"||request.method==="POST") || path==="/api/belgique/clients/export"&&request.method==="GET" || profile?.role==='be_agent'&&path==='/belgique/encoder'&&(request.method==='GET'||request.method==='POST') || path==="/changer-mot-de-passe" || path==="/deconnexion";
+      const allowed=qualityRoute || mentionedReviewRoute || notificationRoute || path==="/belgique"&&(request.method==="GET"||request.method==="POST") || path==="/api/belgique/clients/export"&&request.method==="GET" || ['be_agent','be_centre'].includes(profile?.role||'')&&path==='/belgique/encoder'&&(request.method==='GET'||request.method==='POST') || path==="/changer-mot-de-passe" || path==="/deconnexion";
       if(!allowed){
         if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});
         const url=request.nextUrl.clone();url.pathname=profile?.role === 'qualite' ? '/qualite' : '/belgique';url.search="";return NextResponse.redirect(url);

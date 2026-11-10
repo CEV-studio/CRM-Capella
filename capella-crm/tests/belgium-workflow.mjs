@@ -202,6 +202,28 @@ await imp([{...sarahRow,centre:'TILIRA'}],'2026-11-05');
 assert.equal((await db.query('select centre from be_contracts where key=$1',[sarahRow.key])).rows[0].centre,'SG Contact','supplier alias routes to SG Contact even if a caller supplies the legacy default centre');
 assert.equal((await db.query("select display_name from be_sales_agents where centre='SG Contact' and agent_ref='ayoubelguebais'")).rows[0].display_name,'Sarah');
 console.log('PASS: Sarah alias routing in parser and database, agent KPI display name, existing ownership isolation retained.');
+// A centre manager can encode only for an active agent from the same centre.
+await db.exec('reset role');
+await db.query("update profiles set is_active=true,must_change_password=false where id=$1",[centreUser]);
+await db.query("update be_access set is_active=true,centre='TILIRA' where user_id=$1",[centreUser]);
+const centreAgent=(await db.query("insert into be_sales_agents(centre,agent_ref,display_name) values('TILIRA','nouvelagent','Nouvel agent') returning id")).rows[0].id;
+const otherAgent=(await db.query("insert into be_sales_agents(centre,agent_ref,display_name) values('Cimsourse','other-sales','Autre agent') returning id")).rows[0].id;
+await asUser(centreUser);
+assert.ok((await db.query('select * from be_centre_agents()')).rows.some(a=>a.agent_id===centreAgent));
+assert.ok(!(await db.query('select * from be_centre_agents()')).rows.some(a=>a.agent_id===otherAgent));
+const managerSale={...sale,first_name:'Claire',last_name:'Dupont',product_id:energyProduct,submission_id:'10000000-0000-4000-8000-000000000090',comment:''};
+await assert.rejects(()=>db.query('select be_encode_sale_for_agent($1::jsonb,$2)',[JSON.stringify(managerSale),otherAgent]));
+const managerEntry=(await db.query('select be_encode_sale_for_agent($1::jsonb,$2) id',[JSON.stringify(managerSale),centreAgent])).rows[0].id;
+assert.ok((await db.query('select be_production_read() data')).rows[0].data.contracts.some(c=>c.entry_id===managerEntry&&c.agent==='nouvelagent'));
+await asUser(outsider);await assert.rejects(()=>db.query('select be_encode_sale_for_agent($1::jsonb,$2)',[JSON.stringify(managerSale),centreAgent]));
+await db.exec(`reset role;select set_config('request.jwt.claim.sub','${admin}',false);`);
+const newAgent='10000000-0000-4000-8000-000000000099';
+await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'newagent@test.com' ,'{\"full_name\":\"Nouvel agent\"}')",[newAgent]);
+await db.query("update profiles set role='be_agent',is_active=true,must_change_password=false,commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false where id=$1",[newAgent]);
+await db.query("insert into be_access(user_id,centre,agent_ref) values($1,'TILIRA','nouvelagent')",[newAgent]);
+await asUser(newAgent);assert.ok((await db.query('select be_production_read() data')).rows[0].data.contracts.some(c=>c.entry_id===managerEntry));
+console.log('PASS: centre encoding scoped to agent, with later agent account attribution.');
+
 // Archival cuts access without deleting sales or the historical attribution.
 await asUser(admin);
 await db.query("insert into be_centres(name) values ('TILIRA')");

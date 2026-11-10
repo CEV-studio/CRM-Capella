@@ -169,6 +169,8 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      be_centre_agents:{Args:Record<never,never>;Returns:{agent_id:string;display_name:string}[]};
+      be_encode_sale_for_agent:{Args:{p_data:unknown;p_agent_id:string};Returns:string};
       be_archive_agent:{Args:{p_agent_id:string};Returns:undefined};
       be_archive_centre:{Args:{p_name:string};Returns:undefined};
       partner_team_stats:{Args:Record<never,never>;Returns:{team_id:string;membres:number;prospects_actifs:number;dossiers_en_cours:number;dossiers_valides:number}[]};
