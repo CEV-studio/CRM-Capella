@@ -4,7 +4,7 @@ import { requireProfile } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { loadBelgiumProduction } from '@/lib/belgium/server';
 import { norm } from '@/lib/belgium/domain';
-import { isQualityEligibleSale } from '@/lib/quality';
+import { isQualityEligibleSale, qualitySaleAgent } from '@/lib/quality';
 import type { QualityReview } from '@/lib/domain/database.types';
 
 export const dynamic='force-dynamic';
@@ -19,7 +19,7 @@ export default async function AgentSales({searchParams}:{searchParams:Promise<{r
  if(!ref||ref.length>120||centre.length>120||name.length>120)redirect('/qualite/agents');
  const {contracts}=await loadBelgiumProduction();
  const matches=(value:string|undefined)=>!!value&&[ref,name].some(candidate=>candidate&&norm(value)===norm(candidate));
- const sales=contracts.filter(c=>(!centre||norm(c.centre)===norm(centre))&&(matches(c.agent)||matches(c.agent_reference)))
+ const sales=contracts.filter(c=>(!centre||norm(c.centre)===norm(centre))&&matches(qualitySaleAgent(c.agent)))
   .sort((a,b)=>(b.registered_date||'').localeCompare(a.registered_date||'')||a.client.localeCompare(b.client,'fr')||a.key.localeCompare(b.key));
  const db=await createClient();const allReviews:Review[]=[];
  for(let offset=0;;offset+=1000){
@@ -29,7 +29,8 @@ export default async function AgentSales({searchParams}:{searchParams:Promise<{r
   if(!data||data.length<1000)break;
  }
  const saleKeys=new Set(sales.map(s=>s.key));
- const reviews=allReviews.filter(r=>saleKeys.has(r.sale_key||'')||saleKeys.has(r.sale_reference)||matches(r.agent_name)&&(!centre||norm(r.agent_centre||'')===norm(centre)));
+ const allSaleKeys=new Set(contracts.map(s=>s.key));
+ const reviews=allReviews.filter(r=>saleKeys.has(r.sale_key||'')||saleKeys.has(r.sale_reference)||(!allSaleKeys.has(r.sale_key||'')&&!allSaleKeys.has(r.sale_reference)&&matches(r.agent_name)&&(!centre||norm(r.agent_centre||'')===norm(centre))));
  const bySale=new Map<string,Review[]>();
  for(const review of reviews)for(const key of new Set([review.sale_key,review.sale_reference].filter((key):key is string=>!!key)))bySale.set(key,[...(bySale.get(key)||[]),review]);
  const reviewedKeys=new Set(reviews.flatMap(r=>[r.sale_key,r.sale_reference].filter((key):key is string=>!!key)));

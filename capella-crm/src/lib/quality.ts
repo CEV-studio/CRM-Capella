@@ -4,6 +4,13 @@ export type QualityStatus = "Conforme" | "À consolider" | "Insuffisant" | "Non 
 export const QUALITY_ELIGIBLE_SALE_STATUSES = ['Signé', 'Effectif', 'Salle d’attente'] as const;
 export const isQualityEligibleSale = (status:string) => QUALITY_ELIGIBLE_SALE_STATUSES.some(value=>value===status);
 
+// Use the seller recorded on the sale; supplier references can be shared by a centre.
+export function qualitySaleAgent(agent:string|null|undefined) {
+ const name=(agent||'').trim();
+ const normalized=name.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+ return !normalized||['nonrenseigne','nonattribue','inconnu','nondefini'].includes(normalized) ? 'Non attribué' : name;
+}
+
 // Formulations et repères repris de la grille fournie. Les éléments que cette grille
 // renvoie à une « liste de la grille actuelle » restent signalés comme tels.
 export const MEGA_QUALITY_QUESTIONS_V1 = [

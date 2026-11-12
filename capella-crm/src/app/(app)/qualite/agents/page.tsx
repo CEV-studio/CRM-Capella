@@ -4,7 +4,7 @@ import { requireProfile } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { loadBelgiumProduction } from '@/lib/belgium/server';
 import { norm } from '@/lib/belgium/domain';
-import { aggregateQualityScores, isQualityEligibleSale, type QualityScoreRow } from '@/lib/quality';
+import { aggregateQualityScores, isQualityEligibleSale, qualitySaleAgent, type QualityScoreRow } from '@/lib/quality';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Qualité par agent — Capella CRM' };
@@ -35,7 +35,7 @@ export default async function AgentQualityScores({searchParams}:{searchParams:Pr
  }
  const {data:agents,error:rosterError}=await rosterRequest;
  if(rosterError)throw new Error(`Répertoire des agents : ${rosterError.message}`);
- const summaries=aggregateQualityScores(rows.map(r=>{const sale=bySale.get(r.sale_key||'')||bySale.get(r.sale_reference);return {...r,agent_name:sale?.agent_reference||sale?.agent||r.agent_name,agent_centre:sale?.centre||r.agent_centre};})).agentSummaries;
+ const summaries=aggregateQualityScores(rows.map(r=>{const sale=bySale.get(r.sale_key||'')||bySale.get(r.sale_reference);return {...r,agent_name:sale?qualitySaleAgent(sale.agent):r.agent_name,agent_centre:sale?.centre||r.agent_centre};})).agentSummaries;
  const scored=new Map(summaries.map(a=>[identity(a.centre,a.agent),a]));
  const known=new Set((agents||[]).flatMap(a=>[identity(a.centre,a.agent_ref),identity(a.centre,a.display_name)]));
  const reviewedKeys=new Set(rows.flatMap(r=>[r.sale_key,r.sale_reference].filter((key):key is string=>!!key)));
@@ -47,8 +47,8 @@ export default async function AgentQualityScores({searchParams}:{searchParams:Pr
   ...summaries.filter(a=>!known.has(identity(a.centre,a.agent))).map(a=>({key:identity(a.centre,a.agent),agent:a.agent,ref:a.agent,centre:a.centre,active:true,sales:a.sales,score:a.score})),
  ];
  const cardKeys=new Set(baseCards.flatMap(a=>[identity(a.centre,a.ref),identity(a.centre,a.agent)]));
- for(const sale of contracts){const ref=sale.agent_reference||sale.agent,key=identity(sale.centre,ref);if(!ref||cardKeys.has(key)||cardKeys.has(identity(sale.centre,sale.agent)))continue;const score=scored.get(key);baseCards.push({key,agent:sale.agent||ref,ref,centre:sale.centre,active:true,sales:score?.sales||0,score:score?.score??null});cardKeys.add(key);}
- const cards=baseCards.map(a=>{const related=contracts.filter(c=>norm(c.centre)===norm(a.centre)&&[c.agent,c.agent_reference].some(value=>value&&[a.ref,a.agent].some(alias=>norm(value)===norm(alias))));return {...a,total:related.length,pending:related.filter(c=>c.supplier==='MEGA'&&['Elec','Gaz'].includes(c.energy)&&isQualityEligibleSale(c.status_class)&&!reviewedKeys.has(c.key)).length};})
+ for(const sale of contracts){const ref=qualitySaleAgent(sale.agent),key=identity(sale.centre,ref);if(cardKeys.has(key))continue;const score=scored.get(key);baseCards.push({key,agent:ref,ref,centre:sale.centre,active:true,sales:score?.sales||0,score:score?.score??null});cardKeys.add(key);}
+ const cards=baseCards.map(a=>{const related=contracts.filter(c=>norm(c.centre)===norm(a.centre)&&[a.ref,a.agent].some(alias=>norm(qualitySaleAgent(c.agent))===norm(alias)));return {...a,total:related.length,pending:related.filter(c=>c.supplier==='MEGA'&&['Elec','Gaz'].includes(c.energy)&&isQualityEligibleSale(c.status_class)&&!reviewedKeys.has(c.key)).length};})
   .sort((a,b)=>a.centre.localeCompare(b.centre,'fr')||a.agent.localeCompare(b.agent,'fr'));
  const query=q.trim().toLocaleLowerCase('fr-FR');
  const visible=cards.filter(a=>[a.agent,a.ref,a.centre].some(value=>value.toLocaleLowerCase('fr-FR').includes(query)));

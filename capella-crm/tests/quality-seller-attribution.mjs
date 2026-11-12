@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { qualitySaleAgent, aggregateQualityScores } from '../src/lib/quality.ts';
+assert.equal(qualitySaleAgent('Non renseigné'), 'Non attribué');
+assert.equal(qualitySaleAgent(''), 'Non attribué');
+const sales=[{key:'1',agent:'Alice',agent_reference:'AG000208'},{key:'2',agent:'Bob',agent_reference:'AG000208'},{key:'3',agent:'Non renseigné',agent_reference:'AG000208'}];
+const rows=sales.map((sale,i)=>({id:String(i),activity_name:'MEGA',agent_name:qualitySaleAgent(sale.agent),agent_centre:'TILIRA',sale_reference:sale.key,score_percent:80+i}));
+const summaries=aggregateQualityScores(rows).agentSummaries;
+assert.deepEqual(new Set(summaries.map(x=>x.agent)),new Set(['Alice','Bob','Non attribué']));
+assert.equal(summaries.find(x=>x.agent==='Alice').sales,1);
+assert.equal(summaries.find(x=>x.agent==='Bob').score,81);
+console.log('Quality seller attribution OK');
