@@ -11,6 +11,17 @@ export function qualitySaleAgent(agent:string|null|undefined) {
  return !normalized||['nonrenseigne','nonattribue','inconnu','nondefini'].includes(normalized) ? 'Non attribué' : name;
 }
 
+export const MEGA_QUALITY_NEXT_STEPS = [
+ 'Délai de rétractation de 14 jours.',
+ 'MEGA s’occupe de la résiliation.',
+ 'Confirmation du contrat par e-mail ou courrier et accès à l’espace client MyMEGA une fois l’inscription validée.',
+ 'MEGA peut contacter le client si des informations manquent pour valider l’inscription.',
+ 'Après validation, en cas de changement de fournisseur, le gestionnaire de réseau peut envoyer une demande de relevé d’index.',
+ 'Première facture d’acompte calculée par le gestionnaire de réseau : si le client n’est pas d’accord avec le montant, l’inviter à contacter le service client MEGA au 04 268 20 00.',
+ 'Contre-offre éventuelle du fournisseur actuel.',
+ 'Pour un client professionnel, mentionner que le contrat est couvert par le Code de conduite pour la protection des indépendants et PME sur le marché du gaz et de l’électricité.',
+] as const;
+
 // Formulations et repères repris de la grille fournie. Les éléments que cette grille
 // renvoie à une « liste de la grille actuelle » restent signalés comme tels.
 export const MEGA_QUALITY_QUESTIONS_V1 = [
@@ -28,7 +39,7 @@ export const MEGA_QUALITY_QUESTIONS_V1 = [
   { id:19, criterion:"Prélèvement automatique + factures e-mail proposés ; argumentation si hésitation ; domiciliation partielle expliquée si utile", grave:false, guidance:"4 si proposition et explications adaptées sont faites ; dégrader selon élément omis ou réponse à l’hésitation insuffisante." },
   { id:20, criterion:"E-mail parcouru avec prospect ; coordonnées, adresse, date début, cartes tarifaires et paiement vérifiés", grave:false, guidance:"4 si tous les éléments sont vérifiés avec le prospect ; dégrader selon oubli / vérification partielle." },
   { id:21, criterion:"Prospect sait que le clic génère contrat et changement de fournisseur", grave:true, guidance:"4 si compris et confirmé clairement ; dégrader si explication peu claire mais comprise après clarification. FG si le prospect n’en est pas conscient." },
-  { id:22, criterion:"Étapes suivantes expliquées (liste de la grille actuelle)", grave:false, guidance:"4 si tous les éléments applicables sont expliqués ; dégrader selon nombre / importance des éléments omis ou imprécis. Inclure la mention du Code de conduite pour un client professionnel." },
+  { id:22, criterion:"Étapes suivantes expliquées", grave:false, guidance:"4 si tous les éléments applicables sont expliqués ; dégrader selon nombre / importance des éléments omis ou imprécis. Inclure la mention du Code de conduite pour un client professionnel." },
   { id:23, criterion:"Écoute attentive des besoins et préoccupations", grave:false, guidance:"4 si écoute active et réponses adaptées ; dégrader selon interruptions, reformulations ou préoccupations ignorées." },
   { id:24, criterion:"Aucune déclaration négative sur concurrents ni information erronée", grave:false, guidance:"4 si aucune ; 3/2 si imprécision immédiatement corrigée sans effet ; 1 si propos négatif ou erreur importante ; 0 si propos négatif et/ou information erronée non corrigée. Conserver tout seuil « faute grave » uniquement s’il existe dans la règle MEGA applicable." },
   { id:25, criterion:"Plus de cinq objections : clôture de l’appel", grave:false, conditional:"N/A si le prospect n’a pas formulé plus de cinq objections.", guidance:"Si plus de cinq objections : 4 si clôture appropriée ; dégrader si tardive ou mal amenée ; 0 si l’appel se poursuit. Si le seuil n’est pas atteint : N/A." },
