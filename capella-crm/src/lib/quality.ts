@@ -11,6 +11,13 @@ export function qualitySaleAgent(agent:string|null|undefined) {
  return !normalized||['nonrenseigne','nonattribue','inconnu','nondefini'].includes(normalized) ? 'Non attribué' : name;
 }
 
+export const MEGA_QUALITY_CALL_INTERRUPTION_CASES = [
+ 'Le client mentionne bénéficier du tarif social.',
+ 'Le client semble souffrir de troubles psychologiques.',
+ 'Le client semble trop âgé pour comprendre le processus de vente.',
+ 'Le client est sous administration de biens.',
+] as const;
+
 export const MEGA_QUALITY_NEXT_STEPS = [
  'Délai de rétractation de 14 jours.',
  'MEGA s’occupe de la résiliation.',
