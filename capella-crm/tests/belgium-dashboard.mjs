@@ -19,6 +19,17 @@ assert.deepEqual(cancellations.cancelled.map(c=>c.key),['pre','observed'],'raw c
 assert.deepEqual(cancellations.terminated.map(c=>c.key),['ended'],'MEGA Terminé alone defines the clawback production bucket without requiring confirmed dates');
 assert.equal(cancellations.cancelled.some(c=>cancellations.terminated.includes(c)),false);
 console.log('PASS: supplier client cancellations vs terminated clawbacks, no activation/payment inference, other cancellation reasons excluded.');
+const {clawbackCohorts}=compile('src/lib/belgium/cancellations.ts',()=>domain);
+const cohortRows=[{key:'sep-cancel',registered_date:'2026-09-03',status:'Annulée par le client',status_class:'Annulé'},{key:'oct-end',registered_date:'2026-10-12',status:'Contrat terminé',status_class:'Résilié'},{key:'oct-active',registered_date:'2026-10-15',status:'Contrat effectif',status_class:'Effectif'}];
+let rolling=clawbackCohorts(cohortRows,'2026-11-13');
+assert.deepEqual(rolling.map(c=>c.month),['2026-08','2026-09','2026-10','2026-11']);
+assert.equal(rolling.find(c=>c.month==='2026-10').registered,2);
+assert.equal(rolling.find(c=>c.month==='2026-10').terminated.length,1);
+assert.equal(rolling.find(c=>c.month==='2026-09').trackedThrough,'2026-12');
+rolling=clawbackCohorts(cohortRows,'2026-12-01');
+assert.ok(rolling.some(c=>c.month==='2026-09'),'September remains visible through December');
+assert.equal(rolling.find(c=>c.month==='2026-09').trackedThrough,'2026-12');
+console.log('PASS: monthly sales/cancellation/clawback cohort remains visible through M+3, including September through December.');
 
 assert.equal(domain.productionPeriod('2026-10-31','2026-11-14'),'2026-10-01');
 assert.equal(domain.productionPeriod('2026-10-01','2026-11-15'),'2026-11-01');
