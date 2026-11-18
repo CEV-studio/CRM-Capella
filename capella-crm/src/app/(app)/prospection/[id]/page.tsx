@@ -1,3 +1,4 @@
+import { telephone } from "@/lib/telephone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -136,7 +137,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const activityEmails = (activityEmailData ?? []) as ActivityEmail[];
   const ownerName = estAdmin ? ((profils ?? []).find((x) => x.id === p.assigned_to)?.full_name ?? (p.assigned_to === profil.id ? profil.full_name : null)) : null;
   const sourceName = sources.find((s) => s.id === p.source_id)?.name ?? null;
-  const phone = p.tel_mobile || p.tel_fixe;
+  const phone = telephone(p.tel_mobile || p.tel_fixe);
   const prospectLabel = p.raison_sociale || contactNom(p);
   const prochaineAction = calendarEvents[0] ?? null;
   const nextComparatif = calendarEvents.find((event) => event.kind === "rdv") ?? null;
@@ -189,7 +190,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-2 border-t border-navy-100 pt-5">
-              {phone ? <a href={`tel:${phone}`} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-navy-900 px-4 text-sm font-bold text-white shadow-sm hover:bg-navy-700"><Phone size={16}/>Appeler</a> : null}
+              {phone ? <a href={phone.href} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-navy-900 px-4 text-sm font-bold text-white shadow-sm hover:bg-navy-700"><Phone size={16}/>Appeler</a> : null}
               <ProspectToolsModal prospectId={p.id} prospectLabel={prospectLabel} />
               <CalendarPanel prospectId={p.id} prospectEmail={p.mail} prospectLabel={prospectLabel} connected={Boolean(calendarAccount)} accountEmail={calendarAccount?.email || null} events={calendarEvents} />
             </div>

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Ligne, type LigneProspect } from "./ligne";
 import { mettreCorbeilleEnMasse } from "../admin/corbeille/actions";
 import { PROSPECT_STAGES } from "@/lib/domain/stages";
+import { nomComplet } from "@/lib/domain/noms";
 import { AcdStagePortal } from "@/components/acd-stage-portal";
 
 const TH = "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-navy-600";
@@ -18,6 +19,7 @@ export function ListeProspects({ lignes, afficherCommercial, peutSupprimer, triL
   const [message,setMessage]=useState<string|null>(null);
   function basculer(id:string){setSelection(s=>{const n=new Set(s);n.has(id)?n.delete(id):n.add(id);return n;});}
   const toutCoche=lignes.length>0&&selection.size===lignes.length;
+  const navigation = lignes.map(p => ({ id:p.id, label:p.raison_sociale || nomComplet(p.nom,p.prenom) }));
   const nbColonnes=(afficherCommercial?8:7)+(peutSupprimer?1:0);
   function supprimer(){const ids=[...selection];if(!confirm(`Mettre ${ids.length} fiche(s) à la corbeille ?`))return;setMessage(null);startTransition(async()=>{const r=await mettreCorbeilleEnMasse("prospect",ids);setMessage(r.message);if(r.ok)setSelection(new Set());});}
   return <>
@@ -27,7 +29,7 @@ export function ListeProspects({ lignes, afficherCommercial, peutSupprimer, triL
       {peutSupprimer?<th className="w-10 px-3 py-2"><input type="checkbox" aria-label="Sélectionner tous les prospects affichés" checked={toutCoche} onChange={e=>setSelection(e.currentTarget.checked?new Set(lignes.map(l=>l.id)):new Set())} className="h-4 w-4 accent-[var(--color-star-500)]"/></th>:null}
       <th className={TH}><Link href={triLiens.societe} className="hover:text-sky-capella-700">Société</Link></th><th className={TH}>Contact / téléphone</th><th className={TH}><Link href={triLiens.etape} className="hover:text-sky-capella-700">Étape</Link></th><th className={TH}>Notes</th><th className={TH}><Link href={triLiens.relance} className="hover:text-sky-capella-700">Prochaine action</Link></th><th className={TH}><Link href={triLiens.action} className="hover:text-sky-capella-700">Dernière action</Link></th>{afficherCommercial?<th className={TH}>Commercial</th>:null}<th className={TH}>Source</th>
     </tr></thead><tbody>
-      {messageErreur?<tr><td colSpan={nbColonnes} className="px-3 py-6 text-sm text-navy-800">Lecture impossible : {messageErreur}</td></tr>:lignes.length===0?<tr><td colSpan={nbColonnes} className="px-3 py-10 text-center text-sm text-grey-brand">{libelleVide}</td></tr>:lignes.map(p=><Ligne key={p.id} p={p} afficherCommercial={afficherCommercial} selectionnable={peutSupprimer} coche={selection.has(p.id)} onToggle={basculer} etapes={etapes}/>) }
+      {messageErreur?<tr><td colSpan={nbColonnes} className="px-3 py-6 text-sm text-navy-800">Lecture impossible : {messageErreur}</td></tr>:lignes.length===0?<tr><td colSpan={nbColonnes} className="px-3 py-10 text-center text-sm text-grey-brand">{libelleVide}</td></tr>:lignes.map(p=><Ligne key={p.id} p={p} navigation={navigation} afficherCommercial={afficherCommercial} selectionnable={peutSupprimer} coche={selection.has(p.id)} onToggle={basculer} etapes={etapes}/>) }
     </tbody></table></div>
   </>;
 }

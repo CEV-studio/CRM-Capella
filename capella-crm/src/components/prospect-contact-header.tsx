@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { telephone } from "@/lib/telephone";
 import { Mail, Phone, UserRound } from "lucide-react";
 
 type Field = "prenom" | "nom" | "mail" | "tel_mobile" | "tel_fixe";
@@ -39,7 +40,8 @@ function InlineContactField({ prospectId, field, value, placeholder, type = "tex
 
   if (editing) return <input autoFocus type={type} value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => void save()} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void save(); } if (e.key === "Escape") { setDraft(current); setEditing(false); } }} className="h-8 min-w-[130px] rounded-lg border border-sky-capella-300 bg-white px-2.5 text-xs font-semibold text-navy-900 outline-none focus:ring-2 focus:ring-sky-capella-100" placeholder={placeholder}/>;
 
-  return <button type="button" onClick={() => { setDraft(current); setEditing(true); }} className={`rounded-lg px-1.5 py-1 text-left text-sm transition hover:bg-sky-capella-50 ${current ? "font-medium text-navy-800" : "font-medium text-navy-300"}`} title="Cliquer pour modifier">{saving ? "Enregistrement…" : current || placeholder}</button>;
+  const dial = type === "tel" ? telephone(current) : null;
+  return <>{dial ? <a href={dial.href} className="rounded-lg px-1.5 py-1 text-sm font-medium text-sky-capella-700 hover:underline" aria-label={`Appeler le ${dial.label}`}>{dial.label}</a> : null}<button type="button" onClick={() => { setDraft(current); setEditing(true); }} className={`rounded-lg px-1.5 py-1 text-left text-sm transition hover:bg-sky-capella-50 ${current ? "font-medium text-navy-800" : "font-medium text-navy-300"}`} title="Cliquer pour modifier">{saving ? "Enregistrement…" : dial ? "Modifier" : current || placeholder}</button></>;
 }
 
 export function ProspectContactHeader({ prospectId, prenom, nom, mail, mobile, fixe = null }: {

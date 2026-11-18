@@ -105,7 +105,7 @@ export function ProspectNoteEditor({ prospectId, onNotesChange }: {
   }
 
   return (
-    <div>
+    <div data-unsaved-note={Boolean(body.trim() || (editingId && editingBody !== notes.find(note => note.id === editingId)?.body) || saving || busyNoteId)}>
       <div className="flex items-end gap-2 rounded-xl border border-navy-200 bg-white p-2 shadow-sm transition focus-within:border-sky-capella-300 focus-within:ring-2 focus-within:ring-sky-capella-100">
         <textarea ref={textareaRef} rows={1} value={body} onChange={(e) => { setBody(e.target.value); resize(); }} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void ajouter(); } }} placeholder="Ajouter une note…" className="min-h-[42px] flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 text-sm leading-5 text-navy-900 outline-none placeholder:text-navy-300" />
         <button type="button" onClick={() => void ajouter()} disabled={saving || !body.trim()} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-star-500 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-star-600 disabled:bg-navy-100 disabled:text-navy-300 disabled:shadow-none"><Plus size={14}/>{saving ? "Ajout…" : "Ajouter"}</button>
