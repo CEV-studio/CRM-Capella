@@ -102,15 +102,15 @@ export function AdminHome(props: AdminHomeProps) {
       </section>
       <section aria-label="Accès directs" className="crm-home-section rounded-xl border border-navy-100 bg-white p-5">
         <div className="flex items-center justify-between border-b border-navy-100 pb-4"><h2 className="font-display text-lg font-semibold text-navy-900">Accès directs</h2><span className="text-xs font-medium text-grey-brand">Espace de travail</span></div>
-        <div className="mt-2 divide-y divide-navy-100">{categories.map(category=>{const Icon=category.icon;return <Link key={category.title} href={category.href} className="group flex items-center gap-3 py-3 text-sm font-semibold text-navy-800 hover:text-star-700"><span className="crm-home-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"><Icon size={17}/></span><span className="min-w-0 flex-1">{category.title}</span><ArrowUpRight size={15} className="text-navy-400 group-hover:text-star-700"/></Link>})}</div>
+        <div className="mt-2 divide-y divide-navy-100">{categories.map(category=>{const Icon=category.icon;return <Link prefetch={false} key={category.title} href={category.href} className="group flex items-center gap-3 py-3 text-sm font-semibold text-navy-800 hover:text-star-700"><span className="crm-home-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"><Icon size={17}/></span><span className="min-w-0 flex-1">{category.title}</span><ArrowUpRight size={15} className="text-navy-400 group-hover:text-star-700"/></Link>})}</div>
       </section>
     </div>
     <section aria-label="Sections principales">
       <div className="mb-4 flex items-center justify-between"><h2 className="font-display text-lg font-semibold text-navy-900">Espaces de travail</h2><span className="text-xs font-medium text-grey-brand">{categories.length} espaces</span></div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {categories.map(category=>{const Icon=category.icon;return <article key={category.title} className="crm-home-section flex min-w-0 flex-col rounded-xl border border-navy-100 bg-white p-5">
-          <Link href={category.href} className="group flex items-center gap-3 border-b border-navy-100 pb-4"><span className="crm-home-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"><Icon size={19}/></span><span className="min-w-0 flex-1 font-display font-semibold text-navy-900">{category.title}</span><ArrowUpRight size={16} className="text-navy-400 group-hover:text-star-700"/></Link>
-          <ul className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">{category.links.map(([href,label])=><li key={href}><Link href={href} className="block rounded-md px-2 py-2 text-sm text-navy-600 hover:bg-navy-50 hover:text-navy-900">{label}</Link></li>)}</ul>
+          <Link prefetch={false} href={category.href} className="group flex items-center gap-3 border-b border-navy-100 pb-4"><span className="crm-home-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"><Icon size={19}/></span><span className="min-w-0 flex-1 font-display font-semibold text-navy-900">{category.title}</span><ArrowUpRight size={16} className="text-navy-400 group-hover:text-star-700"/></Link>
+          <ul className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">{category.links.map(([href,label])=><li key={href}><Link prefetch={false} href={href} className="block rounded-md px-2 py-2 text-sm text-navy-600 hover:bg-navy-50 hover:text-navy-900">{label}</Link></li>)}</ul>
         </article>})}
       </div>
     </section>
