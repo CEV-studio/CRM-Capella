@@ -163,6 +163,14 @@ assert.equal((await db.query('select acd_status from public.partner_dossiers whe
 // Commercial and disabled accounts cannot invoke any operational command.
 await asUser(commercial);
 await rejects(()=>db.query('select * from public.adv_directory()'),'directory forbidden to commercial');
+await rejects(()=>db.query('update public.affaires set commission=999 where id=$1',[affaireId]),'commercial cannot change own commission through REST');
+await rejects(()=>db.query("update public.affaires set stage='Signé' where id=$1",[affaireId]),'commercial cannot validate own signed dossier through REST');
+await rejects(()=>db.query("insert into public.affaires(commercial_id,raison_sociale,commission) values($1,'Forged commission',100)",[commercial]),'commercial cannot insert privileged commission');
+// Ordinary sales edits and KO handling still work.
+await db.query("update public.affaires set notes='Commercial note',date_relance='2026-12-10' where id=$1",[affaireId]);
+await db.query("update public.affaires set stage='KO',ko_reason='Test' where id=$1",[affaireId]);
+await db.query("update public.affaires set stage='Demande de cotation' where id=$1",[affaireId]);
+
 await rejects(()=>db.query("select public.adv_save($1,'Signé',1200,null,null,true)",[affair.id]),'commercial cannot perform ADV operation');
 await rejects(()=>db.query("select public.adv_acd_status($1,'terminee')",[rawId]),'commercial cannot process ACD');
 await rejects(()=>db.query('select public.adv_acd_download($1)',[pid]),'commercial cannot record download');

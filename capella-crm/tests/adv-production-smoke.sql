@@ -37,6 +37,7 @@ select set_config('request.jwt.claim.sub',current_setting('test.commercial_id'),
 set local role authenticated;
 do $$
 begin
+ begin update public.affaires set commission=999 where id=current_setting('test.affaire_id')::uuid;raise exception 'Commercial direct commission accepted';exception when insufficient_privilege then null;end;
  begin perform public.adv_save(current_setting('test.affaire_id')::uuid,'Signé',2000,current_date,null,true);raise exception 'Commercial ADV save accepted';exception when insufficient_privilege then null;end;
  begin perform public.adv_acd_status(current_setting('test.acd_id')::uuid,'terminee');raise exception 'Commercial ACD status accepted';exception when insufficient_privilege then null;end;
 end $$;

@@ -12,6 +12,8 @@ Le rôle `adv` est attribuable uniquement par l’administrateur dans la créati
 - Le parcours apporteur conserve sa demande explicite de cotation après signature de l’ACD. ADV peut créer cette cotation, publier des documents et échanger sur le dossier.
 - Refus des fonctions d’administration générale, des exports, de la comptabilité, des boîtes email, du réservoir et des données Belgique.
 
+Les restrictions commerciales existantes sur la commission, la signature et le traitement ACD sont aussi imposées par des triggers, y compris lors d’un accès direct à Supabase. Les éditions commerciales ordinaires et le passage en KO sont conservés.
+
 Les règles applicatives et les règles RLS sont complémentaires. Les écritures arbitraires REST sur les affaires, prospects et demandes ACD sont refusées à ADV ; les RPC privées vérifient le rôle actif dans `profiles`. Les profils complets restent privés ; `adv_directory` expose uniquement les noms et taux nécessaires aux dossiers. Les notifications propres peuvent être marquées lues, sans modifier le destinataire ou le contenu des emails.
 
 ## Vérification
