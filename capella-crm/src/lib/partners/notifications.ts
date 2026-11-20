@@ -6,7 +6,7 @@ import { sendGmailMessage } from '@/lib/gmail';
 // Call only after authentication. Partners may dispatch only notifications generated
 // by their own validated commands; admin may retry the queue. Recipients come from SQL.
 export async function deliverNotifications(profile:Profile){
- if(!['admin','apporteur'].includes(profile.role))return {failed:0,sent:0};
+ if(!profile.is_active || !['admin','adv','apporteur'].includes(profile.role))return {failed:0,sent:0};
  let failed=0,sent=0;
  try{
   const db=createAdminClient();

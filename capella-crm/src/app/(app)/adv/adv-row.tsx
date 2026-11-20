@@ -44,6 +44,7 @@ export function AdvRow({a}:{a:AdvData}){
    {valide&&a.date_signature?<div className="mt-3 text-xs text-green-700">Comptabilisé le {fmtDate(a.date_signature)}</div>:a.commission>0?<div className="mt-3 text-xs text-amber-700">Commission renseignée · validation finale à faire</div>:<div className="mt-3 text-xs text-grey-brand">Commission à renseigner</div>}
   </>:null}
 
+  <Link href={`/conversion/${a.id}`} className="mt-3 block text-sm underline">Informations et documents</Link>
   {a.partnerDossierId?<Link href={`/partenaires/dossiers/${a.partnerDossierId}?onglet=cotations`} className="mt-3 inline-block text-sm text-sky-capella-700 underline">Dossier apporteur · dates, compteurs, documents et messages</Link>:null}
   {!ko?<details className="mt-4 border-t border-navy-100 pt-3">
    <summary className="cursor-pointer select-none text-xs font-semibold text-navy-700">Modifier le dossier</summary>

@@ -1,3 +1,4 @@
+import { AdvRecord } from '@/components/adv-record';
 import { telephone } from "@/lib/telephone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -78,6 +79,7 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const query = await searchParams;
   const isPopup = query.popup === "1";
   const profil = await requireProfile();
+if(profil.role==="adv")return <AdvRecord id={id} scope="prospect"/>;
   const estAdmin = profil.role === "admin";
   const supabase = await createClient();
 

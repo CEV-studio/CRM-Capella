@@ -32,6 +32,7 @@ const PARTNER_NAV = [
   ]),
 ];
 const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/agents",label:"Qualité par agent",icon:BarChart3,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>['be_agent','be_centre'].includes(p.role)}])];
+const ADV_NAV = [section("ADV", "/adv", FileCheck2, [{href:"/adv",label:"Dossiers ADV",icon:FileCheck2},{href:"/admin/acd",label:"Demandes d’ACD",icon:BriefcaseBusiness}]), section("Apporteurs", "/partenaires/portefeuille", Building2, [{href:"/partenaires/portefeuille",label:"Dossiers apporteurs",icon:Building2},{href:"/partenaires/cotations",label:"Cotations apporteurs",icon:BriefcaseBusiness}])];
 const AGENT_NAV = [section("Mes ventes", "/belgique?tab=clients", Users, [{ href: "/belgique?tab=clients", label: "Mes ventes", icon: Users }, { href: "/belgique/encoder", label: "Encoder une vente", icon: FileCheck2 }])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
@@ -143,7 +144,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const collapsed = useSyncExternalStore(subscribeSidebar, readSidebarCollapsed, () => false);
   const visible = (i: NavItem) => (!i.adminOnly || profile.role === "admin") && (!i.needs || i.needs(profile));
-  const navigation = profile.role === 'be_agent' ? AGENT_NAV : ['qualite','be_centre'].includes(profile.role) ? QUALITY_NAV : profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? ADMIN_NAV : profile.role === 'manager' ? MANAGER_NAV : COMMERCIAL_NAV;
+  const navigation = profile.role === 'adv' ? ADV_NAV : profile.role === 'be_agent' ? AGENT_NAV : ['qualite','be_centre'].includes(profile.role) ? QUALITY_NAV : profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? ADMIN_NAV : profile.role === 'manager' ? MANAGER_NAV : COMMERCIAL_NAV;
   const sections = navigation.filter(s => s.items.some(visible));
   const currentSection = sections.find(s => sectionActive(pathname, s));
   const currentItem = currentSection?.items.filter(visible).find(item => actif(pathname, item.href));
@@ -185,7 +186,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       {collapsed ? <div className="crm-sidebar-footer flex flex-col items-center gap-2 border-t border-navy-100 py-4"><div title={profile.full_name} aria-label={profile.full_name} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-sm font-semibold text-white">{profile.full_name.slice(0,1).toUpperCase()}</div><Link prefetch={false} href="/deconnexion" className="rounded-lg p-2 text-navy-500 hover:bg-white" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden/></Link></div> :       <div className="crm-sidebar-footer border-t border-navy-100 px-4 py-4">
         <div className="crm-sidebar-user flex items-center gap-3 rounded-xl border border-navy-100 bg-white p-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-700 font-display text-sm font-semibold text-white">{profile.full_name.slice(0, 1).toUpperCase()}</div>
-          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-navy-500">{profile.role === "be_centre" ? "Centre Belgique" : profile.role === "be_agent" ? "Agent Belgique" : profile.role === "qualite" ? "Responsable qualité" : profile.role === "admin" ? "Administrateur" : profile.role === "manager" ? profile.hierarchy_title === "Leader" ? "Leader" : "Manager" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
+          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-navy-500">{profile.role === "be_centre" ? "Centre Belgique" : profile.role === "be_agent" ? "Agent Belgique" : profile.role === "adv" ? "ADV" : profile.role === "qualite" ? "Responsable qualité" : profile.role === "admin" ? "Administrateur" : profile.role === "manager" ? profile.hierarchy_title === "Leader" ? "Leader" : "Manager" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
           <Link prefetch={false} href="/deconnexion" className="rounded-lg p-1.5 text-navy-500 hover:bg-navy-50 hover:text-navy-900" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
         </div>
       </div>

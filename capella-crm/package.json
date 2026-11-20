@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:partners": "node tests/partner-workflow.mjs",
     "test:belgium": "node tests/belgium-workflow.mjs && node tests/belgium-dashboard.mjs && node tests/belgium-finance.mjs && node tests/belgium-clients-ledger.mjs && node tests/belgium-centre-accounts.mjs",
-    "test:belgium:finance": "node tests/belgium-finance.mjs"
+    "test:belgium:finance": "node tests/belgium-finance.mjs",
+    "test:adv": "node tests/adv-access.mjs && node tests/partner-workflow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

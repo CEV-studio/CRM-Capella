@@ -15,12 +15,12 @@ type RdvAdv={prospect_id:string;start_at:string;html_link:string|null;title:stri
 
 export default async function AdvPage({searchParams}:{searchParams:Promise<Recherche>}){
  const profil=await requireProfile();
- if(profil.role!=="admin")notFound();
+ if(!["admin","adv"].includes(profil.role))notFound();
  const filtres=await searchParams;
  const supabase=await createClient();
  const [{data:affaires,error},{data:profils}]=await Promise.all([
   supabase.from("affaires").select("id, ref, raison_sociale, commercial_id, prospect_id, stage, commission, date_signature, date_relance, date_entree, ko_reason").is("deleted_at",null).order("date_entree",{ascending:false}),
-  supabase.from("profiles").select("id, full_name, commission_rate").eq("is_active",true).order("full_name"),
+  supabase.rpc("adv_directory"),
  ]);
 
  const [{data:checks,error:checksError},{data:partnerQuotes}]=await Promise.all([supabase.from("affaire_adv_checks").select("affaire_id,verification_calls"),supabase.from("partner_quotes").select("affaire_id,dossier_id")]);

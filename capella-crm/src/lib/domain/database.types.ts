@@ -2,7 +2,7 @@ import type { CycleTracking, SupplierBilling } from '@/lib/belgium/domain';
 import type { Contract, Statement, Invoice, ImportRun as BelgiumImportRun } from "@/lib/belgium/domain";
 import type { Dossier, Quote } from "@/lib/partners/types";
 /** Types manuels de la base Supabase — miroir des migrations. */
-export type Role = "admin" | "commercial" | "manager" | "apporteur" | "qualite" | "be_centre" | "be_agent";
+export type Role = "adv" | "admin" | "commercial" | "manager" | "apporteur" | "qualite" | "be_centre" | "be_agent";
 export type PaymentStatus = "À payer" | "Payé" | "En attente";
 export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 
@@ -142,6 +142,9 @@ export interface Database {
       partner_messages:Table<{id:string;dossier_id:string;quote_id:string|null;author_id:string;kind:string;body:string;created_at:string}>;
       crm_notifications:Table<{id:string;recipient_id:string;actor_id:string|null;dossier_id:string|null;title:string;body:string;href:string;read_at:string|null;email_to:string;email_status:string;email_error:string|null;email_attempt_at:string|null;created_at:string}>;
       affaire_adv_checks:Table<{affaire_id:string;verification_calls:boolean;checked_by:string|null;updated_at:string}>;
+      acd_request_meters:Table<{id:string;request_id:string;energy_type:string;identifier:string;contract_expiry:string;address:string;postal_code:string;city:string;position:number}>;
+      acd_requests:Table<{id:string;prospect_id:string;requested_by:string;status:string;raison_sociale:string;siren:string;siret:string;company_address:string;company_postal_code:string;company_city:string;signatory_first_name:string;signatory_last_name:string;signatory_email:string;signatory_phone:string;signatory_capacity:string;signatory_role:string;notes:string|null;submitted_at:string;processed_by:string|null;processed_at:string|null;created_at:string;updated_at:string}>;
+      prospect_contacts:Table<{id:string;prospect_id:string;nom:string;prenom:string;telephone:string|null;email:string|null;fonction:string|null;is_primary:boolean;created_at:string;updated_at:string}>;
       prospects:Table<Prospect,ProspectInsert,ProspectUpdate>;
       entreprises:Table<Entreprise>;
       crm_contacts:Table<CrmContact>;
@@ -169,6 +172,10 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      adv_directory:{Args:Record<never,never>;Returns:{id:string;full_name:string;commission_rate:number}[]};
+      adv_save:{Args:{p_id:string;p_stage:string;p_commission:number;p_signature:string|null;p_relance:string|null;p_verification:boolean|null};Returns:undefined};
+      adv_acd_status:{Args:{p_id:string;p_status:string};Returns:undefined};
+      adv_acd_download:{Args:{p_id:string};Returns:undefined};
       be_centre_agents:{Args:Record<never,never>;Returns:{agent_id:string;display_name:string}[]};
       be_encode_sale_for_agent:{Args:{p_data:unknown;p_agent_id:string};Returns:string};
       be_archive_agent:{Args:{p_agent_id:string};Returns:undefined};

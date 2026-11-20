@@ -11,8 +11,8 @@ export async function enregistrerAdv(
   formData: FormData,
 ): Promise<ActionResult> {
   const profil = await requireProfile();
-  if (profil.role !== "admin") {
-    return { ok: false, message: "Accès ADV réservé à l’administrateur." };
+  if (!["admin","adv"].includes(profil.role)) {
+    return { ok: false, message: "Accès réservé au traitement ADV." };
   }
 
   const id = String(formData.get("id") ?? "");
@@ -42,13 +42,12 @@ export async function enregistrerAdv(
   }
 
   const supabase = await createClient();
-  const { error } = await (supabase as any).from("affaires").update(patch).eq("id", id);
-  if (error) return { ok: false, message: error.message };
-
-  if(formData.get("verification_enabled")==="1"){
-  const {error:checkError}=await supabase.from("affaire_adv_checks").upsert({affaire_id:id,verification_calls:formData.get("verification_calls")==="on",checked_by:profil.id,updated_at:new Date().toISOString()});
-  if(checkError)return {ok:false,message:`Dossier enregistré, vérification non enregistrée : ${checkError.message}`};
-  }
+  const { error } = await supabase.rpc("adv_save", {
+    p_id:id, p_stage:stage, p_commission:commission,
+    p_signature:typeof patch.date_signature==="string" ? patch.date_signature : null, p_relance:dateRelance || null,
+    p_verification:formData.get("verification_enabled")==="1" ? formData.get("verification_calls")==="on" : null,
+  });
+  if(error)return {ok:false,message:error.message};
   await deliverNotifications(profil);
   revalidatePath("/partenaires","layout");
   revalidatePath("/");

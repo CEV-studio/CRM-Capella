@@ -64,6 +64,22 @@ export default async function proxy(request: NextRequest) {
     : { data: null };
 
   if(userId && !isPublic){
+    if (!profile?.is_active) {
+      await supabase.auth.signOut();
+      const url=request.nextUrl.clone();url.pathname='/connexion';url.search='?motif=compte-desactive';
+      const denied=path.startsWith('/api/') ? NextResponse.json({error:'Compte désactivé'},{status:403}) : NextResponse.redirect(url);
+      for(const cookie of response.cookies.getAll())denied.cookies.set(cookie);
+      return denied;
+    }
+    if(profile.role==='adv'){
+      const common=['/changer-mot-de-passe','/deconnexion','/notifications','/api/notifications/lire','/api/partenaires/notifications'].includes(path);
+      const read=request.method==='GET' && (['/','/adv','/admin/acd','/suivi-acd','/partenaires/portefeuille','/partenaires/cotations'].includes(path) || /^\/(?:partenaires\/dossiers|pieces|conversion|prospection|popup\/prospect)\/[0-9a-f-]{36}$/i.test(path) || /^\/api\/acd\/[0-9a-f-]{36}(?:\/telecharger)?$/i.test(path));
+      const write=request.method==='POST' && (['/adv','/api/partenaires/commandes'].includes(path) || /^\/(?:conversion|prospection|popup\/prospect)\/[0-9a-f-]{36}$/i.test(path)) || request.method==='PATCH' && /^\/api\/acd\/demandes\/[0-9a-f-]{36}$/i.test(path);
+      if(!common&&!read&&!write){
+        if(path.startsWith('/api/')||request.method!=='GET')return NextResponse.json({error:'Accès réservé'},{status:403});
+        const url=request.nextUrl.clone();url.pathname='/adv';url.search='';return NextResponse.redirect(url);
+      }
+    }
     if(['qualite','be_centre','be_agent'].includes(profile?.role||'')){
       const qualityRoute = profile?.role === 'qualite' &&
         (path === '/qualite' || path.startsWith('/qualite/') || path === '/api/qualite' || path.startsWith('/api/qualite/'));
@@ -91,7 +107,7 @@ export default async function proxy(request: NextRequest) {
     }
   }
 
-  // Générateur ACD : accessible directement uniquement à l'admin.
+  // Générateur ACD : réservé au traitement ADV et à l’administration.
   // La route serveur /demander peut l'appeler avec le secret interne,
   // qui n'est jamais envoyé au navigateur du commercial.
   const isAcdGenerator = /^\/api\/acd\/[^/]+$/.test(path);
@@ -101,7 +117,7 @@ export default async function proxy(request: NextRequest) {
     const internalCall = Boolean(internalSecret) && givenSecret === internalSecret;
 
     if (!internalCall) {
-      if (profile?.role !== "admin") {
+      if (!profile?.is_active || !["admin","adv"].includes(profile.role)) {
         return new NextResponse("Accès réservé à l'administrateur", { status: 403 });
       }
     }

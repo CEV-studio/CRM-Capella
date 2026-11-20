@@ -39,6 +39,7 @@ export default async function TableauDeBordPage({ searchParams }: { searchParams
   const profil = await requireProfile();
   if (profil.role === "manager") redirect("/equipe");
   if (profil.role === "be_agent") redirect("/belgique?tab=clients");
+  if (profil.role === "adv") redirect("/adv");
   const estAdmin = profil.role === "admin";
   if (profil.role === "apporteur") return <PartnerHome prenom={profil.full_name.split(" ")[0]} />;
   const filtres = await searchParams;

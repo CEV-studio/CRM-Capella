@@ -53,7 +53,7 @@ assert.ok(safe.contracts.length>0);
 for(const c of safe.contracts){for(const forbidden of ['gross_cents','centre_cents','commission','payment','notes','data'])assert.equal(Object.hasOwn(c,forbidden),false,forbidden+' never returned');}
 for(const table of ['be_contracts','be_contract_history','be_statement_lines','be_invoices','be_imports','be_supplier_billing','be_cycle_tracking','affaires','prospects'])assert.equal((await db.query('select * from '+table)).rows.length,0,table+' denied to quality');
 await assert.rejects(()=>db.query("select be_create_invoice('Cimsourse','2026-09-01','QUALITY-HACK')"));
-await db.query("update profiles set role='admin',can_manage_team=true where id=$1",[quality]);
+await assert.rejects(()=>db.query("update profiles set role='admin',can_manage_team=true where id=$1",[quality]), /Modification des autorisations interdite/);
 assert.equal((await db.query('select role from profiles where id=$1',[quality])).rows[0].role,'qualite');
 await asUser(user);await assert.rejects(()=>db.query('select public.be_production_read()'));
 await db.exec('reset role;set role anon;');await assert.rejects(()=>db.query('select public.be_production_read()'));

@@ -43,6 +43,17 @@ export function estAdmin(profile: Profile): boolean {
   return profile.role === "admin";
 }
 
+/** Autorisation de traitement, distincte des droits d’administration. */
+export function peutTraiterAdv(profile: Profile): boolean {
+  return profile.is_active && ["admin", "adv"].includes(profile.role);
+}
+
+export async function requireAdv(): Promise<Profile> {
+  const profile = await requireProfile();
+  if (!peutTraiterAdv(profile)) redirect("/?motif=acces-refuse");
+  return profile;
+}
+
 /** Vrai si ce profil peut gérer l'équipe (admin ou droit « gérer l'équipe »). */
 export function peutGerer(profile: Profile): boolean {
   return profile.role === "admin" || (profile.role === "commercial" && profile.can_manage_team);
