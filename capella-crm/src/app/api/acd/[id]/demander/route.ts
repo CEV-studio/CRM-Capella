@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -25,7 +26,7 @@ export async function POST(request:Request,{ params }:{ params:Promise<{id:strin
   const supabase = await createClient();
   const { data:prospect } = await supabase.from("prospects").select("id, stage, assigned_to, entreprise_id").eq("id",id).is("deleted_at",null).maybeSingle();
   if (!prospect) return NextResponse.json({error:"Prospect introuvable."},{status:404});
-  if (profile.role !== "admin" && prospect.assigned_to !== profile.id) return NextResponse.json({error:"Cette fiche ne t’est pas attribuée."},{status:403});
+  if (!hasPermission(profile,'administration') && prospect.assigned_to !== profile.id) return NextResponse.json({error:"Cette fiche ne t’est pas attribuée."},{status:403});
 
   const siren=clean(body.siren).replace(/\s/g,"");
   const siret=clean(body.siret).replace(/\s/g,"");

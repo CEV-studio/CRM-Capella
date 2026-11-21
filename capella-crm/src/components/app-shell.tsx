@@ -1,4 +1,5 @@
 "use client";
+import { hasPermission, hasAnyPermission, permissionLabels, canAccessPath, homePath } from "@/lib/permissions";
 
 import Link from "next/link";
 import { NotificationBell } from "@/components/notification-bell";
@@ -15,24 +16,24 @@ import type { Profile } from "@/lib/domain/database.types";
 type IconType = typeof LayoutDashboard;
 type NavItem = { href: string; label: string; icon: IconType; adminOnly?: boolean; needs?: (p: Profile) => boolean };
 type Section = { titre: string; href: string; icon: IconType; items: NavItem[] };
-const peutGererLocal = (profile: Profile) => profile.role === "admin" || profile.can_manage_team;
+const peutGererLocal = (profile: Profile) => hasAnyPermission(profile,['administration','crm_gestion']);
 
 const section = (titre: string, href: string, icon: IconType, items: NavItem[]): Section => ({ titre, href, icon, items });
 const dashboard = { href: "/", label: "Tableau de bord", icon: LayoutDashboard };
-const PARTNER_NAV = [
+const PARTNER_NAV = [section("Nouvelle affaire", "/partenaires/opportunites/nouvelle", Target, [{href:"/partenaires/opportunites/nouvelle",label:"Nouvelle affaire apportée",icon:Target}]),
   section("Tableau de bord", "/", Home, [dashboard]),
   section("Suivi des demandes d’ACD", "/suivi-acd", FileCheck2, [
     { href: "/suivi-acd", label: "Suivi des demandes d’ACD", icon: FileCheck2 },
   ]),
   section("Demandes de cotation", "/partenaires/cotations", BriefcaseBusiness, [
-    { href: "/partenaires/cotations", label: "Demandes de cotation", icon: BriefcaseBusiness },
+    { href: "/partenaires/cotations?vue=personnel", label: "Mes cotations apporteur", icon: BriefcaseBusiness },
   ]),
   section("Portefeuille clients", "/partenaires/portefeuille", Building2, [
-    { href: "/partenaires/portefeuille", label: "Portefeuille clients", icon: Building2 },
+    { href: "/partenaires/portefeuille?vue=personnel", label: "Mes affaires apportées", icon: Building2 },
   ]),
 ];
-const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>['admin','qualite'].includes(p.role)},{href:"/qualite/agents",label:"Qualité par agent",icon:BarChart3,needs:(p:Profile)=>['admin','qualite'].includes(p.role)}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>['be_agent','be_centre'].includes(p.role)}])];
-const ADV_NAV = [section("ADV", "/adv", FileCheck2, [{href:"/adv",label:"Dossiers ADV",icon:FileCheck2},{href:"/admin/acd",label:"Demandes d’ACD",icon:BriefcaseBusiness}]), section("Apporteurs", "/partenaires/portefeuille", Building2, [{href:"/partenaires/portefeuille",label:"Dossiers apporteurs",icon:Building2},{href:"/partenaires/cotations",label:"Cotations apporteurs",icon:BriefcaseBusiness}])];
+const QUALITY_NAV = [section("Qualité des ventes", "/qualite", ShieldCheck, [{href:"/qualite",label:"Tableau qualité",icon:ShieldCheck,needs:(p:Profile)=>hasAnyPermission(p,['administration', 'qualite'])},{href:"/qualite/agents",label:"Qualité par agent",icon:BarChart3,needs:(p:Profile)=>hasAnyPermission(p,['administration', 'qualite'])}]),section("Production Belgique", "/belgique", ShieldCheck, [{href:"/belgique",label:"Production",icon:ShieldCheck},{href:"/belgique?tab=clients",label:"Base clients",icon:Users},{href:"/belgique/encoder",label:"Encoder une vente",icon:Users,needs:(p:Profile)=>hasAnyPermission(p,['belgique_encodage', 'belgique_centre'])}])];
+const ADV_NAV = [section("ADV", "/adv", FileCheck2, [{href:"/adv",label:"Dossiers ADV",icon:FileCheck2},{href:"/admin/acd",label:"Demandes d’ACD",icon:BriefcaseBusiness}]), section("Apporteurs", "/partenaires/portefeuille", Building2, [{href:"/partenaires/portefeuille?vue=traitement",label:"Dossiers apporteurs à traiter",icon:Building2},{href:"/partenaires/cotations?vue=traitement",label:"Cotations à traiter",icon:BriefcaseBusiness}])];
 const AGENT_NAV = [section("Mes ventes", "/belgique?tab=clients", Users, [{ href: "/belgique?tab=clients", label: "Mes ventes", icon: Users }, { href: "/belgique/encoder", label: "Encoder une vente", icon: FileCheck2 }])];
 const COMMERCIAL_NAV = [
   section("Tableau de bord", "/", Home, [dashboard]),
@@ -79,7 +80,7 @@ const ADMIN_NAV = [
   section("Comptabilité", "/commissions", CircleDollarSign, [
     { href: "/commissions", label: "Commissions et comptes", icon: CircleDollarSign },
     { href: "/comptabilite/belgique", label: "Belgique : factures et commissions", icon: CircleDollarSign },
-    { href: "/admin/export", label: "Exports", icon: FileDown, needs: p => peutGererLocal(p) || p.can_export },
+    { href: "/admin/export", label: "Exports", icon: FileDown, needs: p => peutGererLocal(p) || hasPermission(p,'export') },
   ]),
   section("Belgique", "/belgique", Building2, [
     { href: "/belgique", label: "Production", icon: Building2 },
@@ -140,11 +141,23 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   const path=usePathname();
   const search=useSearchParams();
   const pathname=path+(search.size?"?"+search.toString():"");
-  const gere = peutGererLocal(profile);
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const collapsed = useSyncExternalStore(subscribeSidebar, readSidebarCollapsed, () => false);
-  const visible = (i: NavItem) => (!i.adminOnly || profile.role === "admin") && (!i.needs || i.needs(profile));
-  const navigation = profile.role === 'adv' ? ADV_NAV : profile.role === 'be_agent' ? AGENT_NAV : ['qualite','be_centre'].includes(profile.role) ? QUALITY_NAV : profile.role === "apporteur" ? PARTNER_NAV : profile.role === "admin" ? ADMIN_NAV : profile.role === 'manager' ? MANAGER_NAV : COMMERCIAL_NAV;
+  const visible = (i: NavItem) => canAccessPath(profile,i.href.split('?')[0]) && (!i.needs||i.needs(profile));
+  const candidates:Section[] = hasPermission(profile,'administration') ? ADMIN_NAV : [
+    ...(hasPermission(profile,'crm')?COMMERCIAL_NAV:[]),
+    ...(hasPermission(profile,'equipe')?MANAGER_NAV.slice(0,1):[]),
+    ...(hasPermission(profile,'apporteur')?PARTNER_NAV:[]),
+    ...(hasPermission(profile,'adv')?ADV_NAV:[]),
+    ...(hasAnyPermission(profile,['qualite','belgique_lecture','belgique_centre'])?QUALITY_NAV:[]),
+    ...(hasPermission(profile,'belgique_encodage')?AGENT_NAV:[]),
+    ...(hasPermission(profile,'email')?[section('Messagerie','/email',Mail,[{href:'/email',label:'Mon email',icon:Mail}])]:[]),
+    ...(hasPermission(profile,'export')?[section('Exports','/admin/export',FileDown,[{href:'/admin/export',label:'Exporter',icon:FileDown}])]:[]),
+    ...(hasPermission(profile,'crm_gestion')?[ADMIN_NAV[ADMIN_NAV.length-1]]:[]),
+  ];
+  const seen=new Set<string>();
+  const navigation=candidates.map(s=>({...s,items:s.items.filter(i=>{if(seen.has(i.href)||!visible(i))return false;seen.add(i.href);return true;})}));
   const sections = navigation.filter(s => s.items.some(visible));
   const currentSection = sections.find(s => sectionActive(pathname, s));
   const currentItem = currentSection?.items.filter(visible).find(item => actif(pathname, item.href));
@@ -153,7 +166,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   return <div className="crm-shell flex min-h-screen bg-surface">
     <aside className={`crm-sidebar sticky top-0 hidden h-screen shrink-0 flex-col border-r border-navy-100 bg-[#f8fafc] text-navy-700 transition-[width] duration-200 md:flex ${collapsed ? "w-[68px]" : "w-64"}`}>
       <div className={`crm-sidebar-brand flex min-h-[76px] items-center border-b border-navy-100 bg-white ${collapsed ? "flex-col justify-center gap-1 py-2" : "justify-between gap-2 px-3 py-4"}`}>
-        <Link prefetch={false} href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="flex min-w-0 justify-center" aria-label="Accueil Capella Energy">
+        <Link prefetch={false} href={homePath(profile)} className="flex min-w-0 justify-center" aria-label="Accueil Capella Energy">
           {collapsed ? <CapellaStar className="h-7 w-7" /> : <Logotype className="w-[170px]" />}
         </Link>
         <button type="button" onClick={() => setSidebarCollapsed(!collapsed)} aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"} title={collapsed ? "Agrandir le menu" : "Réduire le menu"} aria-expanded={!collapsed} className="rounded-lg p-2 text-navy-500 hover:bg-navy-50 hover:text-navy-900 focus-visible:outline-2 focus-visible:outline-sky-capella-500">
@@ -186,7 +199,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       {collapsed ? <div className="crm-sidebar-footer flex flex-col items-center gap-2 border-t border-navy-100 py-4"><div title={profile.full_name} aria-label={profile.full_name} className="flex h-9 w-9 items-center justify-center rounded-full bg-navy-700 text-sm font-semibold text-white">{profile.full_name.slice(0,1).toUpperCase()}</div><Link prefetch={false} href="/deconnexion" className="rounded-lg p-2 text-navy-500 hover:bg-white" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden/></Link></div> :       <div className="crm-sidebar-footer border-t border-navy-100 px-4 py-4">
         <div className="crm-sidebar-user flex items-center gap-3 rounded-xl border border-navy-100 bg-white p-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-700 font-display text-sm font-semibold text-white">{profile.full_name.slice(0, 1).toUpperCase()}</div>
-          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-navy-500">{profile.role === "be_centre" ? "Centre Belgique" : profile.role === "be_agent" ? "Agent Belgique" : profile.role === "adv" ? "ADV" : profile.role === "qualite" ? "Responsable qualité" : profile.role === "admin" ? "Administrateur" : profile.role === "manager" ? profile.hierarchy_title === "Leader" ? "Leader" : "Manager" : profile.role === "apporteur" ? "Apporteur" : gere ? "Gestion d’équipe" : "Commercial"}</div></div>
+          <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-navy-900">{profile.full_name}</div><div className="truncate text-[11px] text-navy-500">{permissionLabels(profile)}</div></div>
           <Link prefetch={false} href="/deconnexion" className="rounded-lg p-1.5 text-navy-500 hover:bg-navy-50 hover:text-navy-900" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={16} aria-hidden /></Link>
         </div>
       </div>
@@ -194,11 +207,11 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
     </aside>
 
     <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between border-b border-white/10 bg-navy-900 px-4 py-2.5 text-white md:hidden">
-      <Link prefetch={false} href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="rounded bg-[#F5F3EE] px-2 py-1"><Logotype className="w-36" /></Link>
+      <Link prefetch={false} href={homePath(profile)} className="rounded bg-[#F5F3EE] px-2 py-1"><Logotype className="w-36" /></Link>
       <Link prefetch={false} href="/deconnexion" className="inline-flex items-center gap-1.5 text-xs text-navy-100"><LogOut size={14} /> Quitter</Link>
     </header>
     <div className="min-w-0 flex-1 pt-14 md:pt-0">
-      <div className="crm-workspace-bar flex min-h-14 items-center justify-between border-b border-navy-100 bg-white/95 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-2 text-sm"><Link prefetch={false} href={profile.role === "be_agent" ? "/belgique?tab=clients" : "/"} className="hidden font-medium text-navy-500 hover:text-navy-900 sm:inline">Capella CRM</Link><span className="hidden text-navy-300 sm:inline" aria-hidden>/</span><span className="truncate font-semibold text-navy-800">{currentSection?.titre ?? "Accueil"}</span>{currentItem && currentItem.label !== currentSection?.titre && <><span className="text-navy-300" aria-hidden>/</span><span className="truncate text-navy-600">{currentItem.label}</span></>}</div><NotificationBell/></div>
+      <div className="crm-workspace-bar flex min-h-14 items-center justify-between border-b border-navy-100 bg-white/95 px-4 sm:px-6"><div className="flex min-w-0 items-center gap-2 text-sm"><Link prefetch={false} href={homePath(profile)} className="hidden font-medium text-navy-500 hover:text-navy-900 sm:inline">Capella CRM</Link><span className="hidden text-navy-300 sm:inline" aria-hidden>/</span><span className="truncate font-semibold text-navy-800">{currentSection?.titre ?? "Accueil"}</span>{currentItem && currentItem.label !== currentSection?.titre && <><span className="text-navy-300" aria-hidden>/</span><span className="truncate text-navy-600">{currentItem.label}</span></>}</div><NotificationBell/></div>
       <nav className="flex items-start gap-2 overflow-x-auto border-b border-navy-100 bg-white p-3 md:hidden">{sections.map(s=>{
         const items=s.items.filter(visible),active=sectionActive(pathname,s);
         return items.length>1?<details key={s.titre} className="shrink-0 rounded-lg bg-navy-50"><summary className={`cursor-pointer whitespace-nowrap px-3 py-2 text-xs font-semibold ${active?'bg-sky-capella-100':''}`}>{s.titre}</summary><ul className="w-60 space-y-1 p-2">{items.map(item=><li key={item.href}><Link prefetch={false} href={item.href} aria-current={actif(pathname,item.href)?'page':undefined} className={`block rounded-md px-3 py-2 text-xs leading-5 ${actif(pathname,item.href)?'bg-sky-capella-100 font-semibold':'hover:bg-white'}`}>{item.label}</Link></li>)}</ul></details>:<Link prefetch={false} key={s.titre} href={items[0].href} className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs ${active?'bg-sky-capella-100 font-semibold':'bg-navy-50'}`}>{s.titre}</Link>;

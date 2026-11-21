@@ -14,12 +14,12 @@ export default async function BoitesEmailPage({ searchParams }: {
 
   const [{ data: accountData }, { data: profileData }, { data: memberData }] = await Promise.all([
     supabase.from("email_accounts").select("*").eq("is_shared", true).order("connected_at", { ascending: false }),
-    supabase.from("profiles").select("id, full_name, email, role, is_active").eq("is_active", true).order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, permissions, is_active").eq("is_active", true).order("full_name"),
     supabase.from("email_account_members").select("*").order("created_at"),
   ]);
 
   const accounts = (accountData ?? []) as EmailAccount[];
-  const profiles = (profileData ?? []) as Pick<Profile, "id" | "full_name" | "email" | "role" | "is_active">[];
+  const profiles = (profileData ?? []) as Pick<Profile, "id" | "full_name" | "email" | "permissions" | "is_active">[];
   const members = (memberData ?? []) as EmailAccountMember[];
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
   const oauthConfigured = Boolean(

@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { Building2, Search } from "lucide-react";
 import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 import { requireProfile } from "@/lib/auth";
@@ -33,7 +34,7 @@ function libelle(client: Client) {
 
 export default async function MesClientsPage({ searchParams }: { searchParams: Promise<Recherche> }) {
   const profile = await requireProfile();
-  const showFinancial = profile.role !== 'commercial' && profile.role !== 'manager';
+  const showFinancial = !hasPermission(profile,'crm') && !hasPermission(profile,'equipe');
   const filtres = await searchParams;
   const supabase = await createClient();
   const db = supabase;

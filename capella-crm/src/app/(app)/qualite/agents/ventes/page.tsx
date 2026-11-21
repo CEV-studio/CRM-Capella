@@ -1,3 +1,4 @@
+import { hasAnyPermission } from '@/lib/permissions';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireProfile } from '@/lib/auth';
@@ -13,7 +14,7 @@ type Review=Pick<QualityReview,'id'|'sale_key'|'sale_reference'|'agent_name'|'ag
 
 export default async function AgentSales({searchParams}:{searchParams:Promise<{ref?:string;name?:string;centre?:string;vue?:string;page?:string}>}){
  const profile=await requireProfile();
- if(!['admin','qualite'].includes(profile.role))redirect('/?motif=acces-refuse');
+ if(!hasAnyPermission(profile,['administration','qualite']))redirect('/?motif=acces-refuse');
  const params=await searchParams;
  const ref=(params.ref||'').trim(),name=(params.name||'').trim(),centre=(params.centre||'').trim();
  if(!ref||ref.length>120||centre.length>120||name.length>120)redirect('/qualite/agents');

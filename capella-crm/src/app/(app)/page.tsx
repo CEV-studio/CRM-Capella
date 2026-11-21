@@ -1,3 +1,4 @@
+import { hasPermission,homePath } from '@/lib/permissions';
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Sparkles, UsersRound } from "lucide-react";
@@ -12,7 +13,6 @@ import { chargerApporteurs } from "@/lib/referentiels";
 import type { Affaire, Apporteur, Profile, Prospect } from "@/lib/domain/database.types";
 import { ProspectFichePopup } from "@/components/prospect-fiche-popup";
 import { AdminHome } from "@/components/admin-home";
-import { PartnerHome } from "@/components/partner-home";
 import { loadBelgiumDashboardMetrics } from "@/lib/belgium/server";
 import { financialModel } from "@/lib/belgium/finance.js";
 
@@ -37,11 +37,8 @@ function bornesSemaine() {
 
 export default async function TableauDeBordPage({ searchParams }: { searchParams: Promise<Recherche> }) {
   const profil = await requireProfile();
-  if (profil.role === "manager") redirect("/equipe");
-  if (profil.role === "be_agent") redirect("/belgique?tab=clients");
-  if (profil.role === "adv") redirect("/adv");
-  const estAdmin = profil.role === "admin";
-  if (profil.role === "apporteur") return <PartnerHome prenom={profil.full_name.split(" ")[0]} />;
+  const estAdmin=hasPermission(profil,'administration');
+  if(!estAdmin&&!hasPermission(profil,'crm'))redirect(homePath(profil));
   const filtres = await searchParams;
   const supabase = await createClient();
   if (estAdmin) {

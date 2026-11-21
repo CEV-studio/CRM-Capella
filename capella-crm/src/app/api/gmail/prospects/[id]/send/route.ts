@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -83,7 +84,7 @@ export async function POST(
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     for (const piece of pieces || []) {
-      if (piece.type === "ACD" && profile.role !== "admin") continue;
+      if (piece.type === "ACD" && !hasPermission(profile,'administration')) continue;
       const { data: file, error: storageError } = await supabase.storage.from(BUCKET_PIECES).download(piece.bucket_path);
       if (storageError || !file) {
         return NextResponse.json({ error: `Pièce jointe indisponible : ${piece.file_name}` }, { status: 400 });

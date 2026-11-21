@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -25,7 +26,7 @@ export default async function EmailPopupPage({ params }: { params: Promise<{ id:
   const templates = (templateData ?? []) as EmailTemplate[];
   const messages = (messageData ?? []) as EmailMessage[];
   const pieces = (piecesData ?? []) as PieceJointe[];
-  const piecesVisibles = profile.role === "admin" ? pieces : pieces.filter((piece) => piece.type !== "ACD");
+  const piecesVisibles = hasPermission(profile,'administration') ? pieces : pieces.filter((piece) => piece.type !== "ACD");
   const fournisseur = p.fournisseur_electricite || p.fournisseur_gaz || "";
   const variables: Record<string, string> = {
     prenom: p.prenom || "", nom: p.nom || "", societe: p.raison_sociale || "", email: p.mail || "",
@@ -42,7 +43,7 @@ export default async function EmailPopupPage({ params }: { params: Promise<{ id:
       messages={messages}
       pieces={piecesVisibles.map((piece) => ({ id: piece.id, file_name: piece.file_name, type: piece.type }))}
       gmailConnected={Boolean(gmailAccount)}
-      estAdmin={profile.role === "admin"}
+      estAdmin={hasPermission(profile,'administration')}
     />
   </main>;
 }

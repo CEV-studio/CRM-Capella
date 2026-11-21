@@ -9,7 +9,7 @@ import type { Database } from "@/lib/domain/database.types";
  * ⚠️  À n'utiliser QUE dans du code serveur, et uniquement pour les
  * opérations que seul l'admin peut déclencher (création de compte
  * commercial, réattribution en masse, export complet).
- * Chaque appel doit être précédé d'une vérification explicite du rôle
+ * Chaque appel doit être précédé d'une vérification explicite des permissions
  * de l'appelant : voir `requireAdmin()` dans src/lib/auth.ts.
  */
 export function createAdminClient() {

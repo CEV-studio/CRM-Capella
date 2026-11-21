@@ -2,11 +2,10 @@ import type { CycleTracking, SupplierBilling } from '@/lib/belgium/domain';
 import type { Contract, Statement, Invoice, ImportRun as BelgiumImportRun } from "@/lib/belgium/domain";
 import type { Dossier, Quote } from "@/lib/partners/types";
 /** Types manuels de la base Supabase — miroir des migrations. */
-export type Role = "adv" | "admin" | "commercial" | "manager" | "apporteur" | "qualite" | "be_centre" | "be_agent";
 export type PaymentStatus = "À payer" | "Payé" | "En attente";
 export type TypeEnergie = "Électricité" | "Gaz" | "Élec+Gaz";
 
-export type Profile = { id:string; full_name:string; email:string; role:Role; hierarchy_title:"Leader"|null; commission_rate:number; is_active:boolean; must_change_password:boolean; can_export:boolean; can_view_all:boolean; can_manage_team:boolean; manager_id:string|null; partner_team_id:string|null; archived_at:string|null; created_at:string; updated_at:string };
+export type Profile = { id:string; full_name:string; email:string; permissions:import("@/lib/permissions").Permission[]; hierarchy_title:"Leader"|null; commission_rate:number; is_active:boolean; must_change_password:boolean; manager_id:string|null; partner_team_id:string|null; archived_at:string|null; created_at:string; updated_at:string };
 export type PartnerTeam = { id:string; name:string; partner_name:string|null; manager_id:string|null; is_active:boolean; created_at:string };
 export type QualityReview = { id:string; activity_name:string; rubric_key:string; agent_name:string; agent_centre:string|null; sale_reference:string; sale_key:string|null; client_key:string|null; mentioned_ids:string[]; identification:Record<string,string>; condition_context:Record<string,boolean>; answers:Record<string,import('@/lib/quality').QualityAnswer>; score_sum:number; applicable_count:number; max_score:number; score_percent:number; status:import('@/lib/quality').QualityStatus; grave_faults:Array<{question_id:number;criterion:string;comment:string}>; call_quality_note:string|null; comments:string|null; controller_id:string; controller_name:string; reviewed_at:string; created_at:string };
 export type QualityReviewComment = { id:string; review_id:string; author_id:string; author_name:string; body:string; mentioned_ids:string[]; created_at:string };
@@ -172,6 +171,8 @@ export interface Database {
     };
     Views:Record<never,never>;
     Functions:{
+      set_profile_permissions:{Args:{p_id:string;p_permissions:string[]};Returns:undefined};
+      has_permission:{Args:{p_permission:string};Returns:boolean};
       adv_directory:{Args:Record<never,never>;Returns:{id:string;full_name:string;commission_rate:number}[]};
       adv_save:{Args:{p_id:string;p_stage:string;p_commission:number;p_signature:string|null;p_relance:string|null;p_verification:boolean|null};Returns:undefined};
       adv_acd_status:{Args:{p_id:string;p_status:string};Returns:undefined};

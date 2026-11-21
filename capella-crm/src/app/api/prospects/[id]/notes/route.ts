@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireProfile } from "@/lib/auth";
@@ -59,7 +60,7 @@ export async function GET(
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   const notes = (data ?? []).map((note: {id:string;body:string;author_id:string|null;author_name:string;created_at:string;updated_at:string|null}) => ({
     ...note,
-    can_edit: profile.role === "admin" || note.author_id === profile.id,
+    can_edit: hasPermission(profile,'administration') || note.author_id === profile.id,
   }));
   if (prospect.notes?.trim() && !notes.some((note: {body:string}) => note.body === prospect.notes)) {
     // The preview may be older than the 100 most recent entries.
@@ -126,7 +127,7 @@ export async function PATCH(
     .update({ body, updated_at: now })
     .eq("id", noteId)
     .eq("prospect_id", id);
-  if (profile.role !== "admin") query = query.eq("author_id", profile.id);
+  if (!hasPermission(profile,'administration')) query = query.eq("author_id", profile.id);
 
   const { data, error } = await query
     .select("id, body, author_id, author_name, created_at, updated_at")
@@ -158,7 +159,7 @@ export async function DELETE(
     .delete()
     .eq("id", noteId)
     .eq("prospect_id", id);
-  if (profile.role !== "admin") query = query.eq("author_id", profile.id);
+  if (!hasPermission(profile,'administration')) query = query.eq("author_id", profile.id);
 
   const { data, error } = await query.select("id").maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

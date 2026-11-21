@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NouveauProspectPage() {
   const profil = await requireProfile();
-  const estAdmin = profil.role === "admin";
+  const estAdmin = hasPermission(profil,'administration');
 
   const supabase = await createClient();
   const [sources, { data: profils }, champsPerso] = await Promise.all([

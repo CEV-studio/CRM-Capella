@@ -1,3 +1,4 @@
+import { canAccessPath, hasPermission, homePath } from '@/lib/permissions';
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -57,10 +58,10 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Read the role once per request; the same value guards restricted routes,
+  // Read permissions once per request; the same value guards restricted routes,
   // partner routes and the ACD generator without repeating database calls.
   const { data: profile } = userId && !isPublic
-    ? await supabase.from("profiles").select("role,is_active").eq("id",userId).maybeSingle()
+    ? await supabase.from("profiles").select("permissions,is_active").eq("id",userId).maybeSingle()
     : { data: null };
 
   if(userId && !isPublic){
@@ -71,55 +72,11 @@ export default async function proxy(request: NextRequest) {
       for(const cookie of response.cookies.getAll())denied.cookies.set(cookie);
       return denied;
     }
-    if(profile.role==='adv'){
-      const common=['/changer-mot-de-passe','/deconnexion','/notifications','/api/notifications/lire','/api/partenaires/notifications'].includes(path);
-      const read=request.method==='GET' && (['/','/adv','/admin/acd','/suivi-acd','/partenaires/portefeuille','/partenaires/cotations'].includes(path) || /^\/(?:partenaires\/dossiers|pieces|conversion|prospection|popup\/prospect)\/[0-9a-f-]{36}$/i.test(path) || /^\/api\/acd\/[0-9a-f-]{36}(?:\/telecharger)?$/i.test(path));
-      const write=request.method==='POST' && (['/adv','/api/partenaires/commandes'].includes(path) || /^\/(?:conversion|prospection|popup\/prospect)\/[0-9a-f-]{36}$/i.test(path)) || request.method==='PATCH' && /^\/api\/acd\/demandes\/[0-9a-f-]{36}$/i.test(path);
-      if(!common&&!read&&!write){
-        if(path.startsWith('/api/')||request.method!=='GET')return NextResponse.json({error:'Accès réservé'},{status:403});
-        const url=request.nextUrl.clone();url.pathname='/adv';url.search='';return NextResponse.redirect(url);
-      }
-    }
-    if(['qualite','be_centre','be_agent'].includes(profile?.role||'')){
-      const qualityRoute = profile?.role === 'qualite' &&
-        (path === '/qualite' || path.startsWith('/qualite/') || path === '/api/qualite' || path.startsWith('/api/qualite/'));
-      const mentionedReviewRoute = /^\/qualite\/[0-9a-f-]{36}$/i.test(path)
-        || /^\/api\/qualite\/[0-9a-f-]{36}\/commentaires$/i.test(path)&&request.method==='POST';
-      const notificationRoute = (path==='/notifications'||path==='/api/partenaires/notifications')&&request.method==='GET'
-        || path==='/api/notifications/lire'&&request.method==='POST';
-      const allowed=qualityRoute || mentionedReviewRoute || notificationRoute || path==="/belgique"&&(request.method==="GET"||request.method==="POST") || path==="/api/belgique/clients/export"&&request.method==="GET" || ['be_agent','be_centre'].includes(profile?.role||'')&&path==='/belgique/encoder'&&(request.method==='GET'||request.method==='POST') || path==="/changer-mot-de-passe" || path==="/deconnexion";
-      if(!allowed){
-        if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});
-        const url=request.nextUrl.clone();url.pathname=profile?.role === 'qualite' ? '/qualite' : '/belgique';url.search="";return NextResponse.redirect(url);
-      }
-    }
-  }
-
-  // A partner cannot use the legacy prospecting/commission/API routes.
-  const partnerAllowed = ["/partenaires", "/notifications", "/api/partenaires", "/api/notifications", "/pieces", "/changer-mot-de-passe", "/deconnexion"].some(prefix=>path===prefix||path.startsWith(prefix+"/"));
-  if (userId && !isPublic && !partnerAllowed) {
-    if(profile?.role === "apporteur") {
-      {
-        if(path.startsWith("/api/")||request.method!=="GET")return NextResponse.json({error:"Accès réservé"},{status:403});
-        const url=request.nextUrl.clone();url.pathname="/partenaires/opportunites";url.search="";
-        return NextResponse.redirect(url);
-      }
-    }
-  }
-
-  // Générateur ACD : réservé au traitement ADV et à l’administration.
-  // La route serveur /demander peut l'appeler avec le secret interne,
-  // qui n'est jamais envoyé au navigateur du commercial.
-  const isAcdGenerator = /^\/api\/acd\/[^/]+$/.test(path);
-  if (userId && isAcdGenerator && request.method === "GET") {
-    const givenSecret = request.headers.get("x-capella-internal-secret") ?? "";
-    const internalSecret = process.env.FORM_WEBHOOK_SECRET ?? "";
-    const internalCall = Boolean(internalSecret) && givenSecret === internalSecret;
-
-    if (!internalCall) {
-      if (!profile?.is_active || !["admin","adv"].includes(profile.role)) {
-        return new NextResponse("Accès réservé à l'administrateur", { status: 403 });
-      }
+    const internalSecret=process.env.FORM_WEBHOOK_SECRET;
+    const internalGenerator=Boolean(internalSecret)&&request.headers.get('x-capella-internal-secret')===internalSecret&&hasPermission(profile,'crm')&&/^\/api\/acd\/[^/]+$/.test(path);
+    if(!canAccessPath(profile,path,request.method)&&!internalGenerator){
+      if(path.startsWith('/api/')||request.method!=='GET')return NextResponse.json({error:'Permission requise'},{status:403});
+      const url=request.nextUrl.clone();url.pathname=homePath(profile);url.search='';return NextResponse.redirect(url);
     }
   }
 

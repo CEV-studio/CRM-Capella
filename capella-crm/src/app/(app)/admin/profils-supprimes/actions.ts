@@ -1,4 +1,5 @@
 'use server';
+
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -10,7 +11,7 @@ export async function modifierCorbeilleProfil(_prev:ActionResult|null, form:Form
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)||id===actor.id||!['supprimer','restaurer'].includes(operation)) return {ok:false,message:'Action interdite.'};
  const db=createAdminClient();
  const patch=operation==='supprimer'?{archived_at:new Date().toISOString(),is_active:false}:{archived_at:null,is_active:false};
- let query=db.from('profiles').update(patch).eq('id',id).neq('role','admin');
+ let query=db.from('profiles').update(patch).eq('id',id).not('permissions','cs','{administration}');
  query=operation==='supprimer'?query.is('archived_at',null):query.not('archived_at','is',null);
  const {data,error}=await query.select('id').maybeSingle();
  if(error||!data)return {ok:false,message:error?.message??'Compte introuvable ou non autorisé.'};

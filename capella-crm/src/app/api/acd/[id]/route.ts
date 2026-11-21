@@ -1,3 +1,4 @@
+import { hasAnyPermission } from '@/lib/permissions';
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -175,7 +176,7 @@ export async function GET(
   const profile=await requireProfile();
   const secret=process.env.FORM_WEBHOOK_SECRET;
   const internal=Boolean(secret)&&_req.headers.get('x-capella-internal-secret')===secret;
-  if(!['admin','adv'].includes(profile.role)&&!internal)return Response.json({error:'Accès réservé'},{status:403});
+  if(!hasAnyPermission(profile,['administration','adv'])&&!internal)return Response.json({error:'Accès réservé'},{status:403});
   const { id } = await params;
   const supabase = await createClient();
   const { data: prospect, error } = await supabase

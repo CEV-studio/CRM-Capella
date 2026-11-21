@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  const allowed = account.owner_profile_id === profile.id || profile.role === "admin";
+  const allowed = account.owner_profile_id === profile.id || hasPermission(profile,'administration');
   if (!allowed) {
     url.searchParams.set("gmail", "erreur");
     url.searchParams.set("message", "Tu n’as pas le droit de déconnecter cette boîte Gmail.");
