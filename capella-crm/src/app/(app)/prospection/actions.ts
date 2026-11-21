@@ -1,4 +1,6 @@
 "use server";
+import { hasPermission } from '@/lib/permissions';
+
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -166,7 +168,7 @@ export async function creerProspect(_prev: ActionResult | null, formData: FormDa
   if (!patch.raison_sociale && !patch.nom && !patch.prenom) return { ok: false, message: "Renseigne au moins une raison sociale ou un nom." };
   if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
   const supabase = await createClient();
-  const proprietaire = profil.role === "admin" ? String(formData.get("assigned_to") ?? "").trim() || null : profil.id;
+  const proprietaire = hasPermission(profil,'administration') ? String(formData.get("assigned_to") ?? "").trim() || null : profil.id;
   const transfertImmediat = patch.stage === "Demande de cotation";
   const donneesCreation = transfertImmediat ? { ...patch, stage: "NRP" } : patch;
   const { data, error } = await supabase.from("prospects").insert({ ...donneesCreation, assigned_to: proprietaire, created_by: profil.id }).select("id").single();

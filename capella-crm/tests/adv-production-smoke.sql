@@ -8,8 +8,9 @@ begin
  (adv_id,'adv-smoke-'||adv_id||'@example.invalid','{"full_name":"ADV smoke fixture"}'),
  (commercial_id,'commercial-smoke-'||commercial_id||'@example.invalid','{"full_name":"Commercial smoke fixture"}'),
  (admin_id,'admin-smoke-'||admin_id||'@example.invalid','{"full_name":"Admin smoke fixture"}');
- update public.profiles set role='adv',commission_rate=0,must_change_password=false where id=adv_id;
- update public.profiles set role='admin',must_change_password=false where id=admin_id;
+ update public.profiles set permissions=array['crm'] where id=commercial_id;
+ update public.profiles set permissions=array['adv','apporteur'],commission_rate=0,must_change_password=false where id=adv_id;
+ update public.profiles set permissions=array['administration'],must_change_password=false where id=admin_id;
  insert into public.prospects(raison_sociale,assigned_to,created_by) values('ADV transaction smoke fixture',commercial_id,commercial_id) returning id into pid;
  insert into public.acd_requests(prospect_id,requested_by,raison_sociale,siren,siret,company_address,company_postal_code,company_city,signatory_first_name,signatory_last_name,signatory_email,signatory_phone,signatory_capacity,signatory_role)
  values(pid,commercial_id,'ADV transaction smoke fixture','123456789','12345678900011','1 rue Test','75002','Paris','Test','Fixture','fixture@example.invalid','0612345678','representant_legal','Gérant') returning id into rid;
@@ -29,7 +30,7 @@ begin
  if not exists(select 1 from public.affaire_adv_checks where affaire_id=aid and verification_calls) then raise exception 'ADV checks failed'; end if;
  update public.affaires set commission=999 where id=aid;
  get diagnostics n=row_count;if n<>0 then raise exception 'Arbitrary ADV REST write allowed'; end if;
- begin update public.profiles set role='admin' where id=auth.uid();raise exception 'ADV escalation accepted';exception when insufficient_privilege then null;end;
+ begin update public.profiles set permissions=array['administration'] where id=auth.uid();raise exception 'ADV escalation accepted';exception when insufficient_privilege then null;end;
  perform set_config('test.affaire_id',aid::text,true);
 end $$;
 reset role;
@@ -61,4 +62,4 @@ begin
 end $$;
 reset role;
 rollback;
-select 'PASS: production PostgreSQL ADV active/disabled, commercial/admin, ACD quotation, commission, call checks, escalation refusal; all fixtures rolled back' as result;
+select 'PASS: production PostgreSQL ADV active/disabled, commercial/admin, ACD quotation, commission, call checks, escalation refusal; cumulative ADV+apporteur confirmed; all fixtures rolled back' as result;

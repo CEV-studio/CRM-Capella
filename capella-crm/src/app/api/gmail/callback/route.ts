@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
   store.delete("gmail_oauth_mode");
   store.delete("gmail_oauth_return");
 
-  if (mode === "shared" && profile.role !== "admin") {
+  if (mode === "shared" && !hasPermission(profile,'administration')) {
     return NextResponse.redirect(new URL("/?motif=acces-refuse", origin));
   }
   if (oauthError) return redirectWithParams(origin, returnTo, { gmail: "erreur", message: oauthError });

@@ -1,4 +1,5 @@
 'use server';
+
 import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
@@ -38,11 +39,11 @@ export async function gererCentre(_prev:ActionResult|null,form:FormData):Promise
  const id=String(form.get('id')||''),operation=form.get('operation');
  if(!/^[0-9a-f-]{36}$/i.test(id)||!['activer','desactiver','password'].includes(String(operation)))return {ok:false,message:'Action invalide.'};
  const db=createAdminClient();
- const {data:profile,error}=await db.from('profiles').select('id,is_active').eq('id',id).in('role',['be_centre','be_agent']).single();
+ const {data:profile,error}=await db.from('profiles').select('id,is_active').eq('id',id).overlaps('permissions',['belgique_centre', 'belgique_encodage']).single();
  if(error||!profile)return {ok:false,message:'Compte centre ou agent introuvable.'};
  if(operation==='password'){
   const motDePasse=password();
-  const flag=await db.from('profiles').update({must_change_password:true}).eq('id',id).in('role',['be_centre','be_agent']);
+  const flag=await db.from('profiles').update({must_change_password:true}).eq('id',id).overlaps('permissions',['belgique_centre', 'belgique_encodage']);
   if(flag.error)return {ok:false,message:'Réinitialisation impossible.'};
   const reset=await db.auth.admin.updateUserById(id,{password:motDePasse});
   if(reset.error)return {ok:false,message:'Réinitialisation impossible.'};
@@ -50,7 +51,7 @@ export async function gererCentre(_prev:ActionResult|null,form:FormData):Promise
  }
  const scope=await db.from('be_access').update({is_active:operation==='activer'}).eq('user_id',id);
  if(scope.error)return {ok:false,message:'Modification impossible.'};
- const update=await db.from('profiles').update({is_active:operation==='activer'}).eq('id',id).in('role',['be_centre','be_agent']);
+ const update=await db.from('profiles').update({is_active:operation==='activer'}).eq('id',id).overlaps('permissions',['belgique_centre', 'belgique_encodage']);
  if(update.error){await db.from('be_access').update({is_active:false}).eq('user_id',id);return {ok:false,message:'Modification impossible.'};}
  revalidatePath('/admin/centres');return {ok:true,message:operation==='activer'?'Compte activé.':'Compte désactivé.'};
 }

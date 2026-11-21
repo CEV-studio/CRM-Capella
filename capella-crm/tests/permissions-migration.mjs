@@ -1,0 +1,33 @@
+import {PGlite} from '@electric-sql/pglite';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;
+create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}',raw_app_meta_data jsonb default '{}');
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+create table storage.buckets(id text primary key,name text,public boolean);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
+grant usage on schema public,auth,storage to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated;alter default privileges in schema public grant all on tables to authenticated,service_role;`);
+const files=fs.readdirSync('supabase/migrations').sort();
+const newer=files.filter(f=>f.includes('cumulative_permissions')||f.includes('retire_legacy_account_roles'));
+for(const file of files.filter(f=>!newer.includes(f)))await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8').replace(/create extension if not exists "pgcrypto";/g,''));
+const cases={admin:['administration','crm','apporteur','adv','qualite','equipe','belgique_lecture','belgique_centre','belgique_encodage','email','crm_gestion','crm_lecture_globale','export'],commercial:['crm','email','export','crm_gestion','crm_lecture_globale'],manager:['crm','email','equipe'],apporteur:['apporteur'],adv:['adv'],qualite:['qualite','belgique_lecture'],be_centre:['belgique_centre'],be_agent:['belgique_encodage'],agent_ia:[]};
+let i=0;const ids={};
+for(const role of Object.keys(cases)){
+ const id=`90000000-0000-4000-8000-${String(++i).padStart(12,'0')}`;ids[role]=id;
+ await db.query('insert into auth.users(id,email) values($1,$2)',[id,role+'@example.invalid']);
+ await db.query('update public.profiles set role=$1,commission_rate=$2,is_active=$3 where id=$4',[role,['admin','commercial','manager','apporteur'].includes(role)?0.5:0,!['agent_ia','manager'].includes(role),id]);
+ if(role==='commercial')await db.query('update public.profiles set can_export=true,can_view_all=true,can_manage_team=true where id=$1',[id]);
+}
+const prior=(await db.query("select id,commission_rate,is_active from profiles order by id")).rows;
+for(const file of newer)await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8'));
+assert.deepEqual((await db.query('select id,commission_rate,is_active from profiles order by id')).rows,prior,'migration preserves all account values');
+for(const [role,expected] of Object.entries(cases))assert.deepEqual((await db.query('select permissions from profiles where id=$1',[ids[role]])).rows[0].permissions.sort(),expected.sort(),role);
+const fresh='90000000-0000-4000-8000-000000000099';
+await db.query('insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3)',[fresh,'signup@example.invalid',JSON.stringify({role:'admin',permissions:['administration'],commission_rate:1})]);
+assert.deepEqual((await db.query('select permissions from profiles where id=$1',[fresh])).rows[0].permissions,[],'signup metadata cannot grant permissions');
+assert.equal(Number((await db.query('select commission_rate from profiles where id=$1',[fresh])).rows[0].commission_rate),0);
+await db.exec(`select set_config('request.jwt.claim.sub','${fresh}',false);set role authenticated;`);
+assert.equal((await db.query('select public.is_admin() b')).rows[0].b,false);
+await assert.rejects(()=>db.query("update profiles set permissions=array['administration'] where id=$1",[fresh]));
+console.log('PASS: every previous account category migrates without losing or broadening modules; active state and commission preserved; signup grants nothing; self-escalation denied');
+await db.close();

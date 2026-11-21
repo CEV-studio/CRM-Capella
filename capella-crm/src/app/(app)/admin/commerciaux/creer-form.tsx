@@ -1,4 +1,5 @@
 "use client";
+import { PermissionFields } from "@/components/permission-fields";
 
 import { useActionState, useState } from "react";
 import { creerCommercial } from "./actions";
@@ -26,7 +27,8 @@ export function CreerCommercialForm({ estAdmin }: { estAdmin: boolean }) {
   return (
     <div className="px-5 py-4">
       <form action={action} className="grid gap-4 sm:grid-cols-2 sm:items-end">
-        <Field label="Type de compte"><select name="role" defaultValue="apporteur" className="h-10 rounded-lg border border-navy-200 px-3"><option value="apporteur">Apporteur</option><option value="qualite">Responsable qualité</option>{estAdmin&&<option value="adv">ADV</option>}<option value="commercial">Commercial</option>{estAdmin&&<option value="leader">Leader</option>}<option value="manager">Manager</option></select></Field>
+        {estAdmin?<div className="sm:col-span-2"><PermissionFields selected={['apporteur']}/></div>:<><input type="hidden" name="permissions" value="crm"/><input type="hidden" name="permissions" value="email"/></>}
+
         <Field label="Nom et prénom">
           <Input name="full_name" required placeholder="Aly Badara Doumbouya" />
         </Field>

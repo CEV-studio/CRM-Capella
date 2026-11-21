@@ -1,3 +1,4 @@
+import { hasAnyPermission } from '@/lib/permissions';
 import { NextRequest, NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -7,7 +8,7 @@ import { validatedTextMentions } from '@/lib/quality-mentions';
 
 export async function POST(request: NextRequest) {
   const profile = await requireProfile();
-  if (!['admin','qualite'].includes(profile.role)) return NextResponse.json({error:"Accès refusé."},{status:403});
+  if (!hasAnyPermission(profile,['administration','qualite'])) return NextResponse.json({error:"Accès refusé."},{status:403});
   let body: unknown;
   try { body=await request.json(); } catch { return NextResponse.json({error:"Données invalides."},{status:400}); }
   if (!body || typeof body !== 'object') return NextResponse.json({error:"Données invalides."},{status:400});

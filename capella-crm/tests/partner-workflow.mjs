@@ -22,7 +22,7 @@ await db.exec('grant all on all sequences in schema public to authenticated,serv
 const admin='10000000-0000-4000-8000-000000000001',a='10000000-0000-4000-8000-000000000002',b='10000000-0000-4000-8000-000000000003',commercial='10000000-0000-4000-8000-000000000004';
 await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values
 ('${admin}','jeremy@capellaenergy.fr','{"full_name":"Admin"}'),('${a}','a@example.org','{"full_name":"Partner A"}'),('${b}','b@example.org','{"full_name":"Partner B"}'),('${commercial}','commercial@example.org','{"full_name":"Commercial"}');
-update public.profiles set role='admin' where id='${admin}';update public.profiles set role='apporteur' where id in ('${a}','${b}');`);
+update public.profiles set commission_rate=0.5;update public.profiles set permissions=ARRAY['crm','email'] where id='${commercial}';update public.profiles set permissions=ARRAY['administration'] where id='${admin}';update public.profiles set permissions=ARRAY['apporteur'] where id in ('${a}','${b}');`);
 async function asUser(id){await db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role authenticated;`);}
 async function cmd(action,id,data={}){const r=await db.query('select public.partner_command($1,$2,$3::jsonb) as id',[action,id,JSON.stringify(data)]);return r.rows[0].id;}
 async function rejects(fn,text){await assert.rejects(fn);console.log('PASS deny:',text);}
@@ -89,7 +89,7 @@ console.log('PASS: apporteur isolation and ACD → quote → ADV flow; commercia
 // Dedicated ADV role: actual PostgreSQL RLS, Storage and transactional RPC tests.
 const adv='10000000-0000-4000-8000-000000000005';
 await db.exec(`reset role;select set_config('request.jwt.claim.sub','${admin}',false);insert into auth.users(id,email,raw_user_meta_data) values('${adv}','adv@example.org','{"full_name":"ADV"}');
- update public.profiles set role='adv',commission_rate=0,must_change_password=false where id='${adv}';
+ update public.profiles set permissions=ARRAY['adv'],commission_rate=0,must_change_password=false where id='${adv}';
  grant all on storage.objects to authenticated;`);
 await asUser(adv);
 assert.equal((await db.query('select public.is_admin() b')).rows[0].b,false);
@@ -124,7 +124,7 @@ await rejects(()=>db.query("insert into storage.objects(bucket_id,name) values('
 await rejects(()=>db.query("insert into storage.objects(bucket_id,name) values('other','forbidden')"),'unrelated bucket');
 await rejects(()=>db.query("insert into public.pieces_jointes(type,prospect_id,bucket_path,file_name) values('ACD',$1,$2,'forbidden.pdf')",[pid,`prospects/${rollbackProspect.id}/forbidden.pdf`]),'forged document reference');
 assert.equal((await db.query("update public.profiles set is_active=false where id=$1 returning id",[commercial])).rows.length,0);
-await rejects(()=>db.query("update public.profiles set role='admin' where id=$1",[adv]),'ADV cannot escalate its own role');
+await rejects(()=>db.query("update public.profiles set permissions=ARRAY['administration'] where id=$1",[adv]),'ADV cannot escalate its own role');
 for(const table of ['email_accounts','be_contracts','partner_teams','sources','lead_assignments']) assert.equal((await db.query('select * from public.'+table)).rows.length,0,table+' hidden');
 // Preserve partner notifications and commissions, include ADV as recipient.
 await asUser(admin);await db.query('update public.profiles set is_active=true where id=$1',[a]);
@@ -185,4 +185,41 @@ await rejects(()=>cmd('message',did,{body:'Disabled'}),'disabled partner command
 await asUser(admin);await db.query("select public.adv_save($1,'Signé',1500,'2026-11-20',null,true)",[affair.id]);
 assert.ok((await db.query('select * from public.profiles')).rows.length>=5,'admin retains full account access');
 console.log('PASS: ADV active/disabled, commercial/admin; direct RLS and Storage isolation; ACD atomicity, partner documents, quotations, notifications and commissions');
+
+// Cumulative permissions: ADV + personal referrer activity, then live revocation.
+await asUser(admin);await db.query('update public.profiles set is_active=true,commission_rate=0.4 where id=$1',[adv]);
+await db.query("select public.set_profile_permissions($1,array['adv','apporteur'])",[adv]);
+await asUser(adv);
+const hybridId='20000000-0000-4000-8000-000000000088';
+await cmd('draft',hybridId,payload);
+const hybrid=(await db.query('select * from public.partner_dossiers where id=$1',[hybridId])).rows[0];
+assert.equal(hybrid.owner_id,adv,'own referrer dossier while also ADV');
+await db.query("insert into public.pieces_jointes(type,prospect_id,bucket_path,file_name) values('Facture',$1,$2,'hybrid.pdf')",[hybrid.prospect_id,`prospects/${hybrid.prospect_id}/hybrid.pdf`]);
+await cmd('submit',hybridId,payload);
+const hybridRequest=(await db.query('select acd_request_id from public.partner_dossiers where id=$1',[hybridId])).rows[0].acd_request_id;
+await db.query("select public.adv_acd_status($1,'terminee')",[hybridRequest]);
+const hybridQuote=await cmd('quote',hybridId,{...quote,request_key:'30000000-0000-4000-8000-000000000088'});
+const hybridAffair=(await db.query('select affaire_id from public.partner_quotes where id=$1',[hybridQuote])).rows[0].affaire_id;
+await db.query("select public.adv_save($1,'Signé',2000,'2026-11-21',null,true)",[hybridAffair]);
+assert.equal(Number((await db.query('select partner_commission from public.partner_quotes where id=$1',[hybridQuote])).rows[0].partner_commission),800);
+await rejects(()=>db.query("insert into public.prospects(raison_sociale,assigned_to) values('No CRM permission',$1)",[adv]),'ADV+apporteur does not imply CRM writes');
+await rejects(()=>cmd('draft',did,payload),'combined access cannot claim another partner dossier');
+await asUser(b);assert.equal((await db.query('select * from public.partner_dossiers where id=$1',[hybridId])).rows.length,0);
+await asUser(admin);await db.query("select public.set_profile_permissions($1,array['apporteur'])",[adv]);
+await asUser(adv);assert.equal((await db.query('select * from public.partner_dossiers where id=$1',[did])).rows.length,0,'ADV revocation removes global access without refreshing JWT');
+assert.equal((await db.query('select * from public.partner_dossiers where id=$1',[hybridId])).rows.length,1,'own referrer activity preserved');
+await rejects(()=>db.query("select public.adv_acd_status($1,'terminee')",[hybridRequest]),'revoked ADV cannot process own ACD');
+await rejects(()=>db.query("select public.set_profile_permissions($1,array['administration'])",[adv]),'permission self-escalation forbidden');
+await asUser(admin);
+await rejects(()=>db.query("select public.set_profile_permissions($1,array['unknown_permission'])",[adv]),'unknown permission denied');
+await rejects(()=>db.query("select public.set_profile_permissions($1,array[]::text[])",[admin]),'last active administration permission cannot be removed');
+await rejects(()=>db.query("update public.profiles set is_active=false where id=$1",[admin]),'last active administrator cannot be deactivated');
+await db.query("select public.set_profile_permissions($1,array['crm','apporteur','qualite'])",[adv]);
+await asUser(adv);assert.equal((await db.query('select * from public.partner_dossiers where id=$1',[hybridId])).rows.length,1);
+await db.query("insert into public.prospects(raison_sociale,assigned_to,created_by) values('CRM and quality',$1,$1)",[adv]);
+assert.equal((await db.query('select * from public.be_contracts')).rows.length,0,'quality+CRM never exposes raw accounting data');
+await asUser(admin);await db.query('update public.profiles set is_active=false where id=$1',[adv]);
+await asUser(adv);assert.equal((await db.query('select * from public.partner_dossiers')).rows.length,0,'inactive cumulative account denied');
+await rejects(()=>cmd('draft','20000000-0000-4000-8000-000000000089',payload),'inactive cumulative account cannot create');
+console.log('PASS: ADV+apporteur own activity and commissions, quality+CRM, independent revocation, no escalations, last-administration protection');
 await db.close();

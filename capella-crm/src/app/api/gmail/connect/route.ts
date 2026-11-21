@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   const profile = await requireProfile();
   const url = new URL(request.url);
   const mode = url.searchParams.get("mode") === "shared" ? "shared" : "personal";
-  if (mode === "shared" && profile.role !== "admin") {
+  if (mode === "shared" && !hasPermission(profile,'administration')) {
     return NextResponse.redirect(new URL("/?motif=acces-refuse", url.origin));
   }
 

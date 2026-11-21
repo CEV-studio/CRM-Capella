@@ -1,3 +1,4 @@
+import { hasAnyPermission } from '@/lib/permissions';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { requireProfile } from '@/lib/auth';
@@ -18,7 +19,7 @@ const color = (score:number) => score >= 90
 
 export default async function AgentQualityScores({searchParams}:{searchParams:Promise<{q?:string}>}) {
  const profile=await requireProfile();
- if(!['admin','qualite'].includes(profile.role))redirect('/?motif=acces-refuse');
+ if(!hasAnyPermission(profile,['administration','qualite']))redirect('/?motif=acces-refuse');
  const {q=''}=await searchParams;
  const db=await createClient();
  const {contracts}=await loadBelgiumProduction();

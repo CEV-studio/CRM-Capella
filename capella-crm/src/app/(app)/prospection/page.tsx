@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { peutGerer, peutSupprimer, requireProfile, voitTout } from "@/lib/auth";
@@ -21,7 +22,7 @@ type CleTri=keyof typeof TRIS;
 type Recherche={q?:string;etape?:string;categorie?:string;commercial?:string;source?:string;historique?:string;tri?:string;page?:string;vue?:string};
 
 export default async function ProspectionPage({searchParams}:{searchParams:Promise<Recherche>}){
-  const profil=await requireProfile(); const estAdmin=profil.role==="admin"; const filtres=await searchParams; const supabase=await createClient(); const db=supabase;
+  const profil=await requireProfile(); const estAdmin=hasPermission(profil,'administration'); const filtres=await searchParams; const supabase=await createClient(); const db=supabase;
   const cleTri:CleTri=(filtres.tri??"action") in TRIS?(filtres.tri as CleTri)??"action":"action"; const tri=TRIS[cleTri]; const page=Math.max(1,Number(filtres.page??1)||1);
   let requete=db.from("prospects").select("id, ref, raison_sociale, nom, prenom, mail, tel_mobile, tel_fixe, siren, stage, next_action, next_action_date, notes, last_action_at, assigned_to, source_id, date_fin_contrat, legacy_sheet",{count:"exact"}).is("deleted_at",null).is("became_client_at",null);
   if(!voitTout(profil) && !peutGerer(profil)) requete=requete.eq("assigned_to",profil.id);

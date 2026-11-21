@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import Link from 'next/link';
 import { requireManage } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -6,7 +7,7 @@ import { CreerCommercialForm } from "./creer-form";
 import { LigneCommercial } from "./ligne-commercial";
 import type { Profile } from "@/lib/domain/database.types";
 
-export const metadata = { title: "Commerciaux — Capella CRM" };
+export const metadata = { title: "Comptes et permissions — Capella CRM" };
 export const dynamic = "force-dynamic";
 
 export default async function CommerciauxPage() {
@@ -19,19 +20,19 @@ export default async function CommerciauxPage() {
     .from("profiles")
     .select("*")
     .is("archived_at", null)
-    .not("role", "in", "(be_centre,be_agent)")
+
     .order("is_active", { ascending: false })
     .order("full_name");
 
   const profils = (data ?? []) as Profile[];
-  const {data:equipes} = moi.role === 'admin' ? await supabase.from('partner_teams').select('id,name').eq('is_active',true).order('name') : {data:[]};
+  const {data:equipes} = hasPermission(moi,'administration') ? await supabase.from('partner_teams').select('id,name').eq('is_active',true).order('name') : {data:[]};
   const actifs = profils.filter((p) => p.is_active);
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-8">
       <header className="mb-6">
         <h1 className="font-display text-2xl font-bold text-navy-800">
-          Commerciaux
+          Comptes et permissions
         </h1>
         <p className="mt-1 text-sm text-grey-brand">
           {actifs.length} compte{actifs.length > 1 ? "s" : ""} actif
@@ -39,16 +40,16 @@ export default async function CommerciauxPage() {
         </p>
       </header>
 
-      {moi.role==='admin'&&<Link href="/admin/centres" className="mb-6 inline-block rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">Créer ou gérer un compte centre</Link>}
-      {moi.role==='admin'&&<Link href="/admin/profils-supprimes" className="mb-6 ml-3 inline-block rounded-xl border border-navy-200 bg-white px-4 py-3 text-sm font-semibold">Profils supprimés</Link>}
-      {moi.role==='admin'&&<Link href="/admin/equipes" className="mb-6 ml-3 inline-block rounded-xl border border-navy-200 bg-white px-4 py-3 text-sm font-semibold">Équipes partenaires</Link>}
+      {hasPermission(moi,'administration')&&<Link href="/admin/centres" className="mb-6 inline-block rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900">Créer ou gérer un compte centre</Link>}
+      {hasPermission(moi,'administration')&&<Link href="/admin/profils-supprimes" className="mb-6 ml-3 inline-block rounded-xl border border-navy-200 bg-white px-4 py-3 text-sm font-semibold">Profils supprimés</Link>}
+      {hasPermission(moi,'administration')&&<Link href="/admin/equipes" className="mb-6 ml-3 inline-block rounded-xl border border-navy-200 bg-white px-4 py-3 text-sm font-semibold">Équipes partenaires</Link>}
 
       <Card className="mb-6">
         <CardHeader
           title="Créer un compte"
           hint="Le mot de passe provisoire s'affiche à l'écran. Aucun email n'est envoyé : tu le transmets toi-même."
         />
-        <CreerCommercialForm estAdmin={moi.role === 'admin'} />
+        <CreerCommercialForm estAdmin={hasPermission(moi,'administration')} />
       </Card>
 
       <Card>
@@ -67,13 +68,13 @@ export default async function CommerciauxPage() {
         ) : (
           <ul className="divide-y divide-navy-100">
             {profils.map((p) => (
-              <LigneCommercial key={p.id} profil={moi.role === 'admin' ? p : {...p, commission_rate: 0}} estMoi={p.id === moi.id} estAdmin={moi.role === 'admin'} equipes={equipes??[]} />
+              <LigneCommercial key={p.id} profil={hasPermission(moi,'administration') ? p : {...p, commission_rate: 0}} estMoi={p.id === moi.id} estAdmin={hasPermission(moi,'administration')} equipes={equipes??[]} />
             ))}
           </ul>
         )}
       </Card>
 
-      
+
     </main>
   );
 }

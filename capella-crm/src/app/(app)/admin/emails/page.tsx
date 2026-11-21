@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { creerTemplate, modifierTemplate, supprimerTemplate, enregistrerSignature, supprimerSignature } from "./actions";
@@ -27,13 +28,13 @@ export default async function AdminEmailsPage({ searchParams }: {
     supabase.from("email_accounts").select("*").eq("is_active", true).order("connected_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("email_templates").select("*").order("sort_order").order("name"),
     supabase.from("email_signatures").select("*").order("created_at"),
-    supabase.from("profiles").select("id, full_name, email, role, is_active").eq("is_active", true).order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, permissions, is_active").eq("is_active", true).order("full_name"),
   ]);
 
   const account = accountData as EmailAccount | null;
   const templates = (templateData ?? []) as EmailTemplate[];
   const signatures = (signatureData ?? []) as EmailSignature[];
-  const profiles = (profileData ?? []) as Pick<Profile, "id" | "full_name" | "email" | "role" | "is_active">[];
+  const profiles = (profileData ?? []) as Pick<Profile, "id" | "full_name" | "email" | "permissions" | "is_active">[];
   const signatureDefault = signatures.find((s) => !s.profile_id) ?? null;
   const signatureParProfil = new Map(signatures.filter((s) => s.profile_id).map((s) => [s.profile_id as string, s]));
 
@@ -113,7 +114,7 @@ export default async function AdminEmailsPage({ searchParams }: {
               <div key={profile.id} className="rounded-xl border border-navy-100 p-4">
                 <div className="mb-3">
                   <h3 className="text-sm font-semibold text-navy-800">{profile.full_name}</h3>
-                  <p className="text-xs text-grey-brand">{profile.email} · {profile.role === "admin" ? "Administrateur" : "Commercial"}</p>
+                  <p className="text-xs text-grey-brand">{profile.email} · {hasPermission(profile,'administration') ? "Administrateur" : "Commercial"}</p>
                 </div>
                 <form action={enregistrerSignature} className="grid gap-3">
                   <input type="hidden" name="profile_id" value={profile.id} />

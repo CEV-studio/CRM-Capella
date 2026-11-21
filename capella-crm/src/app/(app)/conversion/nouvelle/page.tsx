@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -15,7 +16,7 @@ export default async function NouvelleAffairePage({
   searchParams: Promise<{ prospect?: string }>;
 }) {
   const profil = await requireProfile();
-  const estAdmin = profil.role === "admin";
+  const estAdmin = hasPermission(profil,'administration');
   const { prospect: prospectId } = await searchParams;
 
   const supabase = await createClient();

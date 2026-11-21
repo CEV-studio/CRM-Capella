@@ -1,3 +1,4 @@
+import { hasAnyPermission } from '@/lib/permissions';
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
@@ -15,7 +16,7 @@ type RdvAdv={prospect_id:string;start_at:string;html_link:string|null;title:stri
 
 export default async function AdvPage({searchParams}:{searchParams:Promise<Recherche>}){
  const profil=await requireProfile();
- if(!["admin","adv"].includes(profil.role))notFound();
+ if(!hasAnyPermission(profil,['administration','adv']))notFound();
  const filtres=await searchParams;
  const supabase=await createClient();
  const [{data:affaires,error},{data:profils}]=await Promise.all([

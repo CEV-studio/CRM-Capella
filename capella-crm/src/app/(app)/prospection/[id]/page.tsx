@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { AdvRecord } from '@/components/adv-record';
 import { telephone } from "@/lib/telephone";
 import Link from "next/link";
@@ -79,8 +80,8 @@ export default async function FicheProspectPage({ params, searchParams }: {
   const query = await searchParams;
   const isPopup = query.popup === "1";
   const profil = await requireProfile();
-if(profil.role==="adv")return <AdvRecord id={id} scope="prospect"/>;
-  const estAdmin = profil.role === "admin";
+if(hasPermission(profil,'adv')&&!hasPermission(profil,'crm')&&!hasPermission(profil,'administration'))return <AdvRecord id={id} scope="prospect"/>;
+  const estAdmin = hasPermission(profil,'administration');
   const supabase = await createClient();
 
   const { data: prospect } = await supabase.from("prospects").select("*").eq("id", id).is("deleted_at", null).maybeSingle();

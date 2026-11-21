@@ -1,3 +1,4 @@
+import { hasPermission, hasAnyPermission } from '@/lib/permissions';
 import "server-only";
 
 import { cache } from "react";
@@ -40,12 +41,12 @@ export const requireProfile = cache(async function requireProfile(): Promise<Pro
 
 /** Vrai si ce profil a des droits d'administration (fondateur ou délégué). */
 export function estAdmin(profile: Profile): boolean {
-  return profile.role === "admin";
+  return hasPermission(profile,'administration');
 }
 
 /** Autorisation de traitement, distincte des droits d’administration. */
 export function peutTraiterAdv(profile: Profile): boolean {
-  return profile.is_active && ["admin", "adv"].includes(profile.role);
+  return profile.is_active && hasAnyPermission(profile,['administration','adv']);
 }
 
 export async function requireAdv(): Promise<Profile> {
@@ -56,12 +57,12 @@ export async function requireAdv(): Promise<Profile> {
 
 /** Vrai si ce profil peut gérer l'équipe (admin ou droit « gérer l'équipe »). */
 export function peutGerer(profile: Profile): boolean {
-  return profile.role === "admin" || (profile.role === "commercial" && profile.can_manage_team);
+  return hasAnyPermission(profile,['administration','crm_gestion']);
 }
 
 /** Vrai si ce profil voit les données de toute l'équipe. */
 export function voitTout(profile: Profile): boolean {
-  return profile.role === "admin" || (profile.role === "commercial" && profile.can_view_all);
+  return hasPermission(profile,'administration') || (hasPermission(profile,'crm') && hasPermission(profile,'crm_lecture_globale'));
 }
 
 /** Vrai si ce profil peut supprimer des leads (même droit que la gestion). */
@@ -96,7 +97,7 @@ export async function requireManage(): Promise<Profile> {
 /** Garde-fou pour l'export CSV : admin OU commercial avec « exporter ». */
 export async function requireExport(): Promise<Profile> {
   const profile = await requireProfile();
-  if (!estAdmin(profile) && !profile.can_export) {
+  if (!estAdmin(profile) && !hasPermission(profile,'export')) {
     redirect("/?motif=acces-refuse");
   }
   return profile;

@@ -1,3 +1,4 @@
+import { hasPermission, hasAnyPermission } from '@/lib/permissions';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { requireProfile } from '@/lib/auth';
@@ -10,16 +11,16 @@ import { PROSPECT_STAGES } from '@/lib/domain/stages';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Mon équipe — Capella CRM' };
 
-type TeamMember = { id:string; full_name:string; is_active:boolean; partner_team_id:string|null; role:'commercial'|'manager' };
+type TeamMember = { id:string; full_name:string; is_active:boolean; partner_team_id:string|null; permissions:string[] };
 type CommentedProspect = { id:string; assigned_to:string; raison_sociale:string|null; nom:string|null; prenom:string|null; notes:string|null; last_action_at:string|null }; 
 type ProspectRow = { assigned_to:string; stage:string; next_action_date:string|null };
 type AffaireRow = { commercial_id:string; stage:string };
 
 export default async function EquipePage({searchParams}:{searchParams:Promise<{team?:string}>}) {
   const profile = await requireProfile();
-  if (!['manager','admin'].includes(profile.role)) redirect('/?motif=acces-refuse');
+  if (!hasAnyPermission(profile,['equipe','administration'])) redirect('/?motif=acces-refuse');
   // Admins can select any team; managers remain restricted to their active teams.
-  const isAdmin=profile.role==='admin';
+  const isAdmin=hasPermission(profile,'administration');
   const db = createAdminClient();
   let teamsQuery=db.from('partner_teams').select('id,name,is_active,manager_id').order('name');
   if(!isAdmin)teamsQuery=teamsQuery.eq('manager_id',profile.id).eq('is_active',true);
@@ -28,7 +29,7 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
   const requestedTeam=(await searchParams).team;
   const selectedTeam=isAdmin?(teams??[]).find(team=>team.id===requestedTeam):undefined;
   const teamIds=isAdmin?(selectedTeam?[selectedTeam.id]:[]):(teams??[]).map(team=>team.id);
-  let membersQuery=db.from('profiles').select('id,full_name,is_active,partner_team_id,role').eq('role','commercial').is('archived_at',null).order('full_name');
+  let membersQuery=db.from('profiles').select('id,full_name,is_active,partner_team_id,permissions').contains('permissions',['crm']).is('archived_at',null).order('full_name');
   if(isAdmin && selectedTeam) membersQuery=membersQuery.eq('partner_team_id',selectedTeam.id);
   else if(!isAdmin) membersQuery=teamIds.length?membersQuery.or(`partner_team_id.in.(${teamIds.join(',')}),and(partner_team_id.is.null,manager_id.eq.${profile.id})`):membersQuery.is('partner_team_id',null).eq('manager_id',profile.id);
   const { data: membres, error: teamError } = await membersQuery;
@@ -38,11 +39,11 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
     : [profile.id];
   let managers:TeamMember[]=[];
   if(managerIds.length){
-    const {data,error}=await db.from('profiles').select('id,full_name,is_active,partner_team_id,role').in('id',managerIds).eq('role','manager').is('archived_at',null).order('full_name');
+    const {data,error}=await db.from('profiles').select('id,full_name,is_active,partner_team_id,permissions').in('id',managerIds).contains('permissions',['equipe']).is('archived_at',null).order('full_name');
     if(error)throw new Error('Impossible de charger les responsables.');
     managers=(data??[]) as TeamMember[];
   }
-  const team = [...managers,...((membres ?? []) as TeamMember[])];
+  const team = [...new Map([...managers,...((membres ?? []) as TeamMember[])].map(member=>[member.id,member])).values()];
   const teamNames=new Map((teams??[]).map(t=>[t.id,t.name]));
   const ids = team.map(m => m.id);
   const prospects:ProspectRow[]=[]; const affaires:AffaireRow[]=[];
@@ -96,14 +97,14 @@ export default async function EquipePage({searchParams}:{searchParams:Promise<{t
       <KpiTile label="Prospects actifs" value={fmtNombre(sum('actifs'))}/><KpiTile label="Actions en retard" value={fmtNombre(sum('retards'))}/><KpiTile label="Dossiers en cours" value={fmtNombre(sum('encours'))}/><KpiTile label="Dossiers validés ADV" value={fmtNombre(sum('valides'))}/>
     </div>
     <Card className="overflow-x-auto"><table className="w-full min-w-[50rem] text-left text-sm"><thead><tr>{['Commercial / responsable','Équipe','Prospects actifs','Actions en retard','Dossiers en cours','Validés ADV'].map(h=><th key={h} className="px-4 py-3">{h}</th>)}</tr></thead><tbody>
-      {rows.map(row=><tr key={row.id} className="border-b border-navy-100"><td className="px-4 py-3 font-semibold">{row.full_name}{row.role==='manager'&&<span className="ml-2 text-xs text-grey-brand">Responsable</span>}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</td><td className="px-4 py-3">{row.role==='manager'?(teams??[]).filter(t=>t.manager_id===row.id&&(!selectedTeam||t.id===selectedTeam.id)).map(t=>t.name).join(', ')||'—':row.partner_team_id?teamNames.get(row.partner_team_id)??'—':'—'}</td><td className="px-4 py-3">{row.actifs}</td><td className="px-4 py-3">{row.retards}</td><td className="px-4 py-3">{row.encours}</td><td className="px-4 py-3">{row.valides}</td></tr>)}
+      {rows.map(row=><tr key={row.id} className="border-b border-navy-100"><td className="px-4 py-3 font-semibold">{row.full_name}{hasPermission(row,'equipe')&&<span className="ml-2 text-xs text-grey-brand">Responsable</span>}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</td><td className="px-4 py-3">{hasPermission(row,'equipe')?(teams??[]).filter(t=>t.manager_id===row.id&&(!selectedTeam||t.id===selectedTeam.id)).map(t=>t.name).join(', ')||'—':row.partner_team_id?teamNames.get(row.partner_team_id)??'—':'—'}</td><td className="px-4 py-3">{row.actifs}</td><td className="px-4 py-3">{row.retards}</td><td className="px-4 py-3">{row.encours}</td><td className="px-4 py-3">{row.valides}</td></tr>)}
       {rows.length>0&&<tr className="font-bold"><td className="px-4 py-3">Total équipes</td><td/><td className="px-4 py-3">{sum('actifs')}</td><td className="px-4 py-3">{sum('retards')}</td><td className="px-4 py-3">{sum('encours')}</td><td className="px-4 py-3">{sum('valides')}</td></tr>}
     </tbody></table>{!rows.length&&<p className="p-6 text-sm text-grey-brand">Aucun commercial à afficher.</p>}</Card>
     <section className="mt-8 space-y-4" aria-labelledby="statuts-prospection">
       <h2 id="statuts-prospection" className="font-display text-xl font-bold">Statuts de prospection</h2>
       {statuses.length>0?<>
       <Card className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th scope="col" className="whitespace-nowrap px-4 py-3">Commercial</th>{statuses.map(status=><th scope="col" key={status} className="whitespace-nowrap px-4 py-3">{status}</th>)}<th scope="col" className="px-4 py-3">Total</th></tr></thead><tbody>
-      {rows.map(row=>{const counts=statusByMember.get(row.id);return <tr key={row.id} className="border-b border-navy-100"><th scope="row" className="whitespace-nowrap px-4 py-3 font-semibold">{row.full_name}{row.role==='manager'&&<span className="ml-2 text-xs text-grey-brand">Responsable</span>}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(counts?.get(status)??0)}</td>)}<td className="px-4 py-3 font-semibold">{fmtNombre([...counts?.values()??[]].reduce((a,b)=>a+b,0))}</td></tr>})}
+      {rows.map(row=>{const counts=statusByMember.get(row.id);return <tr key={row.id} className="border-b border-navy-100"><th scope="row" className="whitespace-nowrap px-4 py-3 font-semibold">{row.full_name}{hasPermission(row,'equipe')&&<span className="ml-2 text-xs text-grey-brand">Responsable</span>}{!row.is_active&&<span className="ml-2 text-xs text-grey-brand">Désactivé</span>}</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(counts?.get(status)??0)}</td>)}<td className="px-4 py-3 font-semibold">{fmtNombre([...counts?.values()??[]].reduce((a,b)=>a+b,0))}</td></tr>})}
       <tr className="font-bold"><th scope="row" className="px-4 py-3">Total équipe</th>{statuses.map(status=><td key={status} className="px-4 py-3">{fmtNombre(statusTotals.get(status)??0)}</td>)}<td className="px-4 py-3">{fmtNombre(prospects.length)}</td></tr>
       </tbody></table></Card></>:<p className="text-sm text-grey-brand">Aucun lead attribué aux commerciaux affichés.</p>}
     </section>

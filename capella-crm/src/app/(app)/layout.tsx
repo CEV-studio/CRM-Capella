@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { AppShell } from "@/components/app-shell";
@@ -18,7 +19,7 @@ export default async function AppLayout({
     redirect("/changer-mot-de-passe");
   }
 
-  const shellProfile = profile.role === 'commercial' || profile.role === 'manager'
+  const shellProfile = !hasPermission(profile,'administration') && (hasPermission(profile,'crm') || hasPermission(profile,'equipe'))
     ? { ...profile, commission_rate: 0 }
     : profile;
   return <AppShell profile={shellProfile}>{children}</AppShell>;

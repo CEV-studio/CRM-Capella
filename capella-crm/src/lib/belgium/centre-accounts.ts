@@ -23,13 +23,13 @@ export async function centreNames(db:SupabaseClient<Database>){
 export async function provisionCentre(db:SupabaseClient<Database>,input:{name:string;email:string;centre:string;password:string;agentRef?:string}){
  const {data,error}=await db.auth.admin.createUser({email:input.email,password:input.password,email_confirm:true,ban_duration:'876000h',user_metadata:{full_name:input.name,commission_rate:0,must_change_password:true}});
  if(error||!data.user)throw new Error(error?.message||'Création impossible.');
- const id=data.user.id;const role=input.agentRef?'be_agent':'be_centre';
+ const id=data.user.id;const permission=input.agentRef?'belgique_encodage':'belgique_centre';
  try{
-  const profile=await db.from('profiles').update({role,commission_rate:0,is_active:false,must_change_password:true,can_export:false,can_view_all:false,can_manage_team:false}).eq('id',id).select('id').single();
+  const profile=await db.from('profiles').update({permissions:[permission],commission_rate:0,is_active:false,must_change_password:true}).eq('id',id).select('id').single();
   if(profile.error||!profile.data)throw new Error('Configuration du profil impossible.');
   const scope=await db.from('be_access').insert({user_id:id,centre:input.centre,agent_ref:input.agentRef||null,is_active:true});
   if(scope.error)throw new Error('Affectation au centre impossible.');
-  const active=await db.from('profiles').update({is_active:true}).eq('id',id).eq('role',role).select('id').single();
+  const active=await db.from('profiles').update({is_active:true}).eq('id',id).contains('permissions',[permission]).select('id').single();
   if(active.error||!active.data)throw new Error('Activation du profil impossible.');
   const unban=await db.auth.admin.updateUserById(id,{ban_duration:'none'});
   if(unban.error)throw new Error('Activation du compte impossible.');
