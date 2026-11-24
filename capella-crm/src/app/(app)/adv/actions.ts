@@ -1,4 +1,6 @@
 "use server";
+import { hasAnyPermission } from '@/lib/permissions';
+
 
 import { deliverNotifications } from "@/lib/partners/notifications";
 import { revalidatePath } from "next/cache";
@@ -11,7 +13,7 @@ export async function enregistrerAdv(
   formData: FormData,
 ): Promise<ActionResult> {
   const profil = await requireProfile();
-  if (!["admin","adv"].includes(profil.role)) {
+  if (!hasAnyPermission(profil,['administration','adv'])) {
     return { ok: false, message: "Accès réservé au traitement ADV." };
   }
 

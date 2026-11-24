@@ -1,3 +1,4 @@
+import { hasAnyPermission } from '@/lib/permissions';
 import 'server-only';
 import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -41,7 +42,7 @@ export async function loadBelgiumProduction(options:{historyClient?:string}={}){
  const {requireProfile}=await import('@/lib/auth');
  const {redirect}=await import('next/navigation');
  const profile=await requireProfile();
- if(!['admin','qualite','be_centre','be_agent'].includes(profile.role))redirect('/?motif=acces-refuse');
+ if(!hasAnyPermission(profile,['administration','qualite','belgique_lecture','belgique_centre','belgique_encodage']))redirect('/?motif=acces-refuse');
  const db=await createClient();const {data,error}=await db.rpc('be_production_read_scoped',{p_include_history:false,p_history_client:options.historyClient||null});
  if(error)throw new Error(error.message);
  const result=data as unknown as {contracts:(Contract&{period_confirmed:boolean;phone?:string;postal_code?:string;product?:string;agent_reference?:string;client_id?:string})[];tracking:CycleTracking[];last_report:string|null;encoding:{centre:string;agent_ref:string}|null;history:import('./clients').ProductionHistory[]};

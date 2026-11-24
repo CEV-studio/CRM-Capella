@@ -1,4 +1,6 @@
 "use server";
+import { hasPermission } from '@/lib/permissions';
+
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -21,7 +23,7 @@ export async function changerEtapeAffaire(
   const supabase = await createClient();
   const { data: actuelle } = await supabase.from("affaires").select("stage").eq("id", id).maybeSingle();
 
-  if (profil.role !== "admin") {
+  if (!hasPermission(profil,'administration')) {
     if (stage === "Signé") return { ok: false, message: "La validation finale est réservée à l’ADV." };
     if (actuelle?.stage === "Signé") return { ok: false, message: "Ce dossier a déjà été validé par l’ADV." };
   }
@@ -83,7 +85,7 @@ export async function enregistrerAffaire(_prev: ActionResult | null, formData: F
   if (!id) return { ok: false, message: "Affaire introuvable." };
 
   const patch = lireFormulaire(formData);
-  if (profil.role !== "admin") {
+  if (!hasPermission(profil,'administration')) {
     delete patch.commission;
     delete patch.date_signature;
     if (patch.stage === "Signé") delete patch.stage;
@@ -95,7 +97,7 @@ export async function enregistrerAffaire(_prev: ActionResult | null, formData: F
   if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
 
   const supabase = await createClient();
-  if (profil.role !== "admin") {
+  if (!hasPermission(profil,'administration')) {
     const { data: actuelle } = await supabase.from("affaires").select("stage").eq("id", id).maybeSingle();
     if (actuelle?.stage === "Signé") delete patch.stage;
   }
@@ -112,7 +114,7 @@ export async function enregistrerAffaire(_prev: ActionResult | null, formData: F
 export async function creerAffaire(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const profil = await requireProfile();
   const patch = lireFormulaire(formData);
-  if (profil.role !== "admin") {
+  if (!hasPermission(profil,'administration')) {
     delete patch.commission;
     delete patch.date_signature;
     if (patch.stage === "Signé") patch.stage = "Demande de cotation";
@@ -122,7 +124,7 @@ export async function creerAffaire(_prev: ActionResult | null, formData: FormDat
   if (!patch.raison_sociale) return { ok: false, message: "La raison sociale est obligatoire." };
   if (patch.stage === "KO" && !String(patch.ko_reason ?? "").trim()) return { ok: false, message: "Le motif du KO est obligatoire." };
 
-  const commercial = profil.role === "admin" ? String(formData.get("commercial_id") ?? "").trim() || profil.id : profil.id;
+  const commercial = hasPermission(profil,'administration') ? String(formData.get("commercial_id") ?? "").trim() || profil.id : profil.id;
   const prospectId = String(formData.get("prospect_id") ?? "").trim() || null;
   const sourceId = String(formData.get("source_id") ?? "").trim() || null;
   const supabase = await createClient();

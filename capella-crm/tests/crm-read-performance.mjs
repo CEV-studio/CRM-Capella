@@ -19,9 +19,9 @@ for (const file of fs.readdirSync(root + '/supabase/migrations').sort()) {
 await db.exec('grant all on all sequences in schema public to authenticated,service_role;');
 const admin='10000000-0000-4000-8000-000000000001', a='10000000-0000-4000-8000-000000000002', b='10000000-0000-4000-8000-000000000003', partner='10000000-0000-4000-8000-000000000004', disabled='10000000-0000-4000-8000-000000000005';
 for (const [i,id] of [admin,a,b,partner,disabled].entries()) await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,$2,'{\"full_name\":\"Test\"}')",[id,`test${i}@example.org`]);
-await db.query("update public.profiles set role='commercial', can_view_all=false,can_manage_team=false");
-await db.query("update public.profiles set role='admin' where id=$1",[admin]);
-await db.query("update public.profiles set role='apporteur' where id=$1",[partner]);
+await db.query("update public.profiles set permissions=ARRAY['crm','email'], can_view_all=false,can_manage_team=false");
+await db.query("update public.profiles set permissions=ARRAY['administration'] where id=$1",[admin]);
+await db.query("update public.profiles set permissions=ARRAY['apporteur'] where id=$1",[partner]);
 await db.query('update public.profiles set is_active=false where id=$1',[disabled]);
 console.log('Fixtures: profiles ready');
 const source=(await db.query("insert into public.sources(name,kind) values('Volume test','autre') returning id")).rows[0].id;

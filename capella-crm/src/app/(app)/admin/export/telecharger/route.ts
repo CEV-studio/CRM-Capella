@@ -1,3 +1,4 @@
+import { hasPermission } from '@/lib/permissions';
 import { requireExport } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { toCsv } from "@/lib/csv";
@@ -68,10 +69,9 @@ const TABLES: {
     fichier: "commerciaux.csv",
     tri: "full_name",
     colonnes: [
-      ["full_name", "Commercial"], ["email", "Email"], ["role", "Rôle"],
+      ["full_name", "Commercial"], ["email", "Email"],
       ["commission_rate", "Taux commission"], ["is_active", "Actif"],
-      ["can_export", "Peut exporter"], ["can_view_all", "Voit tous les leads"],
-      ["can_manage_team", "Gère l'équipe"], ["created_at", "Créé le"],
+      ["permissions", "Permissions"], ["created_at", "Créé le"],
     ],
   },
   {
@@ -100,7 +100,7 @@ function valeur(v: unknown): string {
 
 export async function GET() {
   const profile = await requireExport();
-  const hideFinancial = profile.role === 'commercial' || profile.role === 'manager';
+  const hideFinancial = hasPermission(profile,'crm') || hasPermission(profile,'equipe');
   // Client de session (RLS) et NON clé de service : chacun n'exporte que ce
   // qu'il a le droit de voir. L'admin voit tout via ses politiques ;
   // un commercial « peut exporter » n'obtient que ses propres lignes.

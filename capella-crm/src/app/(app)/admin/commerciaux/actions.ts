@@ -1,4 +1,6 @@
 "use server";
+import {readAccountLabels} from "@/lib/account-labels";
+import { hasPermission, readPermissions } from "@/lib/permissions";
 
 import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
@@ -28,9 +30,11 @@ export async function creerCommercial(
   formData: FormData,
 ): Promise<ActionResult> {
   const actor = await requireManage();
-  const isLeader = formData.get("role") === "leader";
-  const role = formData.get("role") === "adv" ? "adv" : isLeader || formData.get("role") === "manager" ? "manager" : formData.get("role") === "qualite" ? "qualite" : formData.get("role") === "apporteur" ? "apporteur" : "commercial";
-  if((role !== "commercial" || isLeader) && actor.role !== "admin")return {ok:false,message:"Seul l’administrateur peut créer ce type de compte."};
+  let labels:string[];
+  try{labels=readAccountLabels(formData);}catch{return {ok:false,message:'Étiquettes invalides : 12 étiquettes de 60 caractères maximum.'};}
+  let permissions:ReturnType<typeof readPermissions>;
+  try{permissions=readPermissions(formData);}catch{return {ok:false,message:'Permission inconnue.'};}
+  if(!hasPermission(actor,'administration')&&permissions.some(p=>!['crm','email'].includes(p)))return {ok:false,message:'Permission d’administration requise.'};
 
   const nom = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -52,8 +56,7 @@ export async function creerCommercial(
     email_confirm: true, // pas d'email de confirmation : Jeremy transmet lui-même
     user_metadata: {
       full_name: nom,
-      role: "commercial",
-      commission_rate: ["qualite","adv"].includes(role) ? 0 : taux / 100,
+      commission_rate: permissions.some(p=>['crm','apporteur'].includes(p)) ? taux / 100 : 0,
       must_change_password: true,
     },
   });
@@ -70,9 +73,9 @@ export async function creerCommercial(
     };
   }
 
-  if((role !== "commercial" || isLeader) && created.user){
-    const {error:roleError}=await admin.from("profiles").update({role,hierarchy_title:isLeader?"Leader":null,can_export:false,can_view_all:false,can_manage_team:false}).eq("id",created.user.id);
-    if(roleError){await admin.auth.admin.deleteUser(created.user.id);return {ok:false,message:`Création annulée : ${roleError.message}`};}
+  if(created.user){
+    const {error:permissionError}=await admin.from('profiles').update({permissions,labels,commission_rate:permissions.some(p=>['crm','apporteur'].includes(p))?taux/100:0}).eq('id',created.user.id);
+    if(permissionError){await admin.auth.admin.deleteUser(created.user.id);return {ok:false,message:`Création annulée : ${permissionError.message}`};}
   }
   revalidatePath("/admin/commerciaux");
   return {
@@ -86,14 +89,13 @@ export async function reinitialiserMotDePasse(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireManage();
+  await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, message: "Commercial introuvable." };
 
   const admin = createAdminClient();
-  const {data:cible}=await admin.from("profiles").select("role").eq("id",id).single();
-  if(!cible||['be_centre','be_agent'].includes(cible.role))return {ok:false,message:"Utilise la gestion des comptes centres."};
+
   const motDePasse = genererMotDePasse();
 
   const { error } = await admin.auth.admin.updateUserById(id, {
@@ -105,7 +107,7 @@ export async function reinitialiserMotDePasse(
   const { error: errProfil } = await admin
     .from("profiles")
     .update({ must_change_password: true })
-    .eq("id", id).not("role","in","(be_centre,be_agent)");
+    .eq("id", id);
   if (errProfil) return { ok: false, message: `Échec : ${errProfil.message}` };
 
   revalidatePath("/admin/commerciaux");
@@ -120,7 +122,7 @@ export async function basculerActivation(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const moi = await requireManage();
+  const moi = await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   const actifDemande = String(formData.get("actif")) === "true";
@@ -133,7 +135,7 @@ export async function basculerActivation(
   const { error } = await admin
     .from("profiles")
     .update({ is_active: actifDemande })
-    .eq("id", id).not("role","in","(be_centre,be_agent)");
+    .eq("id", id);
 
   if (error) return { ok: false, message: `Échec : ${error.message}` };
 
@@ -162,7 +164,7 @@ export async function modifierTaux(
   const { error } = await admin
     .from("profiles")
     .update({ commission_rate: taux / 100 })
-    .eq("id", id).not("role","in","(be_centre,be_agent)");
+    .eq("id", id);
 
   if (error) return { ok: false, message: `Échec : ${error.message}` };
 
@@ -170,52 +172,28 @@ export async function modifierTaux(
   return { ok: true, message: `Taux mis à jour : ${taux} %.` };
 }
 
-/** Active ou désactive les trois permissions d'un commercial. */
-export async function modifierPermissions(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const moi = await requireManage();
-
-  const id = String(formData.get("id") ?? "");
-  if (!id) return { ok: false, message: "Commercial introuvable." };
-
-  const patch = {
-    can_export: formData.get("can_export") === "on",
-    can_view_all: formData.get("can_view_all") === "on",
-    can_manage_team: formData.get("can_manage_team") === "on",
-  };
-
-  // Sécurité : personne ne peut retirer « gérer l'équipe » à son propre
-  // compte et se bloquer dehors.
-  if (id === moi.id && !patch.can_manage_team && moi.role !== "admin") {
-    return {
-      ok: false,
-      message: "Tu ne peux pas retirer « gérer l'équipe » à ton propre compte.",
-    };
-  }
-
-  const admin = createAdminClient();
-  const { error } = await admin.from("profiles").update(patch).eq("id", id).not("role","in","(be_centre,be_agent)");
-  if (error) return { ok: false, message: `Échec : ${error.message}` };
-
-  revalidatePath("/admin/commerciaux");
-  return { ok: true, message: "Permissions mises à jour." };
+/** Only the administration permission can grant or revoke access. */
+export async function modifierPermissions(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
+ await requireAdmin();
+ const id=String(formData.get('id')??'');
+ let permissions:ReturnType<typeof readPermissions>;
+ try{permissions=readPermissions(formData);}catch{return {ok:false,message:'Permission inconnue.'};}
+ const db=await import('@/lib/supabase/server').then(m=>m.createClient());
+ const {error}=await db.rpc('set_profile_permissions',{p_id:id,p_permissions:permissions});
+ revalidatePath('/admin/commerciaux');revalidatePath('/','layout');
+ return {ok:!error,message:error?.message??'Permissions enregistrées.'};
 }
 
-export async function modifierRole(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
- const p=await requireManage();if(p.role!=="admin")return {ok:false,message:"Réservé à l’administrateur."};
- const id=String(formData.get("id")??"");const choix=String(formData.get("role")??"");
- if(id===p.id||!['commercial','leader','manager','apporteur','qualite','adv'].includes(choix))return {ok:false,message:"Modification interdite."};
- const db=createAdminClient();
- const {data:cible,error:lecture}=await db.from('profiles').select('role').eq('id',id).is('archived_at',null).maybeSingle();
- if(lecture||!cible||!['commercial','manager','apporteur','qualite','adv'].includes(cible.role))return {ok:false,message:"Profil introuvable ou modification interdite."};
- const role=choix==='leader'?'manager':choix as 'commercial'|'manager'|'apporteur'|'qualite'|'adv';
- const hierarchy_title:'Leader'|null=choix==='leader'?'Leader':null;
- const patch=cible.role===role?{hierarchy_title}:{role,hierarchy_title,...(['qualite','adv'].includes(role)?{commission_rate:0}:{}),...(role!=='commercial'?{manager_id:null,partner_team_id:null}:{}),can_export:false,can_view_all:false,can_manage_team:false};
- const {data,error}=await db.from('profiles').update(patch).eq('id',id).eq('role',cible.role).is('archived_at',null).select('id').maybeSingle();
- revalidatePath('/admin/commerciaux');revalidatePath('/admin/equipes');revalidatePath('/equipe');
- return {ok:!error&&!!data,message:error?.message??(data?'Profil mis à jour.':'Profil modifié entre-temps, veuillez réessayer.')};
+/** Labels are deliberately persisted independently from permissions. */
+export async function modifierEtiquettes(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
+ await requireAdmin();
+ const id=String(formData.get('id')??'');
+ let labels:string[];
+ try{labels=readAccountLabels(formData);}catch{return {ok:false,message:'Étiquettes invalides : 12 étiquettes de 60 caractères maximum.'};}
+ const db=await import('@/lib/supabase/server').then(m=>m.createClient());
+ const {error}=await db.rpc('set_profile_labels',{p_id:id,p_labels:labels});
+ revalidatePath('/admin/commerciaux');
+ return {ok:!error,message:error?.message??'Étiquettes enregistrées. Les permissions restent inchangées.'};
 }
 
 export async function affecterEquipe(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
@@ -224,7 +202,7 @@ export async function affecterEquipe(_prev:ActionResult|null,formData:FormData):
  const db=createAdminClient();
  if(!id)return {ok:false,message:'Affectation invalide.'};
  if(teamId){const {data:team,error}=await db.from('partner_teams').select('id').eq('id',teamId).eq('is_active',true).maybeSingle();if(error||!team)return {ok:false,message:'Équipe active introuvable.'};}
- const {data,error}=await db.from('profiles').update({partner_team_id:teamId||null,manager_id:null}).eq('id',id).eq('role','commercial').is('archived_at',null).select('id').maybeSingle();
+ const {data,error}=await db.from('profiles').update({partner_team_id:teamId||null,manager_id:null}).eq('id',id).contains('permissions',['crm']).is('archived_at',null).select('id').maybeSingle();
  if(error||!data)return {ok:false,message:error?.message??'Commercial introuvable.'};
  revalidatePath('/admin/commerciaux');revalidatePath('/admin/equipes');revalidatePath('/equipe');return {ok:true,message:'Équipe attribuée.'};
 }

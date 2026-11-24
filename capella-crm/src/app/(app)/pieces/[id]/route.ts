@@ -1,3 +1,4 @@
+import { hasAnyPermission } from '@/lib/permissions';
 import { NextResponse } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -19,7 +20,7 @@ export async function GET(
     .maybeSingle();
 
   if (!piece) return new NextResponse("Introuvable", { status: 404 });
-  if (piece.type === "ACD" && !["admin","adv","apporteur"].includes(profile.role)) {
+  if (piece.type === "ACD" && !hasAnyPermission(profile,['administration','adv','apporteur'])) {
     return new NextResponse("Accès réservé à l'administrateur", { status: 403 });
   }
 

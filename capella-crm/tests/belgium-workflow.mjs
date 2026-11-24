@@ -17,7 +17,7 @@ assert.throws(()=>parseRows([header,['12',5.414490200000731e17,'Agent','Contrat 
 const summary=summarize(rows,[{key:rows[0].key,period:'2026-09-01',gross_cents:7500,centre_cents:3500}], '2026-10-01','2026-10-20');assert.equal(summary.active,0,'official September is excluded from October');
 const db=new PGlite();await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create schema storage;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}',raw_app_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create table storage.buckets(id text primary key,name text,public boolean);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;grant usage on schema public,auth,storage to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated;alter default privileges in schema public grant all on tables to authenticated,service_role;`);
 for(const f of fs.readdirSync('supabase/migrations').sort()){let sql=fs.readFileSync('supabase/migrations/'+f,'utf8').replace(/create extension if not exists "pgcrypto";/g,'');await db.exec(sql);}
-const admin='10000000-0000-4000-8000-000000000001',user='10000000-0000-4000-8000-000000000002';await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${admin}','admin@test.com','{"full_name":"Admin"}'),('${user}','user@test.com','{"full_name":"User"}');update profiles set role='admin' where id='${admin}';`);
+const admin='10000000-0000-4000-8000-000000000001',user='10000000-0000-4000-8000-000000000002';await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${admin}','admin@test.com','{"full_name":"Admin"}'),('${user}','user@test.com','{"full_name":"User"}');update profiles set permissions=ARRAY['crm','email'] where id='${user}';update profiles set permissions=ARRAY['administration'] where id='${admin}';`);
 const asUser=async id=>db.exec(`reset role;select set_config('request.jwt.claim.sub','${id}',false);set role authenticated;`);
 async function imp(rows,date='2026-10-20',kind='report',hash=Math.random().toString()){return (await db.query('select be_import($1,$2,$3,$4,$5::jsonb) r',[kind,'test.csv',date,hash,JSON.stringify(rows)])).rows[0].r;}
 await asUser(user);await assert.rejects(()=>imp(rows));assert.equal((await db.query('select * from be_contracts')).rows.length,0);
@@ -46,15 +46,15 @@ await imp([{key:activated.key,supplier:'MEGA',period:'2026-10-01',gross_cents:65
 
 await db.exec("reset role;select set_config('request.jwt.claim.sub','',false);");
 const quality='10000000-0000-4000-8000-000000000003';
-await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${quality}','quality@test.com','{"full_name":"Quality"}');update profiles set role='qualite',commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false where id='${quality}';`);
+await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${quality}','quality@test.com','{"full_name":"Quality"}');update profiles set permissions=ARRAY['qualite','belgique_lecture'],commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false where id='${quality}';`);
 await asUser(quality);
 const safe=(await db.query('select public.be_production_read() as data')).rows[0].data;
 assert.ok(safe.contracts.length>0);
 for(const c of safe.contracts){for(const forbidden of ['gross_cents','centre_cents','commission','payment','notes','data'])assert.equal(Object.hasOwn(c,forbidden),false,forbidden+' never returned');}
 for(const table of ['be_contracts','be_contract_history','be_statement_lines','be_invoices','be_imports','be_supplier_billing','be_cycle_tracking','affaires','prospects'])assert.equal((await db.query('select * from '+table)).rows.length,0,table+' denied to quality');
 await assert.rejects(()=>db.query("select be_create_invoice('Cimsourse','2026-09-01','QUALITY-HACK')"));
-await assert.rejects(()=>db.query("update profiles set role='admin',can_manage_team=true where id=$1",[quality]), /Modification des autorisations interdite/);
-assert.equal((await db.query('select role from profiles where id=$1',[quality])).rows[0].role,'qualite');
+await assert.rejects(()=>db.query("update profiles set permissions=ARRAY['administration'],can_manage_team=true where id=$1",[quality]), /Modification des autorisations interdite/);
+assert.equal((await db.query('select permissions from profiles where id=$1',[quality])).rows[0].permissions.includes('qualite'),true);
 await asUser(user);await assert.rejects(()=>db.query('select public.be_production_read()'));
 await db.exec('reset role;set role anon;');await assert.rejects(()=>db.query('select public.be_production_read()'));
 await asUser(admin);assert.ok((await db.query('select * from be_invoices')).rows.length>0);
@@ -62,7 +62,7 @@ console.log('PASS: quality whitelist, finance and other CRM tables denied, admin
 
 await db.exec("reset role;select set_config('request.jwt.claim.sub','',false);");
 const centreUser='10000000-0000-4000-8000-000000000004',agentUser='10000000-0000-4000-8000-000000000005';
-for(const [id,role]of [[centreUser,'be_centre'],[agentUser,'be_agent']])await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${id}','${role}@test.com','{"full_name":"Portal"}');update profiles set role='${role}',commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false where id='${id}';`);
+for(const [id,role]of [[centreUser,'be_centre'],[agentUser,'be_agent']])await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${id}','${role}@test.com','{"full_name":"Portal"}');update profiles set permissions=ARRAY['${role==='be_centre'?'belgique_centre':'belgique_encodage'}'],commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false where id='${id}';`);
 await db.exec(`insert into be_access(user_id,centre,agent_ref) values('${centreUser}','Cimsourse',null),('${agentUser}','TILIRA','Agent');`);
 await asUser(centreUser);
 let portal=(await db.query('select be_production_read() data')).rows[0].data;
@@ -104,7 +104,7 @@ console.log('PASS: centre/agent ownership, scoped history, inactive access denie
 await asUser(admin);
 await db.exec('reset role');
 const encoder='10000000-0000-4000-8000-000000000006',outsider='10000000-0000-4000-8000-000000000007';
-await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${encoder}','encoder@test.com','{"full_name":"Encodeur"}'),('${outsider}','outsider@test.com','{"full_name":"Autre agent"}');update profiles set role='be_agent',commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false,must_change_password=false where id in ('${encoder}','${outsider}');insert into be_access(user_id,centre,agent_ref) values('${encoder}','TILIRA','signedagent'),('${outsider}','Cimsourse','otheragent');`);
+await db.exec(`insert into auth.users(id,email,raw_user_meta_data) values('${encoder}','encoder@test.com','{"full_name":"Encodeur"}'),('${outsider}','outsider@test.com','{"full_name":"Autre agent"}');update profiles set permissions=ARRAY['belgique_encodage'],commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false,must_change_password=false where id in ('${encoder}','${outsider}');insert into be_access(user_id,centre,agent_ref) values('${encoder}','TILIRA','signedagent'),('${outsider}','Cimsourse','otheragent');`);
 await asUser(encoder);
 const sale={mega_id:'99901',energy:'Elec',ean:'541449020000073180',first_name:'Alice',last_name:'Client',phone:'+32470000000',email:'alice@example.test',product:'Cosy',comment:'À rappeler',owner_id:admin,centre:'Cimsourse',status:'Effectif'};
 const saleId=(await db.query('select be_encode_sale($1::jsonb) id',[JSON.stringify(sale)])).rows[0].id;
@@ -219,7 +219,7 @@ await asUser(outsider);await assert.rejects(()=>db.query('select be_encode_sale_
 await db.exec(`reset role;select set_config('request.jwt.claim.sub','${admin}',false);`);
 const newAgent='10000000-0000-4000-8000-000000000099';
 await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'newagent@test.com' ,'{\"full_name\":\"Nouvel agent\"}')",[newAgent]);
-await db.query("update profiles set role='be_agent',is_active=true,must_change_password=false,commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false where id=$1",[newAgent]);
+await db.query("update profiles set permissions=ARRAY['belgique_encodage'],is_active=true,must_change_password=false,commission_rate=0,can_view_all=false,can_export=false,can_manage_team=false where id=$1",[newAgent]);
 await db.query("insert into be_access(user_id,centre,agent_ref) values($1,'TILIRA','nouvelagent')",[newAgent]);
 await asUser(newAgent);assert.ok((await db.query('select be_production_read() data')).rows[0].data.contracts.some(c=>c.entry_id===managerEntry));
 console.log('PASS: centre encoding scoped to agent, with later agent account attribution.');

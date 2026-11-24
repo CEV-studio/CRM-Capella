@@ -1,3 +1,4 @@
+import { hasPermission, hasAnyPermission } from '@/lib/permissions';
 import 'server-only';
 import type { Profile } from '@/lib/domain/database.types';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -6,16 +7,16 @@ import { sendGmailMessage } from '@/lib/gmail';
 // Call only after authentication. Partners may dispatch only notifications generated
 // by their own validated commands; admin may retry the queue. Recipients come from SQL.
 export async function deliverNotifications(profile:Profile){
- if(!profile.is_active || !['admin','adv','apporteur'].includes(profile.role))return {failed:0,sent:0};
+ if(!profile.is_active || !hasAnyPermission(profile,['administration','adv','apporteur']))return {failed:0,sent:0};
  let failed=0,sent=0;
  try{
   const db=createAdminClient();
   let query=db.from('crm_notifications').select('*').in('email_status',['pending','failed']).order('created_at').limit(20);
-  if(profile.role!=='admin')query=query.eq('actor_id',profile.id);
+  if(!hasPermission(profile,'administration'))query=query.eq('actor_id',profile.id);
   const {data:rows,error}=await query;
   if(error)throw error;
   if(!rows?.length)return {failed,sent};
-  const {data:sender}=await db.from('profiles').select('id').eq('role','admin').eq('is_active',true).eq('email','jeremy@capellaenergy.fr').maybeSingle();
+  const {data:sender}=await db.from('profiles').select('id').contains('permissions',['administration']).eq('is_active',true).eq('email','jeremy@capellaenergy.fr').maybeSingle();
   const account=sender?await getGmailAccountForProfile(sender.id,'send'):null;
   for(const row of rows){
    const {data:claimed}=await db.from('crm_notifications').update({email_status:'sending',email_attempt_at:new Date().toISOString()}).eq('id',row.id).in('email_status',['pending','failed']).select('id').maybeSingle();
