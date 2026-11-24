@@ -1,4 +1,5 @@
 "use server";
+import {readAccountLabels} from "@/lib/account-labels";
 import { hasPermission, readPermissions } from "@/lib/permissions";
 
 import { randomInt } from "node:crypto";
@@ -29,6 +30,8 @@ export async function creerCommercial(
   formData: FormData,
 ): Promise<ActionResult> {
   const actor = await requireManage();
+  let labels:string[];
+  try{labels=readAccountLabels(formData);}catch{return {ok:false,message:'Étiquettes invalides : 12 étiquettes de 60 caractères maximum.'};}
   let permissions:ReturnType<typeof readPermissions>;
   try{permissions=readPermissions(formData);}catch{return {ok:false,message:'Permission inconnue.'};}
   if(!hasPermission(actor,'administration')&&permissions.some(p=>!['crm','email'].includes(p)))return {ok:false,message:'Permission d’administration requise.'};
@@ -71,7 +74,7 @@ export async function creerCommercial(
   }
 
   if(created.user){
-    const {error:permissionError}=await admin.from('profiles').update({permissions,commission_rate:permissions.some(p=>['crm','apporteur'].includes(p))?taux/100:0}).eq('id',created.user.id);
+    const {error:permissionError}=await admin.from('profiles').update({permissions,labels,commission_rate:permissions.some(p=>['crm','apporteur'].includes(p))?taux/100:0}).eq('id',created.user.id);
     if(permissionError){await admin.auth.admin.deleteUser(created.user.id);return {ok:false,message:`Création annulée : ${permissionError.message}`};}
   }
   revalidatePath("/admin/commerciaux");
@@ -179,6 +182,18 @@ export async function modifierPermissions(_prev:ActionResult|null,formData:FormD
  const {error}=await db.rpc('set_profile_permissions',{p_id:id,p_permissions:permissions});
  revalidatePath('/admin/commerciaux');revalidatePath('/','layout');
  return {ok:!error,message:error?.message??'Permissions enregistrées.'};
+}
+
+/** Labels are deliberately persisted independently from permissions. */
+export async function modifierEtiquettes(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{
+ await requireAdmin();
+ const id=String(formData.get('id')??'');
+ let labels:string[];
+ try{labels=readAccountLabels(formData);}catch{return {ok:false,message:'Étiquettes invalides : 12 étiquettes de 60 caractères maximum.'};}
+ const db=await import('@/lib/supabase/server').then(m=>m.createClient());
+ const {error}=await db.rpc('set_profile_labels',{p_id:id,p_labels:labels});
+ revalidatePath('/admin/commerciaux');
+ return {ok:!error,message:error?.message??'Étiquettes enregistrées. Les permissions restent inchangées.'};
 }
 
 export async function affecterEquipe(_prev:ActionResult|null,formData:FormData):Promise<ActionResult>{

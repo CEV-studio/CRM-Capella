@@ -29,6 +29,7 @@ export function CreerCommercialForm({ estAdmin }: { estAdmin: boolean }) {
       <form action={action} className="grid gap-4 sm:grid-cols-2 sm:items-end">
         {estAdmin?<div className="sm:col-span-2"><PermissionFields selected={['apporteur']}/></div>:<><input type="hidden" name="permissions" value="crm"/><input type="hidden" name="permissions" value="email"/></>}
 
+        <Field label="Étiquettes (sans droits)"><Input name="labels" maxLength={800} placeholder="Qualité, Apporteur…" /></Field>
         <Field label="Nom et prénom">
           <Input name="full_name" required placeholder="Aly Badara Doumbouya" />
         </Field>
