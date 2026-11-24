@@ -8,7 +8,7 @@ create function auth.uid() returns uuid language sql stable as $$select nullif(c
 create table storage.buckets(id text primary key,name text,public boolean);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
 grant usage on schema public,auth,storage to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated;alter default privileges in schema public grant all on tables to authenticated,service_role;`);
 const files=fs.readdirSync('supabase/migrations').sort();
-const newer=files.filter(f=>f.includes('cumulative_permissions')||f.includes('retire_legacy_account_roles')||f.includes('account_labels_without_privileges'));
+const newer=files.filter(f=>f.includes('feature_permissions_and_account_access')||f.includes('retire_legacy_account_roles')||f.includes('account_labels_without_privileges'));
 for(const file of files.filter(f=>!newer.includes(f)))await db.exec(fs.readFileSync('supabase/migrations/'+file,'utf8').replace(/create extension if not exists "pgcrypto";/g,''));
 const cases={admin:['administration','crm','apporteur','adv','qualite','equipe','belgique_lecture','belgique_centre','belgique_encodage','email','crm_gestion','crm_lecture_globale','export'],commercial:['crm','email','export','crm_gestion','crm_lecture_globale'],manager:['crm','email','equipe'],apporteur:['apporteur'],adv:['adv'],qualite:['qualite','belgique_lecture'],be_centre:['belgique_centre'],be_agent:['belgique_encodage'],agent_ia:[]};
 let i=0;const ids={};
