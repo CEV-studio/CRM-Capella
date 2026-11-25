@@ -3,11 +3,42 @@ import 'server-only';
 import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import type { Contract,Statement,Invoice,ImportRun,CycleTracking,SupplierBilling,Deduction } from './domain';
-export async function loadBelgium(){
- await requireAdmin();const db=await createClient();
- // Explicit paging avoids PostgREST's default 1,000-row truncation.
- async function all<T>(table:'be_contracts'|'be_statement_lines'|'be_invoices'|'be_imports'|'be_cycle_tracking'|'be_supplier_billing'|'be_deductions',order:string){const out:T[]=[];for(let offset=0;;offset+=1000){const {data,error}=await db.from(table).select('*').order(order).range(offset,offset+999);if(error)throw new Error(`Belgique : ${error.message}`);out.push(...data as T[]);if(data.length<1000)break;}return out;}
- const [raw,lines,invoices,imports,tracking,billing,deductions]=await Promise.all([all<{data:Contract}>('be_contracts','key'),all<{data:Statement}>('be_statement_lines','id'),all<Invoice>('be_invoices','created_at'),all<ImportRun>('be_imports','created_at'),all<CycleTracking>('be_cycle_tracking','contract_key'),all<SupplierBilling>('be_supplier_billing','period'),all<Deduction>('be_deductions','created_at')]);
+type AccountingView = 'dashboard' | 'ledger' | 'contracts' | 'imports' | 'cycles' | 'billing';
+type BelgiumRead = AccountingView | 'import-preview' | 'export';
+type BelgiumTable = 'be_contracts' | 'be_statement_lines' | 'be_invoices' | 'be_imports' | 'be_cycle_tracking' | 'be_supplier_billing' | 'be_deductions';
+
+export async function loadBelgium(view:BelgiumRead, options:{contract?:string}={}){
+ await requireAdmin();
+ const db=await createClient();
+ // Explicit paging avoids PostgREST's default 1,000-row truncation. Break ties
+ // with the primary key so equal timestamps cannot move rows between pages.
+ async function all<T>(enabled:boolean,table:BelgiumTable,columns:string,order:string,tie?:string,contract?:string){
+  const out:T[]=[];
+  if(!enabled)return out;
+  for(let offset=0;;offset+=1000){
+   let query=contract&&table==='be_cycle_tracking'
+    ? db.from(table).select(columns).eq('contract_key',contract).order(order)
+    : db.from(table).select(columns).order(order);
+   if(tie)query=query.order(tie);
+   const {data,error}=await query.range(offset,offset+999);
+   if(error)throw new Error(`Belgique : ${error.message}`);
+   const rows=data as unknown as T[];
+   out.push(...rows);
+   if(rows.length<1000)break;
+  }
+  return out;
+ }
+ const hasCycleOverview=view==='dashboard'||view==='ledger'||view==='cycles'||view==='billing';
+ const contractKey=view==='contracts'&&typeof options.contract==='string'?options.contract:undefined;
+ const [raw,lines,invoices,imports,tracking,billing,deductions]=await Promise.all([
+  all<{data:Contract}>(view!=='imports','be_contracts','data','key'),
+  all<{data:Statement}>(view!=='imports'&&view!=='import-preview','be_statement_lines','data','id'),
+  all<Invoice>(view==='ledger'||view==='billing','be_invoices','*','created_at','id'),
+  all<ImportRun>(view==='imports'||view==='import-preview','be_imports','*','created_at','id'),
+  all<CycleTracking>(hasCycleOverview||!!contractKey,'be_cycle_tracking','*','contract_key',undefined,contractKey),
+  all<SupplierBilling>(hasCycleOverview,'be_supplier_billing','*','period','supplier'),
+  all<Deduction>(view==='ledger','be_deductions','*','created_at','id'),
+ ]);
  return {contracts:raw.map(r=>r.data),statements:lines.map(r=>r.data),invoices,imports:imports.reverse(),tracking,billing,deductions};
 }
 

@@ -25,7 +25,7 @@ export async function POST(request:Request){
  const parsed=parseRows(rows,kind,date,period);if(parsed.length===0||parsed.length>10000)throw new Error('Le fichier doit contenir de 1 à 10 000 contrats.');
  const fingerprint=createHash('sha256').update(kind+date+(kind==='statement'?period:'')).update(Buffer.from(bytes)).digest('hex');
  if(form.get('confirm')!=='yes'){
- const existing=await loadBelgium();const byKey=new Map(existing.contracts.map(c=>[c.key,c]));
+ const existing=await loadBelgium('import-preview');const byKey=new Map(existing.contracts.map(c=>[c.key,c]));
  const lookup=(row:Contract)=>byKey.get(row.key)??existing.contracts.find(c=>c.mega_id===row.mega_id&&norm(c.energy)===norm(row.energy)&&(!c.ean||c.ean===row.ean));
  const changes=parsed.map(row=>{
  const next=row as Contract;const old=lookup(next);
