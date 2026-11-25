@@ -8,9 +8,10 @@ export async function updateInvoice(form:FormData){await requireAdmin();const db
 export async function saveCycle(form:FormData){
  await requireAdmin();const db=await createClient();
  const {contractCycle}=await import('@/lib/belgium/finance');
- const {loadBelgium}=await import('@/lib/belgium/server');
- const {contracts,statements}=await loadBelgium();
- const key=String(form.get('contract_key')??''),contract=contracts.find(c=>c.key===key);
+ const key=String(form.get('contract_key')??'');
+ const {data:contractRow,error:contractError}=await db.from('be_contracts').select('data').eq('key',key).maybeSingle();
+ if(contractError)return {error:contractError.message};
+ const contract=contractRow?.data as import('@/lib/belgium/domain').Contract|undefined;
  if(!contract)return {error:'Contrat introuvable'};
  const today=new Date().toISOString().slice(0,10);
  const date=(name:string)=>String(form.get(name)??'')||null;
@@ -19,6 +20,9 @@ export async function saveCycle(form:FormData){
  const row={contract_key:key,effect_date:date('effect_date'),termination_date:date('termination_date'),completed_at:date('completed_at'),bonus_invoiced_at:date('bonus_invoiced_at'),bonus_paid_at:date('bonus_paid_at'),centre_recovered_cents:amount('centre_recovered'),mega_recovered_cents:amount('mega_recovered'),notes:String(form.get('notes')??''),updated_at:new Date().toISOString()};
  for(const d of [row.effect_date,row.termination_date,row.completed_at,row.bonus_invoiced_at,row.bonus_paid_at])if(d&&(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>today))return {error:'Dates confirmées invalides ou futures'};
  if(row.termination_date&&row.effect_date&&row.termination_date<row.effect_date)return {error:'La résiliation précède la prise d’effet'};
+ const {data:firstStatement,error:statementError}=await db.from('be_statement_lines').select('data').eq('contract_key',key).gt('gross_cents',0).order('period').order('id').limit(1).maybeSingle();
+ if(statementError)return {error:statementError.message};
+ const statements=firstStatement?[firstStatement.data as import('@/lib/belgium/domain').Statement]:[];
  const cycle=contractCycle(contract,statements,row,today);
  const {data:deductions,error:deductionError}=await db.from('be_deductions').select('side,amount_cents').eq('contract_key',key);
  if(deductionError)return {error:deductionError.message};
